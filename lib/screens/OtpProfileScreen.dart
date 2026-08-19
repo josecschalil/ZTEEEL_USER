@@ -125,7 +125,7 @@ class _OtpScreenState extends State<OtpScreen> with TickerProviderStateMixin {
     }
     Navigator.of(
       context,
-    ).push(MaterialPageRoute(builder: (_) => DashboardScreen()));
+    ).push(MaterialPageRoute(builder: (_) => HomeDiscoveryScreen()));
   }
 
   @override
