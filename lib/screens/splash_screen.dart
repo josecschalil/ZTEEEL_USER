@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:zteel_user/screens/dashboard.dart';
 import 'PhoneAuthScreen.dart';
 import '../app_colors.dart';
 
@@ -72,7 +73,7 @@ class _SplashScreenState extends State<SplashScreen>
           Navigator.of(context).pushReplacement(
             PageRouteBuilder(
               transitionDuration: const Duration(milliseconds: 600),
-              pageBuilder: (_, __, ___) => const LoginScreen(),
+              pageBuilder: (_, __, ___) => const HomeDiscoveryScreen(),
               transitionsBuilder: (_, animation, __, child) {
                 return FadeTransition(opacity: animation, child: child);
               },

@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'ProfileScreen.dart';
+import 'FoodDetailScreen.dart';
+import 'RestuarantMenuScreen.dart';
+import 'MainCartScreen.dart';
 import '../widgets/bottom_nav_bar.dart';
 
 class AppColorss {
@@ -178,9 +181,6 @@ const _restaurants = [
   ),
 ];
 
-/// ---------------------------------------------------------------------
-/// Main Dashboard Screen Shell (Handling page swapping across bottom nav)
-/// ---------------------------------------------------------------------
 class HomeDiscoveryScreen extends StatefulWidget {
   const HomeDiscoveryScreen({super.key});
 
@@ -285,7 +285,7 @@ class _HomeDiscoveryScreenState extends State<HomeDiscoveryScreen> {
       _HomeDiscoveryView(isDark: isDark),
       _DealsView(isDark: isDark),
       const SizedBox.shrink(), // Index 2 reserved for central FAB Scan button
-      _SavedView(isDark: isDark),
+      const MainCartScreenPage(showBottomNav: false),
       ProfileScreen(
         showBottomNav: false,
         onBack: () => setState(() => _navIndex = 0),
@@ -441,143 +441,95 @@ class _DealsView extends StatelessWidget {
               separatorBuilder: (_, _) => const SizedBox(height: 16),
               itemBuilder: (context, i) {
                 final deal = _deals[i];
-                return Container(
-                  height: 200,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withAlpha(35),
-                        blurRadius: 14,
-                        offset: const Offset(0, 6),
+                return GestureDetector(
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const FoodDetailsScreen(),
                       ),
-                    ],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(20),
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        Image.network(deal.imageUrl, fit: BoxFit.cover),
-                        DecoratedBox(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.bottomCenter,
-                              end: Alignment.topCenter,
-                              colors: [
-                                Colors.black.withAlpha(220),
-                                Colors.black.withAlpha(100),
-                                Colors.transparent,
-                              ],
-                              stops: const [0.0, 0.55, 1.0],
-                            ),
-                          ),
-                        ),
-                        Positioned(
-                          top: 14,
-                          left: 14,
-                          child: _Badge(text: deal.discount, filled: true),
-                        ),
-                        Positioned(
-                          top: 14,
-                          right: 14,
-                          child: _Badge(
-                            text: deal.timeLeft,
-                            filled: false,
-                            icon: Icons.timer_outlined,
-                          ),
-                        ),
-                        Positioned(
-                          bottom: 14,
-                          left: 14,
-                          right: 14,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                deal.title,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 18,
-                                  letterSpacing: -0.3,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                '${deal.restaurant} • ${deal.distance}',
-                                style: TextStyle(
-                                  color: Colors.white.withAlpha(210),
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
-                          ),
+                    );
+                  },
+                  child: Container(
+                    height: 200,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withAlpha(35),
+                          blurRadius: 14,
+                          offset: const Offset(0, 6),
                         ),
                       ],
                     ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(20),
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          Image.network(deal.imageUrl, fit: BoxFit.cover),
+                          DecoratedBox(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.bottomCenter,
+                                end: Alignment.topCenter,
+                                colors: [
+                                  Colors.black.withAlpha(220),
+                                  Colors.black.withAlpha(100),
+                                  Colors.transparent,
+                                ],
+                                stops: const [0.0, 0.55, 1.0],
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            top: 14,
+                            left: 14,
+                            child: _Badge(text: deal.discount, filled: true),
+                          ),
+                          Positioned(
+                            top: 14,
+                            right: 14,
+                            child: _Badge(
+                              text: deal.timeLeft,
+                              filled: false,
+                              icon: Icons.timer_outlined,
+                            ),
+                          ),
+                          Positioned(
+                            bottom: 14,
+                            left: 14,
+                            right: 14,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  deal.title,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 18,
+                                    letterSpacing: -0.3,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '${deal.restaurant} • ${deal.distance}',
+                                  style: TextStyle(
+                                    color: Colors.white.withAlpha(210),
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// ---------------------------------------------------------------------
-/// Saved Tab Content (Index 3)
-/// ---------------------------------------------------------------------
-class _SavedView extends StatelessWidget {
-  final bool isDark;
-  const _SavedView({required this.isDark});
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 14),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Saved Restaurants ❤️',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -0.4,
-                    color: isDark ? Colors.white : const Color(0xFF1D1E20),
-                  ),
-                ),
-                Text(
-                  '${_restaurants.length} Items',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: isDark ? AppColorss.mutedTextDark : Colors.grey[600],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: ListView.separated(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
-              itemCount: _restaurants.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 14),
-              itemBuilder: (context, i) {
-                return _RestaurantCard(
-                  restaurant: _restaurants[i],
-                  isDark: isDark,
                 );
               },
             ),
@@ -930,86 +882,93 @@ class _DealCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 285,
-      height: 196,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha(35),
-            blurRadius: 14,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            Image.network(deal.imageUrl, fit: BoxFit.cover),
-            DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.bottomCenter,
-                  end: Alignment.topCenter,
-                  colors: [
-                    Colors.black.withAlpha(220),
-                    Colors.black.withAlpha(100),
-                    Colors.transparent,
-                  ],
-                  stops: const [0.0, 0.55, 1.0],
-                ),
-              ),
-            ),
-            Positioned(
-              top: 14,
-              left: 14,
-              child: _Badge(text: deal.discount, filled: true),
-            ),
-            Positioned(
-              top: 14,
-              right: 14,
-              child: _Badge(
-                text: deal.timeLeft,
-                filled: false,
-                icon: Icons.timer_outlined,
-              ),
-            ),
-            Positioned(
-              bottom: 14,
-              left: 14,
-              right: 14,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    deal.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 17,
-                      letterSpacing: -0.3,
-                      height: 1.2,
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    '${deal.restaurant} • ${deal.distance}',
-                    style: TextStyle(
-                      color: Colors.white.withAlpha(210),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
+    return GestureDetector(
+      onTap: () {
+        Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (_) => const FoodDetailsScreen()));
+      },
+      child: Container(
+        width: 285,
+        height: 196,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withAlpha(35),
+              blurRadius: 14,
+              offset: const Offset(0, 6),
             ),
           ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Image.network(deal.imageUrl, fit: BoxFit.cover),
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.bottomCenter,
+                    end: Alignment.topCenter,
+                    colors: [
+                      Colors.black.withAlpha(220),
+                      Colors.black.withAlpha(100),
+                      Colors.transparent,
+                    ],
+                    stops: const [0.0, 0.55, 1.0],
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 14,
+                left: 14,
+                child: _Badge(text: deal.discount, filled: true),
+              ),
+              Positioned(
+                top: 14,
+                right: 14,
+                child: _Badge(
+                  text: deal.timeLeft,
+                  filled: false,
+                  icon: Icons.timer_outlined,
+                ),
+              ),
+              Positioned(
+                bottom: 14,
+                left: 14,
+                right: 14,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      deal.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 17,
+                        letterSpacing: -0.3,
+                        height: 1.2,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      '${deal.restaurant} • ${deal.distance}',
+                      style: TextStyle(
+                        color: Colors.white.withAlpha(210),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -1087,179 +1046,188 @@ class _RestaurantCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: isDark ? AppColorss.cardDark : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isDark ? AppColorss.borderDark : const Color(0xFFF0F0F3),
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: isDark
-                ? Colors.black.withAlpha(80)
-                : Colors.black.withAlpha(12),
-            blurRadius: 14,
-            offset: const Offset(0, 4),
+    return GestureDetector(
+      onTap: () {
+        Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (_) => const RestaurantMenuScreen()));
+      },
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: isDark ? AppColorss.cardDark : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isDark ? AppColorss.borderDark : const Color(0xFFF0F0F3),
+            width: 1,
           ),
-        ],
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(14),
-            child: Image.network(
-              restaurant.imageUrl,
-              width: 92,
-              height: 92,
-              fit: BoxFit.cover,
+          boxShadow: [
+            BoxShadow(
+              color: isDark
+                  ? Colors.black.withAlpha(80)
+                  : Colors.black.withAlpha(12),
+              blurRadius: 14,
+              offset: const Offset(0, 4),
             ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: SizedBox(
-              height: 92,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          restaurant.name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: -0.3,
-                            color: isDark
-                                ? Colors.white
-                                : const Color(0xFF1D1E20),
+          ],
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(14),
+              child: Image.network(
+                restaurant.imageUrl,
+                width: 92,
+                height: 92,
+                fit: BoxFit.cover,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: SizedBox(
+                height: 92,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            restaurant.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: -0.3,
+                              color: isDark
+                                  ? Colors.white
+                                  : const Color(0xFF1D1E20),
+                            ),
                           ),
                         ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColorss.primary.withAlpha(isDark ? 45 : 20),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.star_rounded,
-                              color: AppColorss.primary,
-                              size: 14,
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColorss.primary.withAlpha(
+                              isDark ? 45 : 20,
                             ),
-                            const SizedBox(width: 3),
-                            Text(
-                              restaurant.rating.toStringAsFixed(1),
-                              style: const TextStyle(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.star_rounded,
                                 color: AppColorss.primary,
+                                size: 14,
+                              ),
+                              const SizedBox(width: 3),
+                              Text(
+                                restaurant.rating.toStringAsFixed(1),
+                                style: const TextStyle(
+                                  color: AppColorss.primary,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    Text(
+                      restaurant.cuisine,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: isDark
+                            ? AppColorss.mutedTextDark
+                            : Colors.grey[600],
+                      ),
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.near_me_outlined,
+                              size: 15,
+                              color: isDark
+                                  ? AppColorss.mutedTextDark
+                                  : Colors.grey[500],
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              restaurant.distanceKm,
+                              style: TextStyle(
                                 fontSize: 12,
-                                fontWeight: FontWeight.w700,
+                                fontWeight: FontWeight.w500,
+                                color: isDark
+                                    ? AppColorss.mutedTextDark
+                                    : Colors.grey[600],
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+                            Icon(
+                              Icons.access_time_rounded,
+                              size: 15,
+                              color: isDark
+                                  ? AppColorss.mutedTextDark
+                                  : Colors.grey[500],
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              restaurant.etaMinutes,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                color: isDark
+                                    ? AppColorss.mutedTextDark
+                                    : Colors.grey[600],
                               ),
                             ),
                           ],
                         ),
-                      ),
-                    ],
-                  ),
-                  Text(
-                    restaurant.cuisine,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: isDark
-                          ? AppColorss.mutedTextDark
-                          : Colors.grey[600],
-                    ),
-                  ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.near_me_outlined,
-                            size: 15,
-                            color: isDark
-                                ? AppColorss.mutedTextDark
-                                : Colors.grey[500],
+                        Container(
+                          width: 9,
+                          height: 9,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: restaurant.isOpen
+                                ? const Color(0xFF22C55E)
+                                : const Color(0xFFEF4444),
+                            boxShadow: [
+                              BoxShadow(
+                                color:
+                                    (restaurant.isOpen
+                                            ? const Color(0xFF22C55E)
+                                            : const Color(0xFFEF4444))
+                                        .withAlpha(140),
+                                blurRadius: 6,
+                                spreadRadius: 1,
+                              ),
+                            ],
                           ),
-                          const SizedBox(width: 4),
-                          Text(
-                            restaurant.distanceKm,
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                              color: isDark
-                                  ? AppColorss.mutedTextDark
-                                  : Colors.grey[600],
-                            ),
-                          ),
-                          const SizedBox(width: 14),
-                          Icon(
-                            Icons.access_time_rounded,
-                            size: 15,
-                            color: isDark
-                                ? AppColorss.mutedTextDark
-                                : Colors.grey[500],
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            restaurant.etaMinutes,
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                              color: isDark
-                                  ? AppColorss.mutedTextDark
-                                  : Colors.grey[600],
-                            ),
-                          ),
-                        ],
-                      ),
-                      Container(
-                        width: 9,
-                        height: 9,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: restaurant.isOpen
-                              ? const Color(0xFF22C55E)
-                              : const Color(0xFFEF4444),
-                          boxShadow: [
-                            BoxShadow(
-                              color:
-                                  (restaurant.isOpen
-                                          ? const Color(0xFF22C55E)
-                                          : const Color(0xFFEF4444))
-                                      .withAlpha(140),
-                              blurRadius: 6,
-                              spreadRadius: 1,
-                            ),
-                          ],
                         ),
-                      ),
-                    ],
-                  ),
-                ],
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

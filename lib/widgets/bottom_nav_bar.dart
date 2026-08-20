@@ -24,7 +24,7 @@ class AppBottomNavBar extends StatelessWidget {
       (Icons.home_rounded, 'Home'),
       (Icons.local_offer_rounded, 'Deals'),
       null, // reserved space for center FAB
-      (Icons.favorite_rounded, 'Saved'),
+      (Icons.shopping_cart_rounded, 'My Cart'),
       (Icons.person_rounded, 'Profile'),
     ];
 
