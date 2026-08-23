@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'RestuarantMenuScreen.dart';
 import 'CheckOutScreen.dart';
 
 class SelectionsColors {
@@ -128,7 +127,6 @@ class MySelectionsScreen extends StatefulWidget {
 
 class _MySelectionsScreenState extends State<MySelectionsScreen> {
   int _navIndex = 3; // "My Cart" active by default
-  String _selectedFilter = 'All Baskets (3)';
 
   @override
   Widget build(BuildContext context) {
@@ -335,83 +333,6 @@ class _RoundIconButton extends StatelessWidget {
   }
 }
 
-/// ---------------------------------------------------------------------
-/// Filter Pills Row
-/// ---------------------------------------------------------------------
-class _FilterPillsRow extends StatelessWidget {
-  final String selected;
-  final bool isDark;
-  final ValueChanged<String> onSelect;
-
-  static const _pills = ['All Baskets (3)', 'Active (1)', 'Saved (2)'];
-
-  const _FilterPillsRow({
-    required this.selected,
-    required this.isDark,
-    required this.onSelect,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: _pills.map((pill) {
-          final isSelected = pill == selected;
-          final pillBg = isSelected
-              ? SelectionsColors.primary
-              : (isDark ? SelectionsColors.cardDark : Colors.white);
-          final pillText = isSelected
-              ? Colors.white
-              : (isDark
-                    ? SelectionsColors.textMutedDark
-                    : const Color(0xFF4B5563));
-          final pillBorder = isSelected
-              ? SelectionsColors.primary
-              : (isDark
-                    ? SelectionsColors.borderDark
-                    : const Color(0xFFE5E7EB));
-
-          return GestureDetector(
-            onTap: () => onSelect(pill),
-            child: Container(
-              margin: const EdgeInsets.only(right: 10),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              decoration: BoxDecoration(
-                color: pillBg,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: pillBorder, width: 1),
-                boxShadow: isSelected
-                    ? [
-                        BoxShadow(
-                          color: SelectionsColors.primary.withValues(
-                            alpha: 0.3,
-                          ),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ]
-                    : null,
-              ),
-              child: Text(
-                pill,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
-                  color: pillText,
-                ),
-              ),
-            ),
-          );
-        }).toList(),
-      ),
-    );
-  }
-}
-
-/// ---------------------------------------------------------------------
-/// Section Header with Badge
-/// ---------------------------------------------------------------------
 class _SectionHeader extends StatelessWidget {
   final String title;
   final int count;

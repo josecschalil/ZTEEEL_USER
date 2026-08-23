@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:zteel_user/screens/dashboard.dart';
-import 'PhoneAuthScreen.dart';
 import '../app_colors.dart';
 
 // ─────────────────────────────────────────────

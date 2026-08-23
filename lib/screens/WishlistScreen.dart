@@ -211,10 +211,6 @@ class _WishlistScreenState extends State<WishlistScreen> {
     return list;
   }
 
-  double get _totalSavings => _items
-      .where((i) => i.onSale)
-      .fold(0.0, (sum, i) => sum + (i.originalPrice! - i.price));
-
   void _removeItem(WishlistItem item, bool isDark) {
     setState(() => _items.removeWhere((i) => i.id == item.id));
     ScaffoldMessenger.of(context).hideCurrentSnackBar();

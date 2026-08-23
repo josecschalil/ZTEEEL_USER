@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'OfferExplanationScreen.dart';
+import 'FoodItemPage.dart';
 
 class MenuColors {
   static const primary = Color(0xFFEE5B2B);
@@ -161,6 +163,19 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
   final Map<String, int> _cart = {}; // itemId -> quantity
   int _tabIndex = 0; // Menu / Offers / Reviews / Info
   String _selectedPill = 'All Items';
+  late final PageController _pageController;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController(initialPage: _tabIndex);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
 
   double get _cartTotal {
     double total = 0;
@@ -199,42 +214,47 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
       backgroundColor: bgColor,
       body: Stack(
         children: [
-          CustomScrollView(
-            slivers: [
-              SliverToBoxAdapter(child: _HeroSection(isDark: isDark)),
-              SliverPersistentHeader(
-                pinned: true,
-                delegate: _TabsHeaderDelegate(
-                  selectedIndex: _tabIndex,
+          NestedScrollView(
+            headerSliverBuilder: (context, innerBoxIsScrolled) {
+              return [
+                SliverToBoxAdapter(child: _HeroSection(isDark: isDark)),
+                SliverPersistentHeader(
+                  pinned: true,
+                  delegate: _TabsHeaderDelegate(
+                    selectedIndex: _tabIndex,
+                    isDark: isDark,
+                    onSelect: (i) {
+                      setState(() => _tabIndex = i);
+                      _pageController.animateToPage(
+                        i,
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut,
+                      );
+                    },
+                  ),
+                ),
+              ];
+            },
+            body: PageView(
+              controller: _pageController,
+              onPageChanged: (i) {
+                setState(() => _tabIndex = i);
+              },
+              children: [
+                _MenuView(
+                  selectedPill: _selectedPill,
+                  onSelectPill: (p) => setState(() => _selectedPill = p),
+                  categories: _categories,
+                  cart: _cart,
                   isDark: isDark,
-                  onSelect: (i) => setState(() => _tabIndex = i),
+                  onAdd: _addItem,
+                  onRemove: _removeItem,
                 ),
-              ),
-              SliverToBoxAdapter(
-                child: _CategoryPills(
-                  selected: _selectedPill,
-                  isDark: isDark,
-                  onSelect: (p) => setState(() => _selectedPill = p),
-                ),
-              ),
-              SliverToBoxAdapter(child: _TodaysOffers(isDark: isDark)),
-              SliverPadding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                sliver: SliverList(
-                  delegate: SliverChildListDelegate([
-                    for (final category in _categories)
-                      _CategorySection(
-                        category: category,
-                        cart: _cart,
-                        isDark: isDark,
-                        onAdd: _addItem,
-                        onRemove: _removeItem,
-                      ),
-                    const SizedBox(height: 120),
-                  ]),
-                ),
-              ),
-            ],
+                _OffersView(isDark: isDark),
+                _ReviewsView(isDark: isDark),
+                _InfoView(isDark: isDark),
+              ],
+            ),
           ),
           // Fixed top action buttons over the hero image
           Positioned(
@@ -758,121 +778,138 @@ class _OfferCardWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        width: 280,
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.centerLeft,
-            end: Alignment.centerRight,
-            colors: offer.gradient,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: offer.gradient.first.withValues(alpha: 0.3),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => OfferExplanationScreen(
+              title: offer.headline,
+              subtitle: offer.subline,
+              code: offer.badgeLabel == 'PROMO' ? 'ZTEEEL50' : 'BOGOCOMBO',
+              badge: offer.badgeLabel,
+              expiry: offer.timer,
+              gradientColors: offer.gradient,
             ),
-          ],
-        ),
-        child: Stack(
-          children: [
-            Positioned(
-              right: -24,
-              bottom: -24,
-              child: Container(
-                width: 110,
-                height: 110,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white.withValues(alpha: 0.1),
+          ),
+        );
+      },
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          width: 280,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+              colors: offer.gradient,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: offer.gradient.first.withValues(alpha: 0.3),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Stack(
+            children: [
+              Positioned(
+                right: -24,
+                bottom: -24,
+                child: Container(
+                  width: 110,
+                  height: 110,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withValues(alpha: 0.1),
+                  ),
                 ),
               ),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        offer.badgeLabel,
-                        style: const TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.white,
-                          letterSpacing: 0.5,
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          offer.badgeLabel,
+                          style: const TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                            letterSpacing: 0.5,
+                          ),
                         ),
                       ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.25),
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.timer_outlined,
-                            color: Colors.white,
-                            size: 13,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            offer.timer,
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.25),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.timer_outlined,
                               color: Colors.white,
+                              size: 13,
                             ),
-                          ),
-                        ],
+                            const SizedBox(width: 4),
+                            Text(
+                              offer.timer,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      offer.headline,
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w900,
-                        color: Colors.white,
-                        letterSpacing: -0.3,
+                    ],
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        offer.headline,
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                          letterSpacing: -0.3,
+                        ),
                       ),
-                    ),
-                    Text(
-                      offer.subline,
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.9),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
+                      Text(
+                        offer.subline,
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.9),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ],
+                    ],
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -976,22 +1013,53 @@ class _MenuItemCard extends StatelessWidget {
     final cardBg = isDark ? MenuColors.cardDark : Colors.white;
     final cardBorder = isDark ? MenuColors.borderDark : const Color(0xFFF0F0F3);
 
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: cardBg,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: cardBorder, width: 1),
-        boxShadow: [
-          BoxShadow(
-            color: isDark
-                ? Colors.black.withValues(alpha: 0.2)
-                : Colors.black.withValues(alpha: 0.05),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => FoodItemPage(
+              id: item.id,
+              name: item.name,
+              category: item.tag == 'VEG' ? 'Vegetarian' : 'Non-Veg',
+              price: item.price,
+              description: item.description,
+              isVeg: item.tag == 'VEG',
+              isBestseller: item.badge == 'BESTSELLER',
+              rating: '4.8',
+              photos: [
+                item.imageUrl,
+                'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=600',
+                'https://images.unsplash.com/photo-1565958011703-44f9829ba187?w=600',
+              ],
+              initialQuantity: quantity,
+              onQuantityChanged: (q) {
+                if (q > quantity) {
+                  onAdd();
+                } else if (q < quantity) {
+                  onRemove();
+                }
+              },
+            ),
           ),
-        ],
-      ),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: cardBg,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: cardBorder, width: 1),
+          boxShadow: [
+            BoxShadow(
+              color: isDark
+                  ? Colors.black.withValues(alpha: 0.2)
+                  : Colors.black.withValues(alpha: 0.05),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1033,7 +1101,9 @@ class _MenuItemCard extends StatelessWidget {
                       const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 7, vertical: 2),
+                          horizontal: 7,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           color: MenuColors.primary.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(4),
@@ -1131,6 +1201,7 @@ class _MenuItemCard extends StatelessWidget {
           const SizedBox(height: 14),
         ],
       ),
+    ),
     );
   }
 }
@@ -1313,6 +1384,801 @@ class _ViewCartButton extends StatelessWidget {
               SizedBox(width: 4),
               Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 18),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// ---------------------------------------------------------------------
+/// Swappable Tab Views (Menu, Offers, Reviews, Info)
+/// ---------------------------------------------------------------------
+class _MenuView extends StatelessWidget {
+  final String selectedPill;
+  final ValueChanged<String> onSelectPill;
+  final List<MenuCategory> categories;
+  final Map<String, int> cart;
+  final bool isDark;
+  final ValueChanged<String> onAdd;
+  final ValueChanged<String> onRemove;
+
+  const _MenuView({
+    required this.selectedPill,
+    required this.onSelectPill,
+    required this.categories,
+    required this.cart,
+    required this.isDark,
+    required this.onAdd,
+    required this.onRemove,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final filteredCategories = selectedPill == 'All Items'
+        ? categories
+        : categories.where((c) => c.title == selectedPill).toList();
+
+    return ListView(
+      padding: EdgeInsets.zero,
+      children: [
+        _CategoryPills(
+          selected: selectedPill,
+          isDark: isDark,
+          onSelect: onSelectPill,
+        ),
+        _TodaysOffers(isDark: isDark),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Column(
+            children: [
+              for (final category in filteredCategories)
+                _CategorySection(
+                  category: category,
+                  cart: cart,
+                  isDark: isDark,
+                  onAdd: onAdd,
+                  onRemove: onRemove,
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 120),
+      ],
+    );
+  }
+}
+
+class _OffersView extends StatelessWidget {
+  final bool isDark;
+  const _OffersView({required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    final cardBg = isDark ? MenuColors.cardDark : Colors.white;
+    final cardBorder = isDark ? MenuColors.borderDark : const Color(0xFFF0F0F3);
+    final textColor = isDark ? Colors.white : const Color(0xFF1D1E20);
+    final subColor = isDark ? MenuColors.textMutedDark : Colors.grey[600]!;
+
+    final offers = [
+      {
+        'title': 'FLAT 50% OFF',
+        'subtitle': 'Use code ZTEEEL50 on orders above \$25',
+        'code': 'ZTEEEL50',
+        'badge': 'BESTSELLER',
+        'expiry': 'Valid till 31st Dec',
+        'color': MenuColors.primary,
+      },
+      {
+        'title': 'FREE DELIVERY',
+        'subtitle': 'Enjoy zero delivery fees on orders above \$15',
+        'code': 'FREEDEL',
+        'badge': 'POPULAR',
+        'expiry': 'Valid on all items',
+        'color': const Color(0xFF22C55E),
+      },
+      {
+        'title': '15% STEELPAY CASHBACK',
+        'subtitle': 'Get up to \$10 cashback when paying with SteelPay',
+        'code': 'STEELPAY15',
+        'badge': 'PAYMENT OFFER',
+        'expiry': 'Valid once per user',
+        'color': const Color(0xFF3B82F6),
+      },
+      {
+        'title': 'BUY 1 GET 1 FREE',
+        'subtitle': 'Buy any Artisan Pizza and get a Classic Pizza free',
+        'code': 'BOGOPIZZA',
+        'badge': 'WEEKDAY SPECIAL',
+        'expiry': 'Valid Tue & Thu',
+        'color': const Color(0xFFA855F7),
+      },
+    ];
+
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 120),
+      itemCount: offers.length,
+      itemBuilder: (context, index) {
+        final offer = offers[index];
+        final accentColor = offer['color'] as Color;
+
+        return GestureDetector(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => OfferExplanationScreen(
+                  title: offer['title'] as String,
+                  subtitle: offer['subtitle'] as String,
+                  code: offer['code'] as String,
+                  badge: offer['badge'] as String,
+                  expiry: offer['expiry'] as String,
+                  gradientColors: [
+                    accentColor,
+                    accentColor.withValues(alpha: 0.8),
+                  ],
+                ),
+              ),
+            );
+          },
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 16),
+            decoration: BoxDecoration(
+              color: cardBg,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: cardBorder, width: 1),
+              boxShadow: [
+                BoxShadow(
+                  color: isDark
+                      ? Colors.black.withValues(alpha: 0.25)
+                      : Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: accentColor.withValues(
+                            alpha: isDark ? 0.2 : 0.1,
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(
+                          Icons.local_offer_rounded,
+                          color: accentColor,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 3,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: accentColor.withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    offer['badge'] as String,
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      color: accentColor,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              offer['title'] as String,
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: textColor,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              offer['subtitle'] as String,
+                              style: TextStyle(fontSize: 12, color: subColor),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? Colors.black.withValues(alpha: 0.2)
+                        : const Color(0xFFF9FAFB),
+                    borderRadius: const BorderRadius.vertical(
+                      bottom: Radius.circular(16),
+                    ),
+                    border: Border(
+                      top: BorderSide(color: cardBorder, width: 1),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.schedule_rounded,
+                            size: 14,
+                            color: subColor,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            offer['expiry'] as String,
+                            style: TextStyle(fontSize: 11, color: subColor),
+                          ),
+                        ],
+                      ),
+                      InkWell(
+                        onTap: () {
+                          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'Coupon "${offer['code']}" copied to clipboard!',
+                              ),
+                              behavior: SnackBarBehavior.floating,
+                              duration: const Duration(seconds: 2),
+                            ),
+                          );
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: MenuColors.primary,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            'COPY ${offer['code']}',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _ReviewsView extends StatelessWidget {
+  final bool isDark;
+  const _ReviewsView({required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    final cardBg = isDark ? MenuColors.cardDark : Colors.white;
+    final cardBorder = isDark ? MenuColors.borderDark : const Color(0xFFF0F0F3);
+    final textColor = isDark ? Colors.white : const Color(0xFF1D1E20);
+    final subColor = isDark ? MenuColors.textMutedDark : Colors.grey[600]!;
+
+    final reviews = [
+      {
+        'name': 'Sarah Jenkins',
+        'rating': 5.0,
+        'date': '2 days ago',
+        'comment':
+            'The Truffle Mushroom Pizza is absolutely out of this world! Super fresh ingredients, hot delivery, and crispy crust.',
+        'likes': 18,
+        'avatar':
+            'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100',
+      },
+      {
+        'name': 'Michael Chen',
+        'rating': 4.5,
+        'date': '1 week ago',
+        'comment':
+            'Great food quality and fast delivery. The Artisan Pepperoni was delicious. Will definitely order again.',
+        'likes': 12,
+        'avatar':
+            'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100',
+      },
+      {
+        'name': 'Emily Rodriguez',
+        'rating': 5.0,
+        'date': '2 weeks ago',
+        'comment':
+            'Love the packaging and hygiene standards! Food arrived piping hot within 25 minutes.',
+        'likes': 24,
+        'avatar':
+            'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100',
+      },
+    ];
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 120),
+      children: [
+        Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: cardBg,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: cardBorder),
+          ),
+          child: Row(
+            children: [
+              Column(
+                children: [
+                  Text(
+                    '4.8',
+                    style: TextStyle(
+                      fontSize: 36,
+                      fontWeight: FontWeight.bold,
+                      color: textColor,
+                    ),
+                  ),
+                  const Row(
+                    children: [
+                      Icon(Icons.star_rounded, color: Colors.amber, size: 18),
+                      Icon(Icons.star_rounded, color: Colors.amber, size: 18),
+                      Icon(Icons.star_rounded, color: Colors.amber, size: 18),
+                      Icon(Icons.star_rounded, color: Colors.amber, size: 18),
+                      Icon(
+                        Icons.star_half_rounded,
+                        color: Colors.amber,
+                        size: 18,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '2,450 ratings',
+                    style: TextStyle(fontSize: 12, color: subColor),
+                  ),
+                ],
+              ),
+              const SizedBox(width: 24),
+              Expanded(
+                child: Column(
+                  children: [
+                    _RatingBar(stars: '5 ★', percent: 0.85, isDark: isDark),
+                    _RatingBar(stars: '4 ★', percent: 0.10, isDark: isDark),
+                    _RatingBar(stars: '3 ★', percent: 0.03, isDark: isDark),
+                    _RatingBar(stars: '2 ★', percent: 0.01, isDark: isDark),
+                    _RatingBar(stars: '1 ★', percent: 0.01, isDark: isDark),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Customer Reviews',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: textColor,
+              ),
+            ),
+            Text(
+              'Verified Orders Only',
+              style: TextStyle(fontSize: 12, color: subColor),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        for (final r in reviews) ...[
+          Container(
+            padding: const EdgeInsets.all(16),
+            margin: const EdgeInsets.only(bottom: 14),
+            decoration: BoxDecoration(
+              color: cardBg,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: cardBorder),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 18,
+                      backgroundImage: NetworkImage(r['avatar'] as String),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            r['name'] as String,
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: textColor,
+                            ),
+                          ),
+                          Text(
+                            r['date'] as String,
+                            style: TextStyle(fontSize: 11, color: subColor),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.star_rounded,
+                            color: Colors.amber,
+                            size: 14,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${r['rating']}',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.amber,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  r['comment'] as String,
+                  style: TextStyle(fontSize: 13, color: textColor, height: 1.4),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.thumb_up_alt_outlined,
+                      size: 14,
+                      color: subColor,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Helpful (${r['likes']})',
+                      style: TextStyle(fontSize: 12, color: subColor),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _RatingBar extends StatelessWidget {
+  final String stars;
+  final double percent;
+  final bool isDark;
+  const _RatingBar({
+    required this.stars,
+    required this.percent,
+    required this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 24,
+            child: Text(
+              stars,
+              style: TextStyle(
+                fontSize: 10,
+                color: isDark ? MenuColors.textMutedDark : Colors.grey[600],
+              ),
+            ),
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: percent,
+                minHeight: 6,
+                backgroundColor: isDark ? Colors.white10 : Colors.grey[200],
+                valueColor: const AlwaysStoppedAnimation<Color>(Colors.amber),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InfoView extends StatelessWidget {
+  final bool isDark;
+  const _InfoView({required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    final cardBg = isDark ? MenuColors.cardDark : Colors.white;
+    final cardBorder = isDark ? MenuColors.borderDark : const Color(0xFFF0F0F3);
+    final textColor = isDark ? Colors.white : const Color(0xFF1D1E20);
+    final subColor = isDark ? MenuColors.textMutedDark : Colors.grey[600]!;
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 120),
+      children: [
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: cardBg,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: cardBorder),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: MenuColors.primary.withValues(alpha: 0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.location_on_rounded,
+                      color: MenuColors.primary,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Location & Address',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            color: textColor,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '221B Baker Street, Gourmet Quarter, City Center (1.2 km away)',
+                          style: TextStyle(fontSize: 12, color: subColor),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: cardBg,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: cardBorder),
+          ),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  const Icon(
+                    Icons.access_time_filled_rounded,
+                    color: Color(0xFF22C55E),
+                    size: 20,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Opening Hours',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: textColor,
+                          ),
+                        ),
+                        Text(
+                          'Open Now • 10:00 AM – 11:30 PM (Mon - Sun)',
+                          style: TextStyle(fontSize: 12, color: subColor),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const Divider(height: 24),
+              Row(
+                children: [
+                  const Icon(
+                    Icons.phone_in_talk_rounded,
+                    color: Color(0xFF3B82F6),
+                    size: 20,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Phone & Contact',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: textColor,
+                          ),
+                        ),
+                        Text(
+                          '+1 (555) 382-9102',
+                          style: TextStyle(fontSize: 12, color: subColor),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: cardBg,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: cardBorder),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(
+                    Icons.verified_user_rounded,
+                    color: MenuColors.primary,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Hygiene & Safety Certified',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: textColor,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Text(
+                '100% sanitized kitchen, daily staff temperature checks, and contactless delivery packaging.',
+                style: TextStyle(fontSize: 12, color: subColor, height: 1.4),
+              ),
+              const SizedBox(height: 14),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _FeatureChip(
+                    label: 'AC Dining',
+                    icon: Icons.ac_unit,
+                    isDark: isDark,
+                  ),
+                  _FeatureChip(
+                    label: 'Takeaway Available',
+                    icon: Icons.takeout_dining,
+                    isDark: isDark,
+                  ),
+                  _FeatureChip(
+                    label: 'Outdoor Seating',
+                    icon: Icons.deck,
+                    isDark: isDark,
+                  ),
+                  _FeatureChip(
+                    label: 'Pure Veg Options',
+                    icon: Icons.eco,
+                    isDark: isDark,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _FeatureChip extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final bool isDark;
+  const _FeatureChip({
+    required this.label,
+    required this.icon,
+    required this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.white10 : const Color(0xFFF0F0F3),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: MenuColors.primary),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: isDark ? Colors.white : const Color(0xFF1D1E20),
+            ),
           ),
         ],
       ),

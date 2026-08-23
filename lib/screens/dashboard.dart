@@ -4,6 +4,8 @@ import 'ProfileScreen.dart';
 import 'FoodDetailScreen.dart';
 import 'RestuarantMenuScreen.dart';
 import 'MainCartScreen.dart';
+import 'SearchScreen.dart';
+import 'LocationPageScreen.dart';
 import '../widgets/bottom_nav_bar.dart';
 
 class AppColorss {
@@ -544,73 +546,105 @@ class _DealsView extends StatelessWidget {
 /// ---------------------------------------------------------------------
 /// Header: location + notification bell
 /// ---------------------------------------------------------------------
-class _Header extends StatelessWidget {
+class _Header extends StatefulWidget {
   final bool isDark;
   const _Header({required this.isDark});
 
   @override
+  State<_Header> createState() => _HeaderState();
+}
+
+class _HeaderState extends State<_Header> {
+  String _locationLabel = 'CURRENT LOCATION';
+  String _locationAddress = 'New York, USA';
+
+  Future<void> _openLocationPicker() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const LocationPickerScreen()),
+    );
+
+    if (result != null && result is PickedLocation) {
+      setState(() {
+        if (result.label.isNotEmpty) {
+          _locationLabel = result.label.toUpperCase();
+        }
+        if (result.address.isNotEmpty) {
+          _locationAddress = result.address;
+        }
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final isDark = widget.isDark;
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 14),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppColorss.primary.withAlpha(isDark ? 35 : 20),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.location_on_rounded,
-                  color: AppColorss.primary,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'CURRENT LOCATION',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.5,
-                      color: isDark
-                          ? AppColorss.mutedTextDark
-                          : const Color(0xFF8E8E93),
-                    ),
+          GestureDetector(
+            onTap: _openLocationPicker,
+            behavior: HitTestBehavior.opaque,
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColorss.primary.withAlpha(isDark ? 35 : 20),
+                    shape: BoxShape.circle,
                   ),
-                  const SizedBox(height: 2),
-                  Row(
-                    children: [
-                      Text(
-                        'New York, USA',
-                        style: TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: -0.3,
-                          color: isDark
-                              ? Colors.white
-                              : const Color(0xFF1D1E20),
-                        ),
-                      ),
-                      const SizedBox(width: 2),
-                      Icon(
-                        Icons.keyboard_arrow_down_rounded,
-                        size: 20,
+                  child: const Icon(
+                    Icons.location_on_rounded,
+                    color: AppColorss.primary,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _locationLabel,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.5,
                         color: isDark
                             ? AppColorss.mutedTextDark
-                            : Colors.grey[600],
+                            : const Color(0xFF8E8E93),
                       ),
-                    ],
-                  ),
-                ],
-              ),
-            ],
+                    ),
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        Text(
+                          _locationAddress,
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -0.3,
+                            color: isDark
+                                ? Colors.white
+                                : const Color(0xFF1D1E20),
+                          ),
+                        ),
+                        const SizedBox(width: 2),
+                        Icon(
+                          Icons.keyboard_arrow_down_rounded,
+                          size: 20,
+                          color: isDark
+                              ? AppColorss.mutedTextDark
+                              : Colors.grey[600],
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
           Stack(
             children: [
@@ -706,41 +740,52 @@ class _SearchBar extends StatelessWidget {
             ),
           ],
         ),
-        child: TextField(
-          style: TextStyle(
-            color: isDark ? Colors.white : Colors.black,
-            fontSize: 14,
-            fontWeight: FontWeight.w400,
-          ),
-          decoration: InputDecoration(
-            hintText: 'Search food or restaurants...',
-            hintStyle: TextStyle(
-              color: Colors.grey[400],
-              fontSize: 14,
-              fontWeight: FontWeight.w400,
-            ),
-            prefixIcon: Icon(
-              Icons.search_rounded,
-              color: Colors.grey[400],
-              size: 22,
-            ),
-            suffixIcon: Container(
-              margin: const EdgeInsets.all(6),
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: AppColorss.primary.withAlpha(isDark ? 35 : 20),
-                borderRadius: BorderRadius.circular(10),
+        child: GestureDetector(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const SearchScreen()),
+            );
+          },
+          child: AbsorbPointer(
+            child: TextField(
+              readOnly: true,
+              style: TextStyle(
+                color: isDark ? Colors.white : Colors.black,
+                fontSize: 14,
+                fontWeight: FontWeight.w400,
               ),
-              child: const Icon(
-                Icons.tune_rounded,
-                color: AppColorss.primary,
-                size: 18,
+              decoration: InputDecoration(
+                hintText: 'Search food or restaurants...',
+                hintStyle: TextStyle(
+                  color: Colors.grey[400],
+                  fontSize: 14,
+                  fontWeight: FontWeight.w400,
+                ),
+                prefixIcon: Icon(
+                  Icons.search_rounded,
+                  color: Colors.grey[400],
+                  size: 22,
+                ),
+                suffixIcon: Container(
+                  margin: const EdgeInsets.all(6),
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColorss.primary.withAlpha(isDark ? 35 : 20),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(
+                    Icons.tune_rounded,
+                    color: AppColorss.primary,
+                    size: 18,
+                  ),
+                ),
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(
+                  vertical: 14,
+                  horizontal: 16,
+                ),
               ),
-            ),
-            border: InputBorder.none,
-            contentPadding: const EdgeInsets.symmetric(
-              vertical: 14,
-              horizontal: 16,
             ),
           ),
         ),

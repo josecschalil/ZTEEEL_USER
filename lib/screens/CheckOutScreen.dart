@@ -79,7 +79,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
   static const double _discountRate = 0.25;
   static const double _freeItemTarget = 40.00;
-  int _navIndex = 2;
 
   double get _subtotal =>
       _items.fold(0, (sum, item) => sum + item.unitPrice * item.quantity);
