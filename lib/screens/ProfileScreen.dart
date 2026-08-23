@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'WishlistScreen.dart';
 import 'SavedShopScreen.dart';
 import 'PhoneAuthScreen.dart';
-import 'QrScreen.dart';
+import 'RecentOrderScreen.dart';
+import 'HelpSupportScreen.dart';
 
 class ProfileColors {
   static const primary = Color(0xFFEE5B2B);
@@ -431,10 +432,13 @@ class _MenuRow extends StatelessWidget {
           targetPage = const SavedRestaurantsScreen();
           break;
         case 'OrderScreen':
-          targetPage = const RedeemQrScreen();
+          targetPage = const OrdersScreen();
           break;
         case 'LoginScreen':
           targetPage = const LoginScreen();
+          break;
+        case 'HelpScreen':
+          targetPage = const HelpSupportScreen();
           break;
         default:
           ScaffoldMessenger.of(context).showSnackBar(

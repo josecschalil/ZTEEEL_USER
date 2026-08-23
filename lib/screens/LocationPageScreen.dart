@@ -174,7 +174,9 @@ class _LocationPickerScreenState extends State<LocationPickerScreen>
         '?format=json&lat=${point.latitude}&lon=${point.longitude}&zoom=18&addressdetails=1',
       );
       final response = await http.get(uri, headers: {'User-Agent': _userAgent});
-      debugPrint('Nominatim status: ${response.statusCode}, body: ${response.body}');
+      debugPrint(
+        'Nominatim status: ${response.statusCode}, body: ${response.body}',
+      );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -184,7 +186,9 @@ class _LocationPickerScreenState extends State<LocationPickerScreen>
         }
       } else {
         if (mounted) {
-          setState(() => _address = 'Address lookup failed (${response.statusCode})');
+          setState(
+            () => _address = 'Address lookup failed (${response.statusCode})',
+          );
         }
       }
     } catch (e) {
@@ -321,14 +325,6 @@ class _LocationPickerScreenState extends State<LocationPickerScreen>
     Navigator.of(
       context,
     ).pop(PickedLocation(label: label, address: address, position: position));
-  }
-
-  void _selectSaved(SavedAddress saved) {
-    _mapController.move(saved.position, 16);
-    setState(() {
-      _center = saved.position;
-      _address = saved.address;
-    });
   }
 
   @override
