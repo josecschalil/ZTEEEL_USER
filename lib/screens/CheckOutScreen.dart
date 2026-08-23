@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'QrScreen.dart';
 
 class CheckoutColors {
   static const primary = Color(0xFFEE5B2B);
@@ -750,7 +751,12 @@ class _GenerateQrButton extends StatelessWidget {
           width: double.infinity,
           height: 56,
           child: ElevatedButton(
-            onPressed: () {},
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const QrScreen()),
+              );
+            },
             style: ElevatedButton.styleFrom(
               backgroundColor: CheckoutColors.primary,
               foregroundColor: Colors.white,

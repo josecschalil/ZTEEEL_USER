@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:zteel_user/screens/NotificationScreen.dart';
 import 'ProfileScreen.dart';
 import 'FoodDetailScreen.dart';
 import 'RestuarantMenuScreen.dart';
@@ -613,32 +614,43 @@ class _Header extends StatelessWidget {
           ),
           Stack(
             children: [
-              Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: isDark ? AppColorss.cardDark : Colors.white,
-                  border: Border.all(
-                    color: isDark
-                        ? AppColorss.borderDark
-                        : const Color(0xFFEEEEEE),
-                    width: 1,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: isDark
-                          ? Colors.black.withAlpha(80)
-                          : Colors.black.withAlpha(15),
-                      blurRadius: 10,
-                      offset: const Offset(0, 3),
+              GestureDetector(
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const NotificationsScreen(),
                     ),
-                  ],
-                ),
-                child: Icon(
-                  Icons.notifications_none_rounded,
-                  color: isDark ? Colors.grey[200] : Colors.grey[800],
-                  size: 22,
+                  );
+                },
+                child: Container(
+                  width: 42,
+                  height: 42,
+
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: isDark ? AppColorss.cardDark : Colors.white,
+                    border: Border.all(
+                      color: isDark
+                          ? AppColorss.borderDark
+                          : const Color(0xFFEEEEEE),
+                      width: 1,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: isDark
+                            ? Colors.black.withAlpha(80)
+                            : Colors.black.withAlpha(15),
+                        blurRadius: 10,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: Icon(
+                    Icons.notifications_none_rounded,
+
+                    color: isDark ? Colors.grey[200] : Colors.grey[800],
+                    size: 22,
+                  ),
                 ),
               ),
               Positioned(

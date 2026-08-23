@@ -1,27 +1,9 @@
 import 'package:flutter/material.dart';
+import 'WishlistScreen.dart';
+import 'SavedShopScreen.dart';
+import 'PhoneAuthScreen.dart';
+import 'QrScreen.dart';
 
-/// ZTEEEL User Profile — Flutter port supporting both Light and Dark themes.
-void main() => runApp(const ZteeelProfileApp());
-
-class ZteeelProfileApp extends StatelessWidget {
-  const ZteeelProfileApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'ZTEEEL Profile',
-      debugShowCheckedModeBanner: false,
-      theme: ProfileColors.lightTheme,
-      darkTheme: ProfileColors.darkTheme,
-      themeMode: ThemeMode.light,
-      home: const ProfileScreen(),
-    );
-  }
-}
-
-/// ---------------------------------------------------------------------
-/// Design tokens (mirrors theme palette)
-/// ---------------------------------------------------------------------
 class ProfileColors {
   static const primary = Color(0xFFEE5B2B);
   static const bgLight = Color(0xFFFAFAFC);
@@ -53,12 +35,10 @@ class ProfileColors {
   );
 }
 
-/// ---------------------------------------------------------------------
-/// Data model for the tappable menu rows
-/// ---------------------------------------------------------------------
 class _MenuItem {
   final IconData icon;
   final Color iconColor;
+  final String menupage;
   final String title;
   final String subtitle;
   final bool destructive;
@@ -67,6 +47,7 @@ class _MenuItem {
     required this.iconColor,
     required this.title,
     required this.subtitle,
+    required this.menupage,
     this.destructive = false,
   });
 }
@@ -77,18 +58,21 @@ const _accountItems = [
     iconColor: Color(0xFFEC4899), // pink-500
     title: 'Wishlist',
     subtitle: 'Your favorite upcoming deals',
+    menupage: 'WishlistScreen()',
   ),
   _MenuItem(
     icon: Icons.restaurant_rounded,
     iconColor: Color(0xFF22C55E), // green-500
     title: 'Saved Restaurants',
     subtitle: 'Places you love to visit',
+    menupage: 'SavedShopScreen()',
   ),
   _MenuItem(
     icon: Icons.qr_code_2_rounded,
     iconColor: Color(0xFF3B82F6), // blue-500
     title: 'My Redemptions',
     subtitle: 'Active and past QR code offers',
+    menupage: 'OrderScreen',
   ),
 ];
 
@@ -98,12 +82,14 @@ const _supportItems = [
     iconColor: Color(0xFFA855F7), // purple-500
     title: 'Help & Support',
     subtitle: 'FAQs and contact us',
+    menupage: 'HelpScreen',
   ),
   _MenuItem(
     icon: Icons.logout_rounded,
     iconColor: Color(0xFFEF4444), // red-500
     title: 'Logout',
     subtitle: 'Sign out of your account',
+    menupage: 'LoginScreen',
     destructive: true,
   ),
 ];
@@ -118,11 +104,7 @@ class ProfileScreen extends StatefulWidget {
   final bool showBottomNav;
   final VoidCallback? onBack;
 
-  const ProfileScreen({
-    super.key,
-    this.showBottomNav = true,
-    this.onBack,
-  });
+  const ProfileScreen({super.key, this.showBottomNav = true, this.onBack});
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -169,10 +151,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
 
     if (!widget.showBottomNav) {
-      return Container(
-        color: bgColor,
-        child: bodyContent,
-      );
+      return Container(color: bgColor, child: bodyContent);
     }
 
     return Scaffold(
@@ -199,7 +178,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ],
         ),
-        child: const Icon(Icons.qr_code_scanner_rounded, color: Colors.white, size: 26),
+        child: const Icon(
+          Icons.qr_code_scanner_rounded,
+          color: Colors.white,
+          size: 26,
+        ),
       ),
     );
   }
@@ -272,12 +255,16 @@ class _ProfileHeader extends StatelessWidget {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: ProfileColors.primary.withValues(alpha: isDark ? 0.3 : 0.2),
+                  color: ProfileColors.primary.withValues(
+                    alpha: isDark ? 0.3 : 0.2,
+                  ),
                   width: 4,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: isDark ? Colors.black.withValues(alpha: 0.4) : Colors.black.withValues(alpha: 0.08),
+                    color: isDark
+                        ? Colors.black.withValues(alpha: 0.4)
+                        : Colors.black.withValues(alpha: 0.08),
                     blurRadius: 14,
                     offset: const Offset(0, 4),
                   ),
@@ -297,11 +284,17 @@ class _ProfileHeader extends StatelessWidget {
                   shape: BoxShape.circle,
                   color: isDark ? ProfileColors.cardFill : Colors.white,
                   border: Border.all(
-                    color: isDark ? ProfileColors.bgDeep : ProfileColors.bgLight,
+                    color: isDark
+                        ? ProfileColors.bgDeep
+                        : ProfileColors.bgLight,
                     width: 2,
                   ),
                   boxShadow: const [
-                    BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0, 2)),
+                    BoxShadow(
+                      color: Colors.black12,
+                      blurRadius: 6,
+                      offset: Offset(0, 2),
+                    ),
                   ],
                 ),
                 child: const Icon(
@@ -395,7 +388,9 @@ class _MenuSection extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
-                    color: isDark ? ProfileColors.textDescription : Colors.grey[600],
+                    color: isDark
+                        ? ProfileColors.textDescription
+                        : Colors.grey[600],
                     letterSpacing: 1.4,
                   ),
                 ),
@@ -422,7 +417,38 @@ class _MenuRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cardBg = isDark ? ProfileColors.cardFill : Colors.white;
-    final cardBorderColor = isDark ? ProfileColors.cardBorder : ProfileColors.borderLight;
+    final cardBorderColor = isDark
+        ? ProfileColors.cardBorder
+        : ProfileColors.borderLight;
+
+    void navigateToPage() {
+      Widget? targetPage;
+      switch (item.menupage) {
+        case 'WishlistScreen()':
+          targetPage = const WishlistScreen();
+          break;
+        case 'SavedShopScreen()':
+          targetPage = const SavedRestaurantsScreen();
+          break;
+        case 'OrderScreen':
+          targetPage = const RedeemQrScreen();
+          break;
+        case 'LoginScreen':
+          targetPage = const LoginScreen();
+          break;
+        default:
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('${item.title} feature coming soon!'),
+              behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+          return;
+      }
+
+      Navigator.push(context, MaterialPageRoute(builder: (_) => targetPage!));
+    }
 
     return Container(
       decoration: BoxDecoration(
@@ -431,7 +457,9 @@ class _MenuRow extends StatelessWidget {
         border: Border.all(color: cardBorderColor, width: 1),
         boxShadow: [
           BoxShadow(
-            color: isDark ? Colors.black.withValues(alpha: 0.2) : Colors.black.withValues(alpha: 0.05),
+            color: isDark
+                ? Colors.black.withValues(alpha: 0.2)
+                : Colors.black.withValues(alpha: 0.05),
             blurRadius: 12,
             offset: const Offset(0, 3),
           ),
@@ -442,7 +470,7 @@ class _MenuRow extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
-          onTap: () {},
+          onTap: navigateToPage,
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             child: Row(
@@ -471,7 +499,9 @@ class _MenuRow extends StatelessWidget {
                           height: 1.1,
                           color: item.destructive
                               ? const Color(0xFFEF4444)
-                              : (isDark ? Colors.white : const Color(0xFF1D1E20)),
+                              : (isDark
+                                    ? Colors.white
+                                    : const Color(0xFF1D1E20)),
                         ),
                       ),
                       const SizedBox(height: 3),
@@ -483,7 +513,9 @@ class _MenuRow extends StatelessWidget {
                           fontWeight: FontWeight.w500,
                           color: item.destructive
                               ? const Color(0xFFEF4444).withValues(alpha: 0.7)
-                              : (isDark ? ProfileColors.textDescription : Colors.grey[600]),
+                              : (isDark
+                                    ? ProfileColors.textDescription
+                                    : Colors.grey[600]),
                         ),
                       ),
                     ],
@@ -493,7 +525,9 @@ class _MenuRow extends StatelessWidget {
                   Icons.chevron_right_rounded,
                   color: item.destructive
                       ? const Color(0xFFEF4444).withValues(alpha: 0.5)
-                      : (isDark ? ProfileColors.textDescription : Colors.grey[400]),
+                      : (isDark
+                            ? ProfileColors.textDescription
+                            : Colors.grey[400]),
                 ),
               ],
             ),
@@ -527,7 +561,13 @@ class _BottomNavBar extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
       decoration: BoxDecoration(
         color: isDark ? ProfileColors.bgDeep : Colors.white,
-        border: Border(top: BorderSide(color: isDark ? ProfileColors.cardBorder : ProfileColors.borderLight)),
+        border: Border(
+          top: BorderSide(
+            color: isDark
+                ? ProfileColors.cardBorder
+                : ProfileColors.borderLight,
+          ),
+        ),
       ),
       child: Center(
         child: ConstrainedBox(
@@ -552,17 +592,23 @@ class _BottomNavBar extends StatelessWidget {
                         size: 22,
                         color: selected
                             ? ProfileColors.primary
-                            : (isDark ? ProfileColors.textDescription : Colors.grey[400]),
+                            : (isDark
+                                  ? ProfileColors.textDescription
+                                  : Colors.grey[400]),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         label,
                         style: TextStyle(
                           fontSize: 11,
-                          fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                          fontWeight: selected
+                              ? FontWeight.w700
+                              : FontWeight.w500,
                           color: selected
                               ? ProfileColors.primary
-                              : (isDark ? ProfileColors.textDescription : Colors.grey[400]),
+                              : (isDark
+                                    ? ProfileColors.textDescription
+                                    : Colors.grey[400]),
                         ),
                       ),
                     ],
