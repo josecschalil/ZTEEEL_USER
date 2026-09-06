@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'OfferExplanationScreen.dart';
 import 'FoodItemPage.dart';
+import '../config/api_config.dart';
+import '../services/restaurant_service.dart';
 
 class MenuColors {
   static const primary = Color(0xFFEE5B2B);
@@ -149,11 +151,74 @@ const _categoryPills = [
   'Desserts',
 ];
 
+List<MenuCategory> _mapCategories(List<Map<String, dynamic>> data) {
+  final fallbackItems = _categories.expand((category) => category.items).toList();
+  var fallbackIndex = 0;
+
+  final categories = <MenuCategory>[];
+  for (final category in data) {
+    final itemData = category['menu_items'];
+    if (itemData is! List || itemData.isEmpty) continue;
+
+    final fallbackCategory = _categories[categories.length % _categories.length];
+    final items = <MenuItem>[];
+    for (final item in itemData.whereType<Map>()) {
+      final fallback = fallbackItems[fallbackIndex % fallbackItems.length];
+      fallbackIndex++;
+      final image = item['image']?.toString() ?? '';
+      items.add(
+        MenuItem(
+          id: item['id']?.toString() ?? fallback.id,
+          name: _menuText(item['name'], fallback.name),
+          description: _menuText(item['description'], fallback.description),
+          price: double.tryParse(item['price']?.toString() ?? '') ??
+              fallback.price,
+          imageUrl: _menuImageUrl(image, fallback.imageUrl),
+          badge: fallback.badge,
+          tag: fallback.tag,
+        ),
+      );
+    }
+    if (items.isNotEmpty) {
+      categories.add(
+        MenuCategory(
+          title: _menuText(category['name'], fallbackCategory.title),
+          items: items,
+        ),
+      );
+    }
+  }
+  return categories.isEmpty ? _categories : categories;
+}
+
+String _menuText(Object? value, String fallback) {
+  final text = value?.toString().trim() ?? '';
+  return text.isEmpty ? fallback : text;
+}
+
+String _menuImageUrl(String image, String fallback) {
+  if (image.isEmpty) return fallback;
+  if (image.startsWith('http://') || image.startsWith('https://')) return image;
+  return '${ApiConfig.baseUrl}${image.startsWith('/') ? '' : '/'}$image';
+}
+
 /// ---------------------------------------------------------------------
 /// Main screen
 /// ---------------------------------------------------------------------
 class RestaurantMenuScreen extends StatefulWidget {
-  const RestaurantMenuScreen({super.key});
+  final String? vendorId;
+  final String? restaurantName;
+  final String? heroImageUrl;
+  final String? cuisine;
+  final bool? isOpen;
+  const RestaurantMenuScreen({
+    super.key,
+    this.vendorId,
+    this.restaurantName,
+    this.heroImageUrl,
+    this.cuisine,
+    this.isOpen,
+  });
 
   @override
   State<RestaurantMenuScreen> createState() => _RestaurantMenuScreenState();
@@ -164,11 +229,21 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
   int _tabIndex = 0; // Menu / Offers / Reviews / Info
   String _selectedPill = 'All Items';
   late final PageController _pageController;
+  List<MenuCategory> _menuCategories = _categories;
 
   @override
   void initState() {
     super.initState();
     _pageController = PageController(initialPage: _tabIndex);
+    _loadMenu();
+  }
+
+  Future<void> _loadMenu() async {
+    final vendorId = widget.vendorId;
+    if (vendorId == null || vendorId.isEmpty) return;
+    final categories = await RestaurantService.fetchVendorMenu(vendorId);
+    if (!mounted || categories.isEmpty) return;
+    setState(() => _menuCategories = _mapCategories(categories));
   }
 
   @override
@@ -179,7 +254,7 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
 
   double get _cartTotal {
     double total = 0;
-    for (final category in _categories) {
+    for (final category in _menuCategories) {
       for (final item in category.items) {
         final qty = _cart[item.id] ?? 0;
         total += qty * item.price;
@@ -217,7 +292,15 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
           NestedScrollView(
             headerSliverBuilder: (context, innerBoxIsScrolled) {
               return [
-                SliverToBoxAdapter(child: _HeroSection(isDark: isDark)),
+                SliverToBoxAdapter(
+                  child: _HeroSection(
+                    isDark: isDark,
+                    restaurantName: widget.restaurantName,
+                    imageUrl: widget.heroImageUrl,
+                    cuisine: widget.cuisine,
+                    isOpen: widget.isOpen,
+                  ),
+                ),
                 SliverPersistentHeader(
                   pinned: true,
                   delegate: _TabsHeaderDelegate(
@@ -244,7 +327,7 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
                 _MenuView(
                   selectedPill: _selectedPill,
                   onSelectPill: (p) => setState(() => _selectedPill = p),
-                  categories: _categories,
+                  categories: _menuCategories,
                   cart: _cart,
                   isDark: isDark,
                   onAdd: _addItem,
@@ -373,7 +456,17 @@ class _RoundIconButton extends StatelessWidget {
 /// ---------------------------------------------------------------------
 class _HeroSection extends StatelessWidget {
   final bool isDark;
-  const _HeroSection({required this.isDark});
+  final String? restaurantName;
+  final String? imageUrl;
+  final String? cuisine;
+  final bool? isOpen;
+  const _HeroSection({
+    required this.isDark,
+    this.restaurantName,
+    this.imageUrl,
+    this.cuisine,
+    this.isOpen,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -384,7 +477,7 @@ class _HeroSection extends StatelessWidget {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          Image.network(_heroImageUrl, fit: BoxFit.cover),
+          Image.network(imageUrl?.isNotEmpty == true ? imageUrl! : _heroImageUrl, fit: BoxFit.cover),
           DecoratedBox(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -413,7 +506,9 @@ class _HeroSection extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          'The Golden Spoon',
+                          restaurantName?.isNotEmpty == true
+                              ? restaurantName!
+                              : 'The Golden Spoon',
                           style: TextStyle(
                             fontSize: 26,
                             fontWeight: FontWeight.w800,
@@ -441,9 +536,9 @@ class _HeroSection extends StatelessWidget {
                             ).withValues(alpha: 0.3),
                           ),
                         ),
-                        child: const Text(
-                          'OPEN NOW',
-                          style: TextStyle(
+                        child: Text(
+                          isOpen == false ? 'CLOSED' : 'OPEN NOW',
+                          style: const TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
                             color: Color(0xFF22C55E),
@@ -482,14 +577,20 @@ class _HeroSection extends StatelessWidget {
                         ),
                       ),
                       _Dot(isDark: isDark),
-                      Text(
-                        'Italian, Pizza',
-                        style: TextStyle(
-                          color: isDark
-                              ? MenuColors.textMutedDark
-                              : Colors.grey[700],
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
+                      Flexible(
+                        child: Text(
+                          cuisine?.isNotEmpty == true
+                              ? cuisine!
+                              : 'Italian, Pizza',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: isDark
+                                ? MenuColors.textMutedDark
+                                : Colors.grey[700],
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                       ),
                       _Dot(isDark: isDark),
@@ -647,10 +748,12 @@ class _TabsHeaderDelegate extends SliverPersistentHeaderDelegate {
 class _CategoryPills extends StatelessWidget {
   final String selected;
   final bool isDark;
+  final List<String> labels;
   final ValueChanged<String> onSelect;
   const _CategoryPills({
     required this.selected,
     required this.isDark,
+    required this.labels,
     required this.onSelect,
   });
 
@@ -661,10 +764,10 @@ class _CategoryPills extends StatelessWidget {
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-        itemCount: _categoryPills.length,
+        itemCount: labels.length,
         separatorBuilder: (_, __) => const SizedBox(width: 10),
         itemBuilder: (context, i) {
-          final label = _categoryPills[i];
+          final label = labels[i];
           final isSelected = label == selected;
           return InkWell(
             onTap: () => onSelect(label),
@@ -1425,6 +1528,7 @@ class _MenuView extends StatelessWidget {
         _CategoryPills(
           selected: selectedPill,
           isDark: isDark,
+          labels: ['All Items', ...categories.map((category) => category.title)],
           onSelect: onSelectPill,
         ),
         _TodaysOffers(isDark: isDark),

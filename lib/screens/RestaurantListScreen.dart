@@ -139,7 +139,7 @@ class _NearbyRestaurantsScreenState extends State<NearbyRestaurantsScreen> {
   @override
   void initState() {
     super.initState();
-    _all = widget.restaurants ?? _sampleRestaurants();
+    _all = widget.restaurants ?? sampleRestaurants();
   }
 
   @override
@@ -205,7 +205,15 @@ class _NearbyRestaurantsScreenState extends State<NearbyRestaurantsScreen> {
     widget.onRestaurantSelected?.call(restaurant);
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => const RestaurantMenuScreen()),
+      MaterialPageRoute(
+        builder: (_) => RestaurantMenuScreen(
+          vendorId: restaurant.id,
+          restaurantName: restaurant.name,
+          heroImageUrl: restaurant.imageUrl,
+          cuisine: restaurant.cuisines.join(' · '),
+          isOpen: restaurant.isOpenNow,
+        ),
+      ),
     );
   }
 
@@ -1149,7 +1157,7 @@ class _EmptyState extends StatelessWidget {
 /// Sample data — unchanged from the original screen.
 /// ---------------------------------------------------------------------------
 
-List<RestaurantListing> _sampleRestaurants() {
+List<RestaurantListing> sampleRestaurants() {
   return const [
     RestaurantListing(
       id: 'r1',

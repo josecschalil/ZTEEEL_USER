@@ -2,13 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dashboard.dart';
 import '../app_colors.dart';
+import '../services/auth_service.dart';
 
 // ── Tokens (same as login) ─────────────────────
 
 // ── OTP Screen ────────────────────────────────
 class OtpScreen extends StatefulWidget {
   final String phone;
-  const OtpScreen({super.key, required this.phone});
+  final String? initialOtp;
+  const OtpScreen({super.key, required this.phone, this.initialOtp});
 
   @override
   State<OtpScreen> createState() => _OtpScreenState();
@@ -16,10 +18,10 @@ class OtpScreen extends StatefulWidget {
 
 class _OtpScreenState extends State<OtpScreen> with TickerProviderStateMixin {
   final List<TextEditingController> _ctrl = List.generate(
-    4,
+    6,
     (_) => TextEditingController(),
   );
-  final List<FocusNode> _fn = List.generate(4, (_) => FocusNode());
+  final List<FocusNode> _fn = List.generate(6, (_) => FocusNode());
 
   // which box is active
   int _active = 0;
@@ -60,18 +62,29 @@ class _OtpScreenState extends State<OtpScreen> with TickerProviderStateMixin {
   // resend countdown
   int _countdown = 30;
   bool _canResend = false;
+  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
     _entryAc.forward();
     _fn[0].requestFocus();
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < 6; i++) {
       _fn[i].addListener(() {
         if (_fn[i].hasFocus) setState(() => _active = i);
       });
     }
+    _fillOtp(widget.initialOtp);
     _startCountdown();
+  }
+
+  void _fillOtp(String? otp) {
+    if (otp == null || otp.isEmpty) return;
+    for (var i = 0; i < otp.length && i < _ctrl.length; i++) {
+      _ctrl[i].text = otp[i];
+    }
+    _fn.last.unfocus();
+    setState(() {});
   }
 
   void _startCountdown() {
@@ -88,6 +101,25 @@ class _OtpScreenState extends State<OtpScreen> with TickerProviderStateMixin {
     });
   }
 
+  Future<void> _resendOtp() async {
+    if (!_canResend || _isLoading) return;
+    setState(() => _isLoading = true);
+    final result = await AuthService.sendOtp(widget.phone);
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+    if (result['success'] == true) {
+      _fillOtp(result['otp'] as String?);
+      _startCountdown();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('OTP resent successfully.')),
+      );
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(result['error'] as String), backgroundColor: AppColors.orangeDim),
+    );
+  }
+
   @override
   void dispose() {
     _shakeAc.dispose();
@@ -98,11 +130,11 @@ class _OtpScreenState extends State<OtpScreen> with TickerProviderStateMixin {
   }
 
   String get _code => _ctrl.map((c) => c.text).join();
-  bool get _filled => _code.length == 4;
+  bool get _filled => _code.length == 6;
 
   void _onKey(String val, int i) {
     if (val.length == 1) {
-      if (i < 3) {
+      if (i < _fn.length - 1) {
         _fn[i + 1].requestFocus();
       } else {
         _fn[i].unfocus();
@@ -113,19 +145,27 @@ class _OtpScreenState extends State<OtpScreen> with TickerProviderStateMixin {
     setState(() {});
   }
 
-  void _verify() {
+  Future<void> _verify() async {
     if (!_filled) return;
-    // Simulate wrong code → shake
-    if (_code != '1234') {
-      _shakeAc.forward(from: 0);
-      for (final c in _ctrl) c.clear();
-      _fn[0].requestFocus();
-      setState(() {});
+    setState(() => _isLoading = true);
+    await Future.delayed(const Duration(seconds: 3));
+    final result = await AuthService.verifyCustomerOtp(
+      rawPhone: widget.phone,
+      otp: _code,
+    );
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+    if (result['success'] == true) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => HomeDiscoveryScreen()),
+        (_) => false,
+      );
       return;
     }
-    Navigator.of(
-      context,
-    ).push(MaterialPageRoute(builder: (_) => HomeDiscoveryScreen()));
+    _shakeAc.forward(from: 0);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(result['error'] as String), backgroundColor: AppColors.orangeDim),
+    );
   }
 
   @override
@@ -265,7 +305,7 @@ class _OtpScreenState extends State<OtpScreen> with TickerProviderStateMixin {
                                       ),
                                       children: [
                                         const TextSpan(
-                                          text: 'A 4-digit OTP was sent to\n',
+                                          text: 'A 6-digit OTP was sent to\n',
                                         ),
                                         TextSpan(
                                           text: widget.phone,
@@ -324,7 +364,7 @@ class _OtpScreenState extends State<OtpScreen> with TickerProviderStateMixin {
 
                                   const SizedBox(height: 22),
 
-                                  // 4 digit boxes with shake
+                                  // 6 digit boxes with shake
                                   AnimatedBuilder(
                                     animation: _shakeAnim,
                                     builder: (_, child) {
@@ -342,11 +382,11 @@ class _OtpScreenState extends State<OtpScreen> with TickerProviderStateMixin {
                                     },
                                     child: Row(
                                       children: List.generate(
-                                        4,
+                                        6,
                                         (i) => Expanded(
                                           child: Padding(
                                             padding: EdgeInsets.only(
-                                              right: i < 3 ? 14 : 0,
+                                              right: i < 5 ? 10 : 0,
                                             ),
                                             child: _OtpDigit(
                                               controller: _ctrl[i],
@@ -379,8 +419,7 @@ class _OtpScreenState extends State<OtpScreen> with TickerProviderStateMixin {
                                       if (_canResend) ...[
                                         const SizedBox(width: 6),
                                         GestureDetector(
-                                          onTap: () =>
-                                              setState(_startCountdown),
+                                          onTap: _resendOtp,
                                           child: const Text(
                                             'Resend OTP',
                                             style: TextStyle(
@@ -403,7 +442,7 @@ class _OtpScreenState extends State<OtpScreen> with TickerProviderStateMixin {
                           // ── Sticky footer ──────────────────────
                           _reveal(
                             4,
-                            _Footer(filled: _filled, onVerify: _verify),
+                            _Footer(filled: _filled, isLoading: _isLoading, onVerify: _verify),
                           ),
                         ],
                       ),
@@ -489,8 +528,9 @@ class _OtpDigit extends StatelessWidget {
 // ── Footer ─────────────────────────────────────
 class _Footer extends StatelessWidget {
   final bool filled;
+  final bool isLoading;
   final VoidCallback onVerify;
-  const _Footer({required this.filled, required this.onVerify});
+  const _Footer({required this.filled, required this.isLoading, required this.onVerify});
 
   @override
   Widget build(BuildContext context) {
@@ -506,7 +546,7 @@ class _Footer extends StatelessWidget {
             duration: const Duration(milliseconds: 250),
             height: 56,
             child: ElevatedButton(
-              onPressed: filled ? onVerify : null,
+              onPressed: filled && !isLoading ? onVerify : null,
               style: ElevatedButton.styleFrom(
                 backgroundColor: filled ? AppColors.orange : AppColors.border,
                 foregroundColor: filled
@@ -519,14 +559,9 @@ class _Footer extends StatelessWidget {
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
-              child: const Text(
-                'Verify & Continue',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: .3,
-                ),
-              ),
+              child: isLoading
+                  ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: AppColors.textWhite))
+                  : const Text('Verify & Continue', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, letterSpacing: .3)),
             ),
           ),
           const SizedBox(height: 16),

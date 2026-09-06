@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'OtpProfileScreen.dart';
 import '../app_colors.dart';
+import '../services/auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -14,6 +15,7 @@ class _LoginScreenState extends State<LoginScreen>
   final _phoneCtrl = TextEditingController();
   final _focusNode = FocusNode();
   bool _focused = false;
+  bool _isLoading = false;
 
   late final AnimationController _entryAc = AnimationController(
     vsync: this,
@@ -54,9 +56,9 @@ class _LoginScreenState extends State<LoginScreen>
     super.dispose();
   }
 
-  void _onSendOtp() {
+  Future<void> _onSendOtp() async {
     FocusScope.of(context).unfocus();
-    if (_phoneCtrl.text.trim().length < 6) {
+    if (!AuthService.isValidMobileNumber(_phoneCtrl.text.trim())) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('Enter a valid phone number'),
@@ -68,9 +70,24 @@ class _LoginScreenState extends State<LoginScreen>
       );
       return;
     }
+    setState(() => _isLoading = true);
+    final result = await AuthService.sendOtp(_phoneCtrl.text.trim());
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+    if (result['success'] != true) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result['error'] as String), backgroundColor: AppColors.orangeDim),
+      );
+      return;
+    }
     Navigator.of(
       context,
-    ).push(MaterialPageRoute(builder: (_) => const OtpScreen(phone: '')));
+    ).push(MaterialPageRoute(
+      builder: (_) => OtpScreen(
+        phone: result['phone_number'] as String,
+        initialOtp: result['otp'] as String?,
+      ),
+    ));
   }
 
   @override
@@ -330,7 +347,7 @@ class _LoginScreenState extends State<LoginScreen>
                           const Expanded(child: SizedBox(height: 48)),
 
                           // ── Footer ─────────────────────────
-                          _reveal(4, _Footer(onContinue: _onSendOtp)),
+                          _reveal(4, _Footer(onContinue: _onSendOtp, isLoading: _isLoading)),
                         ],
                       ),
                     ),
@@ -348,7 +365,8 @@ class _LoginScreenState extends State<LoginScreen>
 // ── Footer ─────────────────────────────────────
 class _Footer extends StatelessWidget {
   final VoidCallback onContinue;
-  const _Footer({required this.onContinue});
+  final bool isLoading;
+  const _Footer({required this.onContinue, required this.isLoading});
 
   @override
   Widget build(BuildContext context) {
@@ -363,7 +381,7 @@ class _Footer extends StatelessWidget {
           SizedBox(
             height: 56,
             child: ElevatedButton(
-              onPressed: onContinue,
+              onPressed: isLoading ? null : onContinue,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.orange,
                 foregroundColor: AppColors.textWhite,
@@ -372,14 +390,23 @@ class _Footer extends StatelessWidget {
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
-              child: const Text(
-                'Continue',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: .3,
-                ),
-              ),
+              child: isLoading
+                  ? const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.5,
+                        color: AppColors.textWhite,
+                      ),
+                    )
+                  : const Text(
+                      'Continue',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: .3,
+                      ),
+                    ),
             ),
           ),
           const SizedBox(height: 16),

@@ -34,6 +34,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'dart:ui' as ui;
+import '../services/location_service.dart';
 
 /// ZTEEEL Location Picker — real, pannable OpenStreetMap map with a fixed
 /// center pin (Google Maps / Uber style), live reverse geocoding, address
@@ -84,6 +85,9 @@ class PickedLocation {
     required this.address,
     required this.position,
   });
+
+  double get latitude => position.latitude;
+  double get longitude => position.longitude;
 }
 
 class SavedAddress {
@@ -143,8 +147,10 @@ class _LocationPickerScreenState extends State<LocationPickerScreen>
   List<_SearchResult> _searchResults = [];
   Timer? _debounce;
   Timer? _searchDebounce;
+  int _geocodeRequest = 0;
 
-  static const _userAgent = 'ZteeelApp/1.0 (contact@example.com)';
+  static const _userAgent = 'ZTEEEL Mobile/1.0 LocationPicker';
+  static const _pinOffset = Offset(0, -88);
 
   @override
   void initState() {
@@ -153,7 +159,6 @@ class _LocationPickerScreenState extends State<LocationPickerScreen>
       vsync: this,
       duration: const Duration(milliseconds: 180),
     );
-    _reverseGeocode(_center);
   }
 
   @override
@@ -167,37 +172,42 @@ class _LocationPickerScreenState extends State<LocationPickerScreen>
 
   // -- Reverse geocoding (coords -> address) via OSM Nominatim --
   Future<void> _reverseGeocode(LatLng point) async {
+    final request = ++_geocodeRequest;
     setState(() => _resolvingAddress = true);
     try {
       final uri = Uri.parse(
         'https://nominatim.openstreetmap.org/reverse'
-        '?format=json&lat=${point.latitude}&lon=${point.longitude}&zoom=18&addressdetails=1',
+        '?format=jsonv2&lat=${point.latitude}&lon=${point.longitude}&zoom=18&addressdetails=1',
       );
-      final response = await http.get(uri, headers: {'User-Agent': _userAgent});
-      debugPrint(
-        'Nominatim status: ${response.statusCode}, body: ${response.body}',
-      );
+      final response = await http
+          .get(
+            uri,
+            headers: {
+              'User-Agent': _userAgent,
+              'Accept-Language': 'en',
+            },
+          )
+          .timeout(const Duration(seconds: 8));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final name = data['display_name'] as String?;
-        if (mounted) {
-          setState(() => _address = name ?? 'No address found here');
+        if (mounted && request == _geocodeRequest) {
+          setState(() => _address = _shortAddress(data, point));
         }
       } else {
-        if (mounted) {
-          setState(
-            () => _address = 'Address lookup failed (${response.statusCode})',
-          );
+        if (mounted && request == _geocodeRequest) {
+          setState(() => _address = _coordinateAddress(point));
         }
       }
     } catch (e) {
       debugPrint('Reverse geocode error: $e');
-      if (mounted) {
-        setState(() => _address = 'Unable to fetch address — check connection');
+      if (mounted && request == _geocodeRequest) {
+        setState(() => _address = _coordinateAddress(point));
       }
     } finally {
-      if (mounted) setState(() => _resolvingAddress = false);
+      if (mounted && request == _geocodeRequest) {
+        setState(() => _resolvingAddress = false);
+      }
     }
   }
 
@@ -253,7 +263,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen>
       _searchController.text = result.label;
     });
     FocusScope.of(context).unfocus();
-    _mapController.move(result.position, 16);
+    _mapController.move(result.position, 16, offset: _pinOffset);
     setState(() => _center = result.position);
     _reverseGeocode(result.position);
   }
@@ -265,14 +275,14 @@ class _LocationPickerScreenState extends State<LocationPickerScreen>
       setState(() => _isDragging = true);
       _pinController.forward();
     } else if (event is MapEventMove) {
-      setState(() => _center = event.camera.center);
+      setState(() => _center = _selectedPoint(event.camera));
     } else if (event is MapEventMoveEnd) {
       setState(() => _isDragging = false);
       _pinController.reverse();
       _debounce?.cancel();
       _debounce = Timer(
         const Duration(milliseconds: 400),
-        () => _reverseGeocode(_center),
+        () => _reverseGeocode(_selectedPoint(event.camera)),
       );
     }
   }
@@ -307,7 +317,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen>
         desiredAccuracy: LocationAccuracy.high,
       );
       final point = LatLng(position.latitude, position.longitude);
-      _mapController.move(point, 16);
+      _mapController.move(point, 16, offset: _pinOffset);
       setState(() => _center = point);
       await _reverseGeocode(point);
     } catch (_) {
@@ -321,7 +331,41 @@ class _LocationPickerScreenState extends State<LocationPickerScreen>
     }
   }
 
-  void _confirm(String label, String address, LatLng position) {
+  LatLng _selectedPoint(MapCamera camera) {
+    return camera.screenOffsetToLatLng(
+      camera.nonRotatedSize.center(Offset.zero) + _pinOffset,
+    );
+  }
+
+  String _coordinateAddress(LatLng point) =>
+      'Coordinates: ${point.latitude.toStringAsFixed(6)}, '
+      '${point.longitude.toStringAsFixed(6)}';
+
+  String _shortAddress(Map<String, dynamic> data, LatLng point) {
+    final address = data['address'];
+    if (address is! Map) return _coordinateAddress(point);
+    final values = [
+      address['road'],
+      address['neighbourhood'] ?? address['suburb'],
+      address['city'] ?? address['town'] ?? address['village'],
+    ]
+        .map((value) => value?.toString().trim() ?? '')
+        .where((value) => value.isNotEmpty)
+        .toSet()
+        .toList();
+    return values.isEmpty ? _coordinateAddress(point) : values.join(', ');
+  }
+
+  Future<void> _confirm(String label, String address, LatLng position) async {
+    await LocationService.save(
+      SavedLocationCoordinates(
+        latitude: position.latitude,
+        longitude: position.longitude,
+        label: label,
+        address: address,
+      ),
+    );
+    if (!mounted) return;
     Navigator.of(
       context,
     ).pop(PickedLocation(label: label, address: address, position: position));
@@ -340,6 +384,11 @@ class _LocationPickerScreenState extends State<LocationPickerScreen>
                 initialCenter: _defaultCenter,
                 initialZoom: 15,
                 onMapEvent: _onMapEvent,
+                onMapReady: () {
+                  final selected = _selectedPoint(_mapController.camera);
+                  setState(() => _center = selected);
+                  _reverseGeocode(selected);
+                },
               ),
               children: [
                 TileLayer(
@@ -536,9 +585,12 @@ class _LocationPickerScreenState extends State<LocationPickerScreen>
               resolving: _resolvingAddress,
               locating: _locating,
               onUseCurrentLocation: _useCurrentLocation,
-              onSelectSaved: (saved) =>
-                  _confirm(saved.label, saved.address, saved.position),
-              onConfirm: () => _confirm('Selected Location', _address, _center),
+              onSelectSaved: (saved) {
+                _confirm(saved.label, saved.address, saved.position);
+              },
+              onConfirm: () {
+                _confirm('Selected Location', _address, _center);
+              },
             ),
           ),
         ],

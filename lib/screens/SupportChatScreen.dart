@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 // ── Local palette (self-contained, no external color file) ─────────────
 abstract final class _C {
   static const Color bg = Color(0xFFFFFFFF);
-  static const Color surface = Color(0xFFFFFFFF);
   static const Color surfaceRaised = Color(0xFFF7F5F3);
   static const Color orange = Color(0xFFEF5A4C);
   static const Color green = Color(0xFF1D9E6B);
@@ -12,7 +11,6 @@ abstract final class _C {
   static const Color textMuted = Color(0xFF8C8680);
   static const Color textOnAccent = Color(0xFFFFFFFF);
   static const Color border = Color(0xFFECEAE7);
-  static const Color black = Colors.black;
 }
 
 class _ChatMessage {

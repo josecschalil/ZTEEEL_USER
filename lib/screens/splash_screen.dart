@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:zteel_user/screens/dashboard.dart';
+import 'package:zteel_user/screens/PhoneAuthScreen.dart';
+import 'package:zteel_user/services/auth_service.dart';
 import '../app_colors.dart';
 
 // ─────────────────────────────────────────────
@@ -66,13 +68,17 @@ class _SplashScreenState extends State<SplashScreen>
     );
 
     _ac.forward().then((_) {
-      _progressAc.forward().then((_) {
+      _progressAc.forward().then((_) async {
         if (mounted) {
+          final loggedIn = await AuthService.isLoggedIn();
+          if (!mounted) return;
           // Add a subtle fade transition to the next screen
           Navigator.of(context).pushReplacement(
             PageRouteBuilder(
               transitionDuration: const Duration(milliseconds: 600),
-              pageBuilder: (_, __, ___) => const HomeDiscoveryScreen(),
+              pageBuilder: (_, __, ___) => loggedIn
+                  ? HomeDiscoveryScreen()
+                  : const LoginScreen(),
               transitionsBuilder: (_, animation, __, child) {
                 return FadeTransition(opacity: animation, child: child);
               },

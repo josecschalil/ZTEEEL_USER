@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'FoodDetailScreen.dart';
+import '../config/api_config.dart';
+import '../services/offer_service.dart';
 
 /// Shared color tokens (same as dashboard AppColorss)
 class _DealsColors {
@@ -22,6 +24,80 @@ class Deal {
     required this.timeLeft,
     required this.imageUrl,
   });
+}
+
+Future<List<Deal>> dealsFromOffers(List<Map<String, dynamic>> offers) async {
+  final vendors = <String, Future<Map<String, dynamic>?>>{};
+  final menus = <String, Future<List<Map<String, dynamic>>>>{};
+  final hydrated = await Future.wait(offers.asMap().entries.map((entry) async {
+    final offer = entry.value;
+    final fallback = deals[entry.key % deals.length];
+    final vendorId = offer['vendor']?.toString() ?? '';
+    if (vendorId.isEmpty) return fallback;
+    final vendor = await vendors.putIfAbsent(
+      vendorId,
+      () => OfferService.fetchVendor(vendorId),
+    );
+    final menu = await menus.putIfAbsent(
+      vendorId,
+      () => OfferService.fetchVendorMenu(vendorId),
+    );
+    final discount = double.tryParse(offer['discount_percentage']?.toString() ?? '');
+    return Deal(
+      title: _offerText(offer['title'], fallback.title),
+      restaurant: _offerText(vendor?['business_name'], fallback.restaurant),
+      distance: fallback.distance,
+      discount: discount == null
+          ? fallback.discount
+          : '${discount.toStringAsFixed(discount % 1 == 0 ? 0 : 1)}% OFF',
+      timeLeft: _offerTimeLeft(offer['ends_at']) ?? fallback.timeLeft,
+      imageUrl: _offerImage(offer, menu) ?? fallback.imageUrl,
+    );
+  }));
+  return hydrated;
+}
+
+String _offerText(Object? value, String fallback) {
+  final text = value?.toString().trim() ?? '';
+  return text.isEmpty ? fallback : text;
+}
+
+String? _offerImage(Map<String, dynamic> offer, List<Map<String, dynamic>> menu) {
+  final targets = offer['targets'];
+  final itemIds = targets is Map ? targets['item_ids'] : null;
+  final categoryIds = targets is Map ? targets['category_ids'] : null;
+  for (final category in menu) {
+    final categoryMatches = categoryIds is List && categoryIds.contains(category['id']?.toString());
+    final items = category['menu_items'];
+    if (items is! List) continue;
+    for (final item in items.whereType<Map>()) {
+      final matches = categoryMatches ||
+          (itemIds is List && itemIds.contains(item['id']?.toString())) ||
+          (itemIds is! List && categoryIds is! List);
+      if (!matches) continue;
+      final image = item['image']?.toString() ?? '';
+      if (image.isEmpty) continue;
+      return image.startsWith('http')
+          ? image
+          : '${ApiConfig.baseUrl}${image.startsWith('/') ? '' : '/'}$image';
+    }
+  }
+  return null;
+}
+
+List<Deal> dashboardDeals(List<Deal> liveDeals) {
+  if (liveDeals.length >= 3) return liveDeals.take(3).toList();
+  return [...liveDeals, ...deals.skip(liveDeals.length)].take(3).toList();
+}
+
+String? _offerTimeLeft(Object? value) {
+  final end = DateTime.tryParse(value?.toString() ?? '')?.toLocal();
+  if (end == null) return null;
+  final difference = end.difference(DateTime.now());
+  if (difference.isNegative) return 'Ending soon';
+  if (difference.inDays > 0) return '${difference.inDays}d left';
+  if (difference.inHours > 0) return '${difference.inHours}h left';
+  return '${difference.inMinutes.clamp(1, 59)}m left';
 }
 
 /// Sample deals data
@@ -60,9 +136,60 @@ const deals = [
 /// Can be used as a standalone pushed screen OR embedded in the
 /// dashboard's IndexedStack as the Deals tab (index 1).
 /// ─────────────────────────────────────────────────────────────────────
-class DealsScreen extends StatelessWidget {
+class DealsScreen extends StatefulWidget {
   final bool isDark;
-  const DealsScreen({super.key, required this.isDark});
+  final List<Deal> initialDeals;
+  const DealsScreen({super.key, required this.isDark, this.initialDeals = const []});
+
+  @override
+  State<DealsScreen> createState() => _DealsScreenState();
+}
+
+class _DealsScreenState extends State<DealsScreen> {
+  static const _pageSize = 10;
+  final _searchController = TextEditingController();
+  final _scrollController = ScrollController();
+  List<Deal> _allDeals = deals;
+  String _query = '';
+  int _visibleCount = _pageSize;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialDeals.isNotEmpty) _allDeals = widget.initialDeals;
+    _scrollController.addListener(_loadMoreOnScroll);
+    _loadDeals();
+  }
+
+  Future<void> _loadDeals() async {
+    final offers = await OfferService.fetchOffers();
+    if (!mounted || offers.isEmpty) return;
+    final loaded = await dealsFromOffers(offers);
+    if (!mounted || loaded.isEmpty) return;
+    setState(() => _allDeals = loaded);
+  }
+
+  void _loadMoreOnScroll() {
+    if (_scrollController.position.extentAfter > 240 ||
+        _visibleCount >= _filteredDeals.length) return;
+    setState(() => _visibleCount += _pageSize);
+  }
+
+  List<Deal> get _filteredDeals {
+    final query = _query.trim().toLowerCase();
+    if (query.isEmpty) return _allDeals;
+    return _allDeals.where((deal) =>
+        deal.title.toLowerCase().contains(query) ||
+        deal.restaurant.toLowerCase().contains(query) ||
+        deal.discount.toLowerCase().contains(query)).toList();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -81,7 +208,9 @@ class DealsScreen extends StatelessWidget {
                     fontSize: 22,
                     fontWeight: FontWeight.w700,
                     letterSpacing: -0.4,
-                    color: isDark ? Colors.white : const Color(0xFF1D1E20),
+                    color: widget.isDark
+                        ? Colors.white
+                        : const Color(0xFF1D1E20),
                   ),
                 ),
                 Container(
@@ -90,11 +219,13 @@ class DealsScreen extends StatelessWidget {
                     vertical: 6,
                   ),
                   decoration: BoxDecoration(
-                    color: _DealsColors.primary.withAlpha(isDark ? 35 : 20),
+                    color: _DealsColors.primary.withAlpha(
+                      widget.isDark ? 35 : 20,
+                    ),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(
-                    '${deals.length} Active',
+                  '${_allDeals.length} Active',
                     style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
@@ -105,13 +236,34 @@ class DealsScreen extends StatelessWidget {
               ],
             ),
           ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+            child: TextField(
+              controller: _searchController,
+              onChanged: (value) => setState(() {
+                _query = value;
+                _visibleCount = _pageSize;
+              }),
+              decoration: InputDecoration(
+                hintText: 'Search offers',
+                prefixIcon: const Icon(Icons.search_rounded),
+                filled: true,
+                fillColor: widget.isDark ? const Color(0xFF281E19) : Colors.white,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+          ),
           Expanded(
             child: ListView.separated(
+              controller: _scrollController,
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
-              itemCount: deals.length,
+              itemCount: _filteredDeals.take(_visibleCount).length,
               separatorBuilder: (_, __) => const SizedBox(height: 16),
               itemBuilder: (context, i) {
-                final deal = deals[i];
+                final deal = _filteredDeals.take(_visibleCount).elementAt(i);
                 return GestureDetector(
                   onTap: () {
                     Navigator.of(context).push(
@@ -265,7 +417,8 @@ class DealBadge extends StatelessWidget {
 /// Deal model and data.
 /// ─────────────────────────────────────────────────────────────────────
 class HotDealsRow extends StatelessWidget {
-  const HotDealsRow({super.key});
+  final List<Deal> previewDeals;
+  const HotDealsRow({super.key, this.previewDeals = deals});
 
   @override
   Widget build(BuildContext context) {
@@ -274,9 +427,10 @@ class HotDealsRow extends StatelessWidget {
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 20),
-        itemCount: deals.length,
+        itemCount: previewDeals.take(3).length,
         separatorBuilder: (_, __) => const SizedBox(width: 14),
-        itemBuilder: (context, i) => _DealCard(deal: deals[i]),
+        itemBuilder: (context, i) =>
+            _DealCard(deal: previewDeals.take(3).elementAt(i)),
       ),
     );
   }

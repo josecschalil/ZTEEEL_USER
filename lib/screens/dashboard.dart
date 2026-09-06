@@ -10,6 +10,10 @@ import 'PopularFoodScreen.dart';
 import 'RestaurantListScreen.dart';
 import 'DealsScreen.dart';
 import '../widgets/bottom_nav_bar.dart';
+import '../config/api_config.dart';
+import '../services/restaurant_service.dart';
+import '../services/offer_service.dart';
+import '../services/location_service.dart';
 
 class AppColorss {
   static const primary = Color(0xFFEE5B2B);
@@ -51,6 +55,7 @@ class FoodCategory {
 }
 
 class Restaurant {
+  final String id;
   final String name;
   final String cuisine;
   final double rating;
@@ -59,6 +64,7 @@ class Restaurant {
   final bool isOpen; // drives the green/red status dot
   final String imageUrl;
   const Restaurant({
+    required this.id,
     required this.name,
     required this.cuisine,
     required this.rating,
@@ -109,6 +115,7 @@ const _categories = [
 
 const _restaurants = [
   Restaurant(
+    id: 'sample-la-bella-italia',
     name: 'La Bella Italia',
     cuisine: 'Italian • Pasta • Pizza',
     rating: 4.8,
@@ -119,6 +126,7 @@ const _restaurants = [
         'https://lh3.googleusercontent.com/aida-public/AB6AXuCSrAnq8EYT5wnPYsBKM4M5us1vIvfGA30eMn3GSPlJqfTEM7v4960LrWnx8xNtMKP3B6QkCmCMz9PueCntKEAWezbE30-Nlx4xzksuUO6xye8VEtwJvvu5W2Jfaa2Wg61Bs3NkBJICRQncyjqcMuKJ1DiT5JsUzgeiM3cY4Dg2L2N9tVCdHZ3pW2xfXw-GTFilmX0l0T8cSYCg574ublg6gZavHvJXBX9gFRHjGb48u0xk09SGDqsYSP2HrjG1pqlCek7-N0UWX17y',
   ),
   Restaurant(
+    id: 'sample-sushi-master',
     name: 'Sushi Master',
     cuisine: 'Japanese • Sushi • Asian',
     rating: 4.5,
@@ -129,6 +137,7 @@ const _restaurants = [
         'https://lh3.googleusercontent.com/aida-public/AB6AXuAV4KaIk0LA9cH24ERImPnDkVz--7lPo2L7pPtM2ILiJhfh0K-ySZfynaoy-RmSiB3YFvtnAnPgcgPfxjk45wiAgrcxPmrls2BXXRcdQnbRRgFR7aO9gJoJkN__NYftVngo4SuuITMfTf85wsWZCjZcqAyWW-PyFiSMPAudLaT6684M6XG-yZXkly9UGMXJTmTNaiTlqXPlC1po5TviR3F0hRBE_griI99iN1Erc2ovBo4HTf-eA3ZswrpbBD4rOHvkOhMP92rss5OE',
   ),
   Restaurant(
+    id: 'sample-smokehouse',
     name: 'The Smokehouse',
     cuisine: 'American • BBQ • Grill',
     rating: 4.9,
@@ -140,6 +149,71 @@ const _restaurants = [
   ),
 ];
 
+List<Restaurant> _withFallbackRestaurantDetails(
+  List<Map<String, dynamic>> vendors,
+) {
+  return vendors.asMap().entries.map((entry) {
+    final fallback = _restaurants[entry.key % _restaurants.length];
+    final vendor = entry.value;
+    final image = vendor['cover_image'] ?? vendor['icon_image'];
+    final imageUrl = image is String && image.isNotEmpty
+        ? (image.startsWith('http://') || image.startsWith('https://')
+              ? image
+              : '${ApiConfig.baseUrl}${image.startsWith('/') ? '' : '/'}$image')
+        : fallback.imageUrl;
+    final category = vendor['category']?.toString();
+    final description = vendor['shop_description']?.toString();
+
+    return Restaurant(
+      id: vendor['id']?.toString() ?? fallback.id,
+      name: _textOrFallback(vendor['business_name'], fallback.name),
+      cuisine: _textOrFallback(
+        description ?? (category == 'food' ? null : category),
+        fallback.cuisine,
+      ),
+      rating: fallback.rating,
+      distanceKm: fallback.distanceKm,
+      etaMinutes: fallback.etaMinutes,
+      isOpen: vendor['is_open_now'] is bool
+          ? vendor['is_open_now'] as bool
+          : fallback.isOpen,
+      imageUrl: imageUrl,
+    );
+  }).toList();
+}
+
+String _textOrFallback(Object? value, String fallback) {
+  final text = value?.toString().trim() ?? '';
+  return text.isEmpty ? fallback : text;
+}
+
+List<Restaurant> _fillDashboardRestaurants(List<Restaurant> restaurants) {
+  if (restaurants.length >= 3) return restaurants.take(3).toList();
+  return [...restaurants, ..._restaurants.skip(restaurants.length)].take(3).toList();
+}
+
+RestaurantListing _toRestaurantListing(Restaurant restaurant) {
+  return RestaurantListing(
+    id: restaurant.id,
+    name: restaurant.name,
+    imageUrl: restaurant.imageUrl,
+    fallbackIcon: Icons.restaurant_rounded,
+    cuisines: restaurant.cuisine
+        .split('•')
+        .map((item) => item.trim())
+        .where((item) => item.isNotEmpty)
+        .toList(),
+    rating: restaurant.rating,
+    reviewCount: 0,
+    distanceKm: double.tryParse(restaurant.distanceKm.split(' ').first) ?? 0,
+    etaMins: int.tryParse(restaurant.etaMinutes.split(' ').first) ?? 0,
+    isOpenNow: restaurant.isOpen,
+    isPromoted: false,
+    hasFreeDelivery: false,
+    priceLevel: r'₹₹',
+  );
+}
+
 class HomeDiscoveryScreen extends StatefulWidget {
   const HomeDiscoveryScreen({super.key});
 
@@ -149,6 +223,31 @@ class HomeDiscoveryScreen extends StatefulWidget {
 
 class _HomeDiscoveryScreenState extends State<HomeDiscoveryScreen> {
   int _navIndex = 0;
+  List<Restaurant> _liveRestaurants = const [];
+  List<Deal> _liveDeals = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRestaurants();
+    _loadDeals();
+  }
+
+  Future<void> _loadRestaurants() async {
+    final vendors = await RestaurantService.fetchRestaurants();
+    if (!mounted || vendors.isEmpty) return;
+    setState(() {
+      _liveRestaurants = _withFallbackRestaurantDetails(vendors);
+    });
+  }
+
+  Future<void> _loadDeals() async {
+    final offers = await OfferService.fetchOffers();
+    if (!mounted || offers.isEmpty) return;
+    final loaded = await dealsFromOffers(offers);
+    if (!mounted || loaded.isEmpty) return;
+    setState(() => _liveDeals = loaded);
+  }
 
   void _showScanModal(BuildContext context, bool isDark) {
     showModalBottomSheet(
@@ -243,9 +342,17 @@ class _HomeDiscoveryScreenState extends State<HomeDiscoveryScreen> {
     final List<Widget> pages = [
       _HomeDiscoveryView(
         isDark: isDark,
+        restaurants: _fillDashboardRestaurants(_liveRestaurants),
+        allRestaurants: _liveRestaurants.isEmpty
+            ? null
+            : [
+                ..._liveRestaurants.map(_toRestaurantListing),
+                ...sampleRestaurants(),
+              ],
+        deals: dashboardDeals(_liveDeals),
         onSeeAllDeals: () => setState(() => _navIndex = 1),
       ),
-      DealsScreen(isDark: isDark),
+      DealsScreen(isDark: isDark, initialDeals: _liveDeals),
       const SizedBox.shrink(), // Index 2 reserved for central FAB Scan button
       const MainCartScreenPage(showBottomNav: false),
       ProfileScreen(
@@ -313,8 +420,17 @@ class _HomeDiscoveryScreenState extends State<HomeDiscoveryScreen> {
 /// ---------------------------------------------------------------------
 class _HomeDiscoveryView extends StatelessWidget {
   final bool isDark;
+  final List<Restaurant> restaurants;
+  final List<RestaurantListing>? allRestaurants;
+  final List<Deal> deals;
   final VoidCallback? onSeeAllDeals;
-  const _HomeDiscoveryView({required this.isDark, this.onSeeAllDeals});
+  const _HomeDiscoveryView({
+    required this.isDark,
+    required this.restaurants,
+    required this.deals,
+    this.allRestaurants,
+    this.onSeeAllDeals,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -347,7 +463,7 @@ class _HomeDiscoveryView extends StatelessWidget {
                   onSeeAll: onSeeAllDeals,
                 ),
                 const SizedBox(height: 14),
-                const HotDealsRow(),
+                HotDealsRow(previewDeals: deals),
                 const SizedBox(height: 28),
                 _SectionHeader(
                   title: 'Best Restaurants',
@@ -355,13 +471,18 @@ class _HomeDiscoveryView extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => const NearbyRestaurantsScreen(),
+                        builder: (_) => NearbyRestaurantsScreen(
+                          restaurants: allRestaurants,
+                        ),
                       ),
                     );
                   },
                 ),
                 const SizedBox(height: 14),
-                _BestRestaurantsList(isDark: isDark),
+                _BestRestaurantsList(
+                  isDark: isDark,
+                  restaurants: restaurants.take(3).toList(),
+                ),
                 const SizedBox(height: 16),
               ],
             ),
@@ -387,6 +508,21 @@ class _HeaderState extends State<_Header> {
   String _locationLabel = 'CURRENT LOCATION';
   String _locationAddress = 'New York, USA';
 
+  @override
+  void initState() {
+    super.initState();
+    _restoreLocation();
+  }
+
+  Future<void> _restoreLocation() async {
+    final saved = await LocationService.load();
+    if (!mounted || saved == null) return;
+    setState(() {
+      _locationLabel = saved.label.toUpperCase();
+      _locationAddress = saved.address;
+    });
+  }
+
   Future<void> _openLocationPicker() async {
     final result = await Navigator.push(
       context,
@@ -402,6 +538,18 @@ class _HeaderState extends State<_Header> {
           _locationAddress = result.address;
         }
       });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 3),
+            content: Text(
+              'Location saved: ${result.latitude.toStringAsFixed(6)}, '
+              '${result.longitude.toStringAsFixed(6)}',
+            ),
+          ),
+        );
+      }
     }
   }
 
@@ -414,11 +562,12 @@ class _HeaderState extends State<_Header> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          GestureDetector(
-            onTap: _openLocationPicker,
-            behavior: HitTestBehavior.opaque,
-            child: Row(
-              children: [
+          Expanded(
+            child: GestureDetector(
+              onTap: _openLocationPicker,
+              behavior: HitTestBehavior.opaque,
+              child: Row(
+                children: [
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
@@ -432,11 +581,14 @@ class _HeaderState extends State<_Header> {
                   ),
                 ),
                 const SizedBox(width: 10),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                     Text(
                       _locationLabel,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
@@ -449,15 +601,19 @@ class _HeaderState extends State<_Header> {
                     const SizedBox(height: 2),
                     Row(
                       children: [
-                        Text(
-                          _locationAddress,
-                          style: TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: -0.3,
-                            color: isDark
-                                ? Colors.white
-                                : const Color(0xFF1D1E20),
+                        Expanded(
+                          child: Text(
+                            _locationAddress,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: -0.3,
+                              color: isDark
+                                  ? Colors.white
+                                  : const Color(0xFF1D1E20),
+                            ),
                           ),
                         ),
                         const SizedBox(width: 2),
@@ -470,11 +626,14 @@ class _HeaderState extends State<_Header> {
                         ),
                       ],
                     ),
-                  ],
+                    ],
+                  ),
                 ),
-              ],
+                ],
+              ),
             ),
           ),
+          const SizedBox(width: 12),
           Stack(
             children: [
               GestureDetector(
@@ -759,14 +918,18 @@ class _PopularFoodGrid extends StatelessWidget {
 /// ---------------------------------------------------------------------
 class _BestRestaurantsList extends StatelessWidget {
   final bool isDark;
-  const _BestRestaurantsList({required this.isDark});
+  final List<Restaurant> restaurants;
+  const _BestRestaurantsList({
+    required this.isDark,
+    required this.restaurants,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
-        children: _restaurants
+        children: restaurants
             .map(
               (r) => Padding(
                 padding: const EdgeInsets.only(bottom: 14),
@@ -790,7 +953,17 @@ class _RestaurantCard extends StatelessWidget {
       onTap: () {
         Navigator.of(
           context,
-        ).push(MaterialPageRoute(builder: (_) => const RestaurantMenuScreen()));
+        ).push(
+          MaterialPageRoute(
+            builder: (_) => RestaurantMenuScreen(
+              vendorId: restaurant.id,
+              restaurantName: restaurant.name,
+              heroImageUrl: restaurant.imageUrl,
+              cuisine: restaurant.cuisine,
+              isOpen: restaurant.isOpen,
+            ),
+          ),
+        );
       },
       child: Container(
         padding: const EdgeInsets.all(14),
