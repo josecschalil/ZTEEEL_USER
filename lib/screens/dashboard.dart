@@ -189,7 +189,10 @@ String _textOrFallback(Object? value, String fallback) {
 
 List<Restaurant> _fillDashboardRestaurants(List<Restaurant> restaurants) {
   if (restaurants.length >= 3) return restaurants.take(3).toList();
-  return [...restaurants, ..._restaurants.skip(restaurants.length)].take(3).toList();
+  return [
+    ...restaurants,
+    ..._restaurants.skip(restaurants.length),
+  ].take(3).toList();
 }
 
 RestaurantListing _toRestaurantListing(Restaurant restaurant) {
@@ -568,67 +571,67 @@ class _HeaderState extends State<_Header> {
               behavior: HitTestBehavior.opaque,
               child: Row(
                 children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: AppColorss.primary.withAlpha(isDark ? 35 : 20),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.location_on_rounded,
-                    color: AppColorss.primary,
-                    size: 20,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                    Text(
-                      _locationLabel,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.5,
-                        color: isDark
-                            ? AppColorss.mutedTextDark
-                            : const Color(0xFF8E8E93),
-                      ),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColorss.primary.withAlpha(isDark ? 35 : 20),
+                      shape: BoxShape.circle,
                     ),
-                    const SizedBox(height: 2),
-                    Row(
+                    child: const Icon(
+                      Icons.location_on_rounded,
+                      color: AppColorss.primary,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: Text(
-                            _locationAddress,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 17,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: -0.3,
-                              color: isDark
-                                  ? Colors.white
-                                  : const Color(0xFF1D1E20),
-                            ),
+                        Text(
+                          _locationLabel,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.5,
+                            color: isDark
+                                ? AppColorss.mutedTextDark
+                                : const Color(0xFF8E8E93),
                           ),
                         ),
-                        const SizedBox(width: 2),
-                        Icon(
-                          Icons.keyboard_arrow_down_rounded,
-                          size: 20,
-                          color: isDark
-                              ? AppColorss.mutedTextDark
-                              : Colors.grey[600],
+                        const SizedBox(height: 2),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                _locationAddress,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: -0.3,
+                                  color: isDark
+                                      ? Colors.white
+                                      : const Color(0xFF1D1E20),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 2),
+                            Icon(
+                              Icons.keyboard_arrow_down_rounded,
+                              size: 20,
+                              color: isDark
+                                  ? AppColorss.mutedTextDark
+                                  : Colors.grey[600],
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                    ],
                   ),
-                ),
                 ],
               ),
             ),
@@ -919,10 +922,7 @@ class _PopularFoodGrid extends StatelessWidget {
 class _BestRestaurantsList extends StatelessWidget {
   final bool isDark;
   final List<Restaurant> restaurants;
-  const _BestRestaurantsList({
-    required this.isDark,
-    required this.restaurants,
-  });
+  const _BestRestaurantsList({required this.isDark, required this.restaurants});
 
   @override
   Widget build(BuildContext context) {
@@ -951,9 +951,7 @@ class _RestaurantCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        Navigator.of(
-          context,
-        ).push(
+        Navigator.of(context).push(
           MaterialPageRoute(
             builder: (_) => RestaurantMenuScreen(
               vendorId: restaurant.id,
@@ -1029,20 +1027,11 @@ class _RestaurantCard extends StatelessWidget {
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: AppColorss.primary.withAlpha(
-                              isDark ? 45 : 20,
-                            ),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(
-                                Icons.star_rounded,
-                                color: AppColorss.primary,
-                                size: 14,
-                              ),
-                              const SizedBox(width: 3),
                               Text(
                                 restaurant.rating.toStringAsFixed(1),
                                 style: const TextStyle(
@@ -1051,6 +1040,12 @@ class _RestaurantCard extends StatelessWidget {
                                   fontWeight: FontWeight.w700,
                                 ),
                               ),
+                              const Icon(
+                                Icons.star_rounded,
+                                color: AppColorss.primary,
+                                size: 14,
+                              ),
+                              const SizedBox(width: 3),
                             ],
                           ),
                         ),
@@ -1111,27 +1106,6 @@ class _RestaurantCard extends StatelessWidget {
                               ),
                             ),
                           ],
-                        ),
-                        Container(
-                          width: 9,
-                          height: 9,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: restaurant.isOpen
-                                ? const Color(0xFF22C55E)
-                                : const Color(0xFFEF4444),
-                            boxShadow: [
-                              BoxShadow(
-                                color:
-                                    (restaurant.isOpen
-                                            ? const Color(0xFF22C55E)
-                                            : const Color(0xFFEF4444))
-                                        .withAlpha(140),
-                                blurRadius: 6,
-                                spreadRadius: 1,
-                              ),
-                            ],
-                          ),
                         ),
                       ],
                     ),

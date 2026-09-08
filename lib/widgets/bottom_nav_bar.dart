@@ -40,7 +40,9 @@ class AppBottomNavBar extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: isDark ? Colors.black.withValues(alpha: 0.39) : Colors.black.withValues(alpha: 0.06),
+            color: isDark
+                ? Colors.black.withValues(alpha: 0.39)
+                : Colors.black.withValues(alpha: 0.06),
             blurRadius: 16,
             offset: const Offset(0, -4),
           ),
@@ -67,9 +69,7 @@ class AppBottomNavBar extends StatelessWidget {
                     size: 22,
                     color: selected
                         ? primaryColor
-                        : (isDark
-                              ? mutedTextDarkColor
-                              : Colors.grey[400]),
+                        : (isDark ? mutedTextDarkColor : Colors.grey[400]),
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -80,9 +80,7 @@ class AppBottomNavBar extends StatelessWidget {
                       letterSpacing: 0.1,
                       color: selected
                           ? primaryColor
-                          : (isDark
-                                ? mutedTextDarkColor
-                                : Colors.grey[400]),
+                          : (isDark ? mutedTextDarkColor : Colors.grey[400]),
                     ),
                   ),
                 ],

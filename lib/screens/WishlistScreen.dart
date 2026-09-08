@@ -1,1053 +1,986 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
-/// Palette matches ProfileColors exactly (same field names, same values)
-/// so this screen reads as part of the same app as the Profile screen.
-class WishlistColors {
-  static const primary = Color(0xFFEE5B2B);
-  static const bgLight = Color(0xFFFAFAFC);
-  static const bgDeep = Color(0xFF1E1714);
-  static const cardLight = Colors.white;
-  static const cardFill = Color(0xFF281E19);
-  static const borderLight = Color(0xFFF0F0F3);
-  static const cardBorder = Color(0xFF3D2B23);
-  static const textDescription = Color(0xFFC9A092);
-
-  static ThemeData get theme => ThemeData(
-    useMaterial3: true,
-    fontFamily: 'PlusJakartaSans',
-    scaffoldBackgroundColor: bgDeep,
-    colorScheme: ColorScheme.fromSeed(
-      seedColor: primary,
-      brightness: Brightness.dark,
-    ),
-  );
-}
-
-class Shop {
+// ─── Data model ───────────────────────────────────────────────────────────────
+class DishItem {
   final String id;
+  final String restaurant;
+  final double distance;
   final String name;
-  final Color color;
-  const Shop({required this.id, required this.name, required this.color});
-}
-
-class WishlistItem {
-  final String id;
-  final String name;
-  final String category;
-  final Shop shop;
+  final double rating;
+  final String tag;
+  final Color tagColor;
   final double price;
-  final double? originalPrice; // null = no discount
+  final String category;
   final String imageUrl;
-  const WishlistItem({
+
+  const DishItem({
     required this.id,
+    required this.restaurant,
+    required this.distance,
     required this.name,
-    required this.category,
-    required this.shop,
+    required this.rating,
+    required this.tag,
+    required this.tagColor,
     required this.price,
-    this.originalPrice,
+    required this.category,
     required this.imageUrl,
   });
-
-  bool get onSale => originalPrice != null && originalPrice! > price;
-  int get discountPercent =>
-      onSale ? (((originalPrice! - price) / originalPrice!) * 100).round() : 0;
 }
 
-enum SortMode { recent, priceLowHigh, priceHighLow, shopAz }
-
-// Shop accent colors reuse the same hues as the icon badges on the
-// Profile screen (blue / green / purple), plus primary for the
-// flagship shop — same colorful-icon-badge vocabulary throughout the app.
-const _shops = [
-  Shop(
-    id: 'golden_spoon',
-    name: 'The Golden Spoon',
-    color: WishlistColors.primary,
+final List<DishItem> _allItems = [
+  DishItem(
+    id: '1',
+    restaurant: 'The Burger Foundry',
+    distance: 0.4,
+    name: 'Truffle Wagyu Double Smash',
+    rating: 4.9,
+    tag: 'Bestseller',
+    tagColor: const Color(0xFF64748B),
+    price: 16.50,
+    category: 'burgers',
+    imageUrl:
+        'https://lh3.googleusercontent.com/aida-public/AB6AXuChJa_7z6FQ4Cc3dqQv_05s5vL0bX8Dv3Imb6RanYxUdzG4RGsiQ04OWyBV4d4TH_-iUKMq8mV2nEe4PnnoB4mxQX-p0KSZ5YmdtJAJgZOvKmwkJFE8HENVh4loQ6sgPIPVOBMwYx8KalMDTh_ndzEdnUcwNTdsEN3Q-F-uyRgqCiKzBk06O2Dkn4woTW_9P9sv3vSiSs1Hw773VV1aDXdo0FdmDv6EfxtnZEimJ030Qdzkklwu8-wZ8A',
   ),
-  Shop(id: 'urban_bites', name: 'Urban Bites & Co.', color: Color(0xFF3B82F6)),
-  Shop(
-    id: 'salad_project',
-    name: 'The Salad Project',
-    color: Color(0xFF22C55E),
+  DishItem(
+    id: '2',
+    restaurant: 'Aloha Poke & Greens',
+    distance: 1.1,
+    name: 'Spicy Salmon & Avocado Bowl',
+    rating: 4.8,
+    tag: 'Gluten-free',
+    tagColor: const Color(0xFF059669),
+    price: 14.20,
+    category: 'japanese',
+    imageUrl:
+        'https://lh3.googleusercontent.com/aida-public/AB6AXuCuYBD1euhC3LEdJ0dSm42lJpLpqUQPniU8yiTItfLJHaHdxmtMUxo76C43a6zJg4_xQDjnIHevWAYDqcy85Jq7Hmn1deiJeolmkYpVXlWS0dyU2qVfkd7_vIwVro3FQKJeo9w9Q6mmZR1ThqAG_DjO-Asp6JSTxDaWdxuYPhrwK7WxxPQaFyy8haSMRPxQvWA4Sdnkt-CLU7slQBDUoDWcl6y_0Osojg5JqFxUCaBLTPyT_BRd-XWLiA',
   ),
-  Shop(id: 'smokehouse', name: 'The Smokehouse', color: Color(0xFFA855F7)),
-];
-
-final List<WishlistItem> _seedItems = [
-  WishlistItem(
-    id: 'w1',
-    name: 'Truffle Pasta',
-    category: 'Main Course',
-    shop: _shops[0],
+  DishItem(
+    id: '3',
+    restaurant: 'Bella Napoli Pizzeria',
+    distance: 0.8,
+    name: 'Wood-Fired Margherita',
+    rating: 4.9,
+    tag: 'Wood Oven',
+    tagColor: const Color(0xFF64748B),
     price: 18.00,
+    category: 'pizza',
     imageUrl:
-        'https://lh3.googleusercontent.com/aida-public/AB6AXuDE52O8N8mMKZbpP7xYKADq_Q7TB5iJZUJQEb80XS6VuNpTnmbweZFBt_-Js_qnBNx62GBZJraK2M2YYb0Uygrv1FJ43D5ei7V-HMyuWfXXa-Li61rNfSR20a4f_HYJD4W8rxMWnb89eeUqXl1v1ZUY6XrYE97ZD4nZXOSWAtLWB3-_uSryOq8T0smAyASpMPhI-loxjh8f0zSf1gd91h5NWeXBRJeuKH2ORm4-4htCJ5BcKPZHzkIsDb_e39cUR2PgHx5uQimvzL25',
+        'https://lh3.googleusercontent.com/aida-public/AB6AXuDRyyhlIGP5x6ywi8bDKDJt31j3BTgfpJVLw_4Fxk_SVj-bq1JnuvoXLPFE_LrfndvVMn8NXdJmrxYc5DKpICOhT8qksgqm-wHWxRoDxVj6m7b2chOwKOFrFxPOMtHESct75MjTQwn-hXeFTjbKVsB17s-DwzDydSNLLEqUb87p9BzoiS6d65_K0d3_P1YrYOoK3_TJhnhRmJFOaKwp6cxrsHO1WhcGs8UT9nw-FX_wheVrHb3ibThnag',
   ),
-  WishlistItem(
-    id: 'w2',
-    name: 'Cheesy Delight Pizza',
-    category: 'Pizza',
-    shop: _shops[0],
-    price: 12.50,
-    originalPrice: 24.99,
+  DishItem(
+    id: '4',
+    restaurant: 'Ramen Master Shinjuku',
+    distance: 1.6,
+    name: 'Tonkotsu Black Garlic Ramen',
+    rating: 4.7,
+    tag: 'Extra Ajitama',
+    tagColor: const Color(0xFF64748B),
+    price: 15.80,
+    category: 'japanese',
     imageUrl:
-        'https://lh3.googleusercontent.com/aida-public/AB6AXuBJSMfmwvvapG0ZHxYVePZV8uQK-WLKaOEBlNU9foogkBwzEY19ieziXMxOYMCX9IYuRqVLhcqWCTifN7QdZEEqEN8lDswHzWTC85QA716MmM_ZSZMnzW02rcdwwDJooMYoPnPnf3aPk-VikoWOdXQ20ZaHpC25Efb0cY9Ny4akg6_z0o_MckdyPF8P-9Pc5aqeflowj9BIXYHyx56_gOS9liUE9vu4vySXUoDz4bJZ3C_YHKPo8OqOLiFZ4ZtqCMc5fqX9v0UzPaKn',
+        'https://lh3.googleusercontent.com/aida-public/AB6AXuBl3le2yFK8tIF9xJ9oF7n0HQIWMRvsIsrmsBxlFDLAmTd-ZuDBKrX16l1dBCyblp0FaQ92CuZ6W0oEdouxrI1FEamza-J9NsYKUtR5t4RJPgTv9IpHMqoAGWqjsrFkp6X2waVGbBIvF_OshHIC_y1Mhy0Xdvqd1O-vpU6FHMXrl29SbTyt_9vrIGanTLA8tqCS-6owjd_QbW6douHo-oAQtyO5o8OAWa9nFwv1QI3ua54V4PNbyL1Xjg',
   ),
-  WishlistItem(
-    id: 'w3',
-    name: 'Double Beef Smash',
-    category: 'Burger',
-    shop: _shops[1],
-    price: 8.50,
-    originalPrice: 17.00,
+  DishItem(
+    id: '5',
+    restaurant: 'Kumo Bakery & Cafe',
+    distance: 2.2,
+    name: 'Matcha Basque Cheesecake',
+    rating: 5.0,
+    tag: 'Artisanal',
+    tagColor: const Color(0xFF64748B),
+    price: 7.50,
+    category: 'desserts',
     imageUrl:
-        'https://lh3.googleusercontent.com/aida-public/AB6AXuAQajB08E40GIXc8XWyyyJMRfiC-vn1pldnjNsBeT4QKpDSVuRPNQiF_8Xk7LRwrIYXJxmOvomxzJt0g1Mb_vFTw03CabQfXbrnowLWkLGvTcQApK-VYIWfGXD-eU6-Mr2ZxcrCB1y52q3uNdCnHoOtbB4c0y3OXzn8IKuMQUNSr1UiZok0k27xh3YuHhZJLw9l1ZPXTbm4vGTIpX6ZbJuOTXN3CMD3aNLeddYUY_4mTJJjgQW83l3ZJlgse1qM9CR25MIsOBKXjG7p',
-  ),
-  WishlistItem(
-    id: 'w4',
-    name: 'Morning Berry Bowl',
-    category: 'Healthy',
-    shop: _shops[2],
-    price: 9.20,
-    imageUrl:
-        'https://lh3.googleusercontent.com/aida-public/AB6AXuD4yhPin6dzd-0bzsMiqqxvvUt4eAfu6HTxkb3DYB2THXb5sagbjYSFDbkvCxjzxusQ5dWZfaRvXoq8qyJ8ACdiGbOtBoi4StQfmdpWtxfMDDOKxb_FfqRgdCmcx7tEt6Jg4w6nZRHbKit8KD9do6rpyv5ztqJla4UiiAJPNjRWxApaV0lYy8kQYFKgSmBBeW6U6yndkJdUiE4s9N6gPfR91oID-PtuospqsPqEOBlETl8irRRgka1_hH9yTIY8UvuntkKdc5zVoqO7',
-  ),
-  WishlistItem(
-    id: 'w5',
-    name: 'Classic Bruschetta',
-    category: 'Starters',
-    shop: _shops[0],
-    price: 8.50,
-    imageUrl:
-        'https://lh3.googleusercontent.com/aida-public/AB6AXuC0GC79J4Zm8F2EUKSyEXzxTAEI94jwQagtF87LSrYHNS7jvgGOaYmxPQjquEEH_VtxZ59iIN8c3kVmtvWyUk9rgoXJihR2mCIauaELYlJp7lm17q75uq4R2ycoIVSXG5Yy00xTKvmHEHTEHv9ZDo-j48R7KPwC5iQ6TEhzUcmMjJ4Kmf4WnFcMClT2gfowVEJA7l0OLe32RVEkQummZa6Gws-2B7CgQZrN640LwY6hxM1CK5_AW4J3zpffBHBwyxG7ICpgi1pJfaTr',
-  ),
-  WishlistItem(
-    id: 'w6',
-    name: 'Smoked Beef Ribs',
-    category: 'BBQ',
-    shop: _shops[3],
-    price: 22.00,
-    originalPrice: 27.50,
-    imageUrl:
-        'https://lh3.googleusercontent.com/aida-public/AB6AXuBYqdb8-9dmDhLNbRhUZwKxFHXjz7Y4vohYf_W8xFGxw9kTwBHveqIdCkrTHUQFaxTmEKqlWLgb-g07hckDwyvI3EPQVd3yfOyVhYftbNZTfrukzHIIF1mz8wheRiNmvKSKP5jfdisKF6Q9AqcHT4mQn639vumXdwgcHeA5Cwp-7jEXE5VN06kcFAgxiMEPHNL6fnBGJ-owFJCNfjFr7-zH4-urFCgqol1C4sA1vL_GrWomz0r_eUCrXltx83sxyhzUlNVuKq2S8fzN',
-  ),
-  WishlistItem(
-    id: 'w7',
-    name: 'Crispy Calamari',
-    category: 'Starters',
-    shop: _shops[0],
-    price: 12.00,
-    imageUrl:
-        'https://lh3.googleusercontent.com/aida-public/AB6AXuCkI0TATJPsgwsaat2AW6Fap5fIXeLSNAnIX7OZlfqp2hzhoQonPI6Hkfnl8QbHHzA-6nLahdJ6ClTs8dVM691mkZV0RfJRWurapBWxEJoUSKmtuLvyXOcXQ9RuLZw293hRGe1qfO5dWyPPEpIHqFdtRfdXRTWKTE7VgyKsiAvKtxjxG7WvA9EkKTCpxvVkjkx1hCPFSruChrYmBq0cDYCH0DuavItlBGuUslw7atPUZHVPct__WQ8rD-oJ2MCl2Yrk9JE8ZuGIe4sU',
-  ),
-  WishlistItem(
-    id: 'w8',
-    name: 'Miso Soup',
-    category: 'Starters',
-    shop: _shops[1],
-    price: 3.50,
-    imageUrl:
-        'https://lh3.googleusercontent.com/aida-public/AB6AXuAzVwyx5UJyBlkILUTxyC6woyMOJdGQHNMZcrQZyLzdU1ZwSyW5Jn5OVdi-uUtezcHjo-q5BdB43aCAB44bO4_UQ40vqMg2rUbeDPfRAdks1b6UQermDb6MH5iF0geKrfMudwQBLHCL5NWn_qvRofQtdWGB1L3wLZtFsotLQpa6fXwqYUcbRay34zGjrX0-6whqyIZFqo1R1Wv5IocBTySU6TtrMk2FTmjJrYlB-FqX8aoQZoWN1y6rAJFaFIro74FBs8WaSnT6opxK',
+        'https://lh3.googleusercontent.com/aida-public/AB6AXuCqVHlc8mO7cZb0teb5uaEAVGYThfxb4ROaZISvZWiGps2pP9HKo3P12Rk6q3hIOfp-D1f_qY2wDk5PCaNKGc4b-dpmXsKtbFW9OY6rW7rHPlYkgGYeBDYOiDXjztHgnbvw3r_2VuNEl3ZUZwj14YEycvu2jsSiQpgL4aSgBwm0are4HAAlOIBSfgnCCovTM9EGj1JktEXpIPqIWoepMavY7dPQAbpSC1omOcay2F8rRbRtUfdo97UeJQ',
   ),
 ];
 
-/// ---------------------------------------------------------------------
-/// Main screen
-/// ---------------------------------------------------------------------
-class WishlistScreen extends StatefulWidget {
-  const WishlistScreen({super.key});
-
+// ─── Saved Screen ─────────────────────────────────────────────────────────────
+class Wishlistscreen extends StatefulWidget {
+  const Wishlistscreen({super.key});
   @override
-  State<WishlistScreen> createState() => _WishlistScreenState();
+  State<Wishlistscreen> createState() => _WishlistscreenState();
 }
 
-class _WishlistScreenState extends State<WishlistScreen> {
-  late List<WishlistItem> _items;
-  final TextEditingController _searchController = TextEditingController();
-  String _query = '';
-  String? _selectedShopId; // null = All Shops
-  SortMode _sortMode = SortMode.recent;
+class _WishlistscreenState extends State<Wishlistscreen> {
+  String _activeFilter = 'all';
+  String _searchQuery = '';
+  final TextEditingController _searchCtrl = TextEditingController();
+  final Set<String> _addedIds = {};
+  late List<DishItem> _items;
+
+  static const _categories = [
+    ('all', 'All'),
+    ('burgers', 'Burgers'),
+    ('japanese', 'Japanese & Bowls'),
+    ('pizza', 'Pizza'),
+    ('desserts', 'Desserts'),
+  ];
 
   @override
   void initState() {
     super.initState();
-    _items = List.of(_seedItems);
-    _searchController.addListener(() {
-      setState(() => _query = _searchController.text.trim().toLowerCase());
-    });
+    _items = List.from(_allItems);
+  }
+
+  List<DishItem> get _filtered => _items.where((d) {
+    final matchCat = _activeFilter == 'all' || d.category == _activeFilter;
+    final q = _searchQuery.toLowerCase();
+    final matchSearch =
+        q.isEmpty ||
+        d.name.toLowerCase().contains(q) ||
+        d.restaurant.toLowerCase().contains(q) ||
+        d.tag.toLowerCase().contains(q);
+    return matchCat && matchSearch;
+  }).toList();
+
+  void _removeItem(String id) {
+    setState(() => _items.removeWhere((d) => d.id == id));
+  }
+
+  void _toggleAdd(String id) async {
+    setState(() => _addedIds.add(id));
+    await Future.delayed(const Duration(milliseconds: 1200));
+    if (mounted) setState(() => _addedIds.remove(id));
   }
 
   @override
   void dispose() {
-    _searchController.dispose();
+    _searchCtrl.dispose();
     super.dispose();
-  }
-
-  List<WishlistItem> get _visibleItems {
-    var list = _items.where((item) {
-      final matchesQuery =
-          _query.isEmpty ||
-          item.name.toLowerCase().contains(_query) ||
-          item.shop.name.toLowerCase().contains(_query) ||
-          item.category.toLowerCase().contains(_query);
-      final matchesShop =
-          _selectedShopId == null || item.shop.id == _selectedShopId;
-      return matchesQuery && matchesShop;
-    }).toList();
-
-    switch (_sortMode) {
-      case SortMode.recent:
-        break; // keep insertion order
-      case SortMode.priceLowHigh:
-        list.sort((a, b) => a.price.compareTo(b.price));
-        break;
-      case SortMode.priceHighLow:
-        list.sort((a, b) => b.price.compareTo(a.price));
-        break;
-      case SortMode.shopAz:
-        list.sort((a, b) => a.shop.name.compareTo(b.shop.name));
-        break;
-    }
-    return list;
-  }
-
-  void _removeItem(WishlistItem item, bool isDark) {
-    setState(() => _items.removeWhere((i) => i.id == item.id));
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: isDark
-            ? WishlistColors.cardFill
-            : WishlistColors.cardLight,
-        content: Text(
-          'Removed "${item.name}" from wishlist',
-          style: TextStyle(
-            color: isDark ? Colors.white : const Color(0xFF1D1E20),
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        action: SnackBarAction(
-          label: 'UNDO',
-          textColor: WishlistColors.primary,
-          onPressed: () => setState(() => _items.add(item)),
-        ),
-      ),
-    );
-  }
-
-  void _openSortSheet(bool isDark) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: isDark
-          ? WishlistColors.cardFill
-          : WishlistColors.cardLight,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (context) => _SortSheet(
-        isDark: isDark,
-        selected: _sortMode,
-        onSelect: (mode) {
-          setState(() => _sortMode = mode);
-          Navigator.pop(context);
-        },
-      ),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final visible = _visibleItems;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColor = isDark ? WishlistColors.bgDeep : WishlistColors.bgLight;
-
+    final filtered = _filtered;
     return Scaffold(
-      backgroundColor: bgColor,
-      body: SafeArea(
-        child: Column(
-          children: [
-            _TopBar(isDark: isDark, itemCount: _items.length),
-            Expanded(
-              child: CustomScrollView(
-                slivers: [
-                  SliverToBoxAdapter(
-                    child: Center(
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 420),
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _SearchBar(
-                                isDark: isDark,
-                                controller: _searchController,
-                                onFilterTap: () => _openSortSheet(isDark),
-                              ),
-                              const SizedBox(height: 16),
-                              _ShopFilterRow(
-                                isDark: isDark,
-                                selectedShopId: _selectedShopId,
-                                onSelect: (id) =>
-                                    setState(() => _selectedShopId = id),
-                              ),
-                              const SizedBox(height: 8),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  if (visible.isEmpty)
-                    SliverFillRemaining(
-                      hasScrollBody: false,
-                      child: _EmptyState(
-                        isDark: isDark,
-                        hasQuery: _query.isNotEmpty,
-                      ),
-                    )
-                  else
-                    SliverToBoxAdapter(
-                      child: Center(
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 420),
-                          child: Padding(
-                            padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
-                            child: Column(
-                              children: [
-                                for (final item in visible)
-                                  Padding(
-                                    padding: const EdgeInsets.only(bottom: 12),
-                                    child: _WishlistCard(
-                                      isDark: isDark,
-                                      item: item,
-                                      onRemove: () => _removeItem(item, isDark),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
+      backgroundColor: const Color(0xFFFAFAFB),
+      extendBody: true,
+      body: Stack(
+        children: [
+          // ── Scrollable content ─────────────────────────────────────────────
+          CustomScrollView(
+            physics: const BouncingScrollPhysics(),
+            slivers: [
+              // Status bar spacer
+              SliverToBoxAdapter(
+                child: SizedBox(
+                  height: MediaQuery.of(context).padding.top + 56,
+                ),
               ),
-            ),
-          ],
-        ),
+              // Search bar
+              SliverToBoxAdapter(
+                child: _SearchBar(
+                  controller: _searchCtrl,
+                  onChanged: (v) => setState(() => _searchQuery = v),
+                  onClear: () {
+                    _searchCtrl.clear();
+                    setState(() => _searchQuery = '');
+                  },
+                ),
+              ),
+              // Category pills
+              SliverToBoxAdapter(
+                child: _CategoryPills(
+                  categories: _categories,
+                  active: _activeFilter,
+                  onSelect: (f) => setState(() => _activeFilter = f),
+                ),
+              ),
+              // Cards
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+                sliver: SliverList.separated(
+                  itemCount: filtered.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 12),
+                  itemBuilder: (ctx, i) {
+                    final item = filtered[i];
+                    return _DishCard(
+                      key: ValueKey(item.id),
+                      item: item,
+                      isAdded: _addedIds.contains(item.id),
+                      onRemove: () => _removeItem(item.id),
+                      onAdd: () => _toggleAdd(item.id),
+                    );
+                  },
+                ),
+              ),
+              // Bottom hint
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 20),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.favorite_rounded,
+                        size: 14,
+                        color: Color(0xFF94A3B8),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Tap heart to remove from saved',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade400,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              // Space for floating cart + nav
+              const SliverToBoxAdapter(child: SizedBox(height: 140)),
+            ],
+          ),
+
+          // ── Frosted header ─────────────────────────────────────────────────
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: _Header(count: filtered.length),
+          ),
+
+          // ── Floating cart dock ─────────────────────────────────────────────
+          Positioned(
+            bottom:
+                kBottomNavigationBarHeight +
+                MediaQuery.of(context).padding.bottom +
+                8,
+            left: 16,
+            right: 16,
+            child: const _CartDock(),
+          ),
+        ],
       ),
+      // ── Bottom nav ──────────────────────────────────────────────────────────
+      bottomNavigationBar: _BottomNav(),
     );
   }
 }
 
-/// ---------------------------------------------------------------------
-/// Top bar — matches ProfileScreen's _TopBar exactly (chevron + title)
-/// ---------------------------------------------------------------------
-class _TopBar extends StatelessWidget {
-  final bool isDark;
-  final int itemCount;
-  const _TopBar({required this.isDark, required this.itemCount});
+// ─── Header ───────────────────────────────────────────────────────────────────
+class _Header extends StatelessWidget {
+  final int count;
+  const _Header({required this.count});
 
   @override
   Widget build(BuildContext context) {
-    final textColor = isDark ? Colors.white : const Color(0xFF1D1E20);
-    final subtitleColor = isDark
-        ? WishlistColors.textDescription
-        : Colors.grey[600];
-
     return Container(
-      padding: const EdgeInsets.fromLTRB(8, 12, 8, 8),
-      color: isDark ? WishlistColors.bgDeep : WishlistColors.bgLight,
-      child: Row(
-        children: [
-          SizedBox(
-            width: 40,
-            height: 40,
-            child: IconButton(
-              padding: EdgeInsets.zero,
-              onPressed: () => Navigator.of(context).maybePop(),
-              icon: Icon(
-                Icons.chevron_left_rounded,
-                color: textColor,
-                size: 28,
-              ),
-            ),
-          ),
-          Expanded(
-            child: Column(
+      color: const Color(0xD9FAFAFB),
+      child: SafeArea(
+        bottom: false,
+        child: SizedBox(
+          height: 56,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Row(
               children: [
                 Text(
-                  'My Wishlist',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: textColor,
+                  'Saved',
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF0F172A),
+                    letterSpacing: -0.5,
                   ),
                 ),
-                Text(
-                  '$itemCount item${itemCount == 1 ? '' : 's'} saved',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: subtitleColor,
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF7ED),
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                  child: Text(
+                    '$count',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFFEA580C),
+                    ),
+                  ),
+                ),
+                const Spacer(),
+                // Filter button
+                _IconBtn(icon: Icons.tune_rounded, onTap: () {}),
+                const SizedBox(width: 8),
+                // Avatar
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F5F9),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: const Color(0xFFE2E8F0),
+                      width: 1,
+                    ),
+                  ),
+                  alignment: Alignment.center,
+                  child: const Text(
+                    'JD',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF475569),
+                    ),
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 40),
-        ],
+        ),
       ),
     );
   }
 }
 
+class _IconBtn extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+  const _IconBtn({required this.icon, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          shape: BoxShape.circle,
+          border: Border.all(color: const Color(0xFFF1F5F9), width: 1),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Icon(icon, size: 18, color: const Color(0xFF475569)),
+      ),
+    );
+  }
+}
+
+// ─── Search bar ───────────────────────────────────────────────────────────────
 class _SearchBar extends StatelessWidget {
-  final bool isDark;
   final TextEditingController controller;
-  final VoidCallback onFilterTap;
+  final ValueChanged<String> onChanged;
+  final VoidCallback onClear;
+
   const _SearchBar({
-    required this.isDark,
     required this.controller,
-    required this.onFilterTap,
+    required this.onChanged,
+    required this.onClear,
   });
 
   @override
   Widget build(BuildContext context) {
-    final fieldBg = isDark ? WishlistColors.cardFill : WishlistColors.cardLight;
-    final fieldBorder = isDark
-        ? WishlistColors.cardBorder
-        : WishlistColors.borderLight;
-    final textColor = isDark ? Colors.white : const Color(0xFF1D1E20);
-    final hintColor = isDark
-        ? WishlistColors.textDescription
-        : Colors.grey[500];
-
-    return Row(
-      children: [
-        Expanded(
-          child: Container(
-            decoration: BoxDecoration(
-              color: fieldBg,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: fieldBorder),
-              boxShadow: [
-                BoxShadow(
-                  color: isDark
-                      ? Colors.black.withValues(alpha: 0.15)
-                      : Colors.black.withValues(alpha: 0.04),
-                  blurRadius: 10,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(99),
+          border: Border.all(color: const Color(0xFFE2E8F0).withOpacity(0.7)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.025),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
             ),
-            child: TextField(
-              controller: controller,
-              style: TextStyle(
-                color: textColor,
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-              ),
-              decoration: InputDecoration(
-                hintText: 'Search saved items or shops',
-                hintStyle: TextStyle(color: hintColor),
-                prefixIcon: Icon(
-                  Icons.search_rounded,
-                  color: hintColor,
-                  size: 22,
-                ),
-                suffixIcon: ValueListenableBuilder<TextEditingValue>(
-                  valueListenable: controller,
-                  builder: (context, value, _) {
-                    if (value.text.isEmpty) return const SizedBox.shrink();
-                    return IconButton(
-                      icon: Icon(
-                        Icons.close_rounded,
-                        color: hintColor,
-                        size: 18,
-                      ),
-                      onPressed: controller.clear,
-                    );
-                  },
-                ),
-                border: InputBorder.none,
-                isDense: true,
-                contentPadding: const EdgeInsets.symmetric(vertical: 14),
-              ),
+          ],
+        ),
+        child: TextField(
+          controller: controller,
+          onChanged: onChanged,
+          style: const TextStyle(
+            fontSize: 13.5,
+            fontWeight: FontWeight.w500,
+            color: Color(0xFF1E293B),
+          ),
+          decoration: InputDecoration(
+            hintText: 'Search saved dishes & spots...',
+            hintStyle: TextStyle(
+              color: Colors.grey.shade400,
+              fontWeight: FontWeight.w400,
+              fontSize: 13.5,
             ),
+            prefixIcon: const Icon(
+              Icons.search_rounded,
+              size: 20,
+              color: Color(0xFF94A3B8),
+            ),
+            suffixIcon: controller.text.isNotEmpty
+                ? GestureDetector(
+                    onTap: onClear,
+                    child: const Icon(
+                      Icons.close_rounded,
+                      size: 18,
+                      color: Color(0xFF94A3B8),
+                    ),
+                  )
+                : null,
+            border: InputBorder.none,
+            contentPadding: const EdgeInsets.symmetric(vertical: 11),
           ),
         ),
-        const SizedBox(width: 10),
-        InkWell(
-          onTap: onFilterTap,
-          borderRadius: BorderRadius.circular(14),
-          child: Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: WishlistColors.primary.withValues(
-                alpha: isDark ? 0.2 : 0.1,
-              ),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: WishlistColors.primary.withValues(alpha: 0.3),
-              ),
-            ),
-            child: const Icon(
-              Icons.tune_rounded,
-              color: WishlistColors.primary,
-              size: 22,
-            ),
-          ),
-        ),
-      ],
+      ),
     );
   }
 }
 
-/// ---------------------------------------------------------------------
-/// Shop filter — same pill treatment as the "GOLD MEMBER" badge on
-/// ProfileScreen (tinted fill + soft border when selected).
-/// ---------------------------------------------------------------------
-class _ShopFilterRow extends StatelessWidget {
-  final bool isDark;
-  final String? selectedShopId;
-  final ValueChanged<String?> onSelect;
-  const _ShopFilterRow({
-    required this.isDark,
-    required this.selectedShopId,
+// ─── Category pills ───────────────────────────────────────────────────────────
+class _CategoryPills extends StatelessWidget {
+  final List<(String, String)> categories;
+  final String active;
+  final ValueChanged<String> onSelect;
+
+  const _CategoryPills({
+    required this.categories,
+    required this.active,
     required this.onSelect,
   });
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 38,
-      child: ListView(
+      height: 46,
+      child: ListView.separated(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
         scrollDirection: Axis.horizontal,
-        children: [
-          _ShopChip(
-            isDark: isDark,
-            label: 'All Shops',
-            accent: WishlistColors.primary,
-            selected: selectedShopId == null,
-            onTap: () => onSelect(null),
-          ),
-          const SizedBox(width: 10),
-          for (final shop in _shops) ...[
-            _ShopChip(
-              isDark: isDark,
-              label: shop.name,
-              accent: shop.color,
-              selected: selectedShopId == shop.id,
-              onTap: () => onSelect(shop.id),
+        itemCount: categories.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (ctx, i) {
+          final (key, label) = categories[i];
+          final isActive = active == key;
+          return GestureDetector(
+            onTap: () => onSelect(key),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              decoration: BoxDecoration(
+                color: isActive ? const Color(0xFF0F172A) : Colors.white,
+                borderRadius: BorderRadius.circular(99),
+                border: Border.all(
+                  color: isActive
+                      ? Colors.transparent
+                      : const Color(0xFFE2E8F0),
+                  width: 1,
+                ),
+                boxShadow: isActive
+                    ? [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.08),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ]
+                    : null,
+              ),
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+                  color: isActive ? Colors.white : const Color(0xFF475569),
+                ),
+              ),
             ),
-            const SizedBox(width: 10),
-          ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+// ─── Dish Card ────────────────────────────────────────────────────────────────
+class _DishCard extends StatefulWidget {
+  final DishItem item;
+  final bool isAdded;
+  final VoidCallback onRemove;
+  final VoidCallback onAdd;
+
+  const _DishCard({
+    super.key,
+    required this.item,
+    required this.isAdded,
+    required this.onRemove,
+    required this.onAdd,
+  });
+
+  @override
+  State<_DishCard> createState() => _DishCardState();
+}
+
+class _DishCardState extends State<_DishCard>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _animCtrl;
+  late final Animation<double> _opacityAnim;
+  late final Animation<double> _scaleAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _animCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 240),
+    );
+    _opacityAnim = Tween<double>(begin: 1, end: 0).animate(_animCtrl);
+    _scaleAnim = Tween<double>(begin: 1, end: 0.95).animate(_animCtrl);
+  }
+
+  void _handleRemove() async {
+    await _animCtrl.forward();
+    widget.onRemove();
+  }
+
+  @override
+  void dispose() {
+    _animCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final item = widget.item;
+    return FadeTransition(
+      opacity: _opacityAnim,
+      child: ScaleTransition(
+        scale: _scaleAnim,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: const Color(0xFFF1F5F9), width: 1),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 12,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                // Thumbnail
+                _Thumbnail(imageUrl: item.imageUrl, onRemove: _handleRemove),
+                const SizedBox(width: 14),
+                // Content
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Restaurant + distance
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              item.restaurant,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                                color: Color(0xFF64748B),
+                              ),
+                            ),
+                          ),
+                          const Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 4),
+                            child: Text(
+                              '•',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Color(0xFF94A3B8),
+                              ),
+                            ),
+                          ),
+                          Text(
+                            '${item.distance} mi',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Color(0xFF94A3B8),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      // Dish name
+                      Text(
+                        item.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF0F172A),
+                          height: 1.3,
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      // Rating + tag
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFFBEB),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.star_rounded,
+                                  size: 12,
+                                  color: Color(0xFFD97706),
+                                ),
+                                const SizedBox(width: 2),
+                                Text(
+                                  item.rating.toStringAsFixed(1),
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFFD97706),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            item.tag,
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                              color: item.tagColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      // Price + Add button
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            '\$${item.price.toStringAsFixed(2)}',
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF0F172A),
+                            ),
+                          ),
+                          _AddButton(
+                            isAdded: widget.isAdded,
+                            onTap: widget.onAdd,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Thumbnail ────────────────────────────────────────────────────────────────
+class _Thumbnail extends StatelessWidget {
+  final String imageUrl;
+  final VoidCallback onRemove;
+  const _Thumbnail({required this.imageUrl, required this.onRemove});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 96,
+      height: 96,
+      child: Stack(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Image.network(
+              imageUrl,
+              width: 96,
+              height: 96,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => Container(
+                width: 96,
+                height: 96,
+                color: const Color(0xFFF1F5F9),
+              ),
+            ),
+          ),
+          Positioned(
+            top: 6,
+            right: 6,
+            child: GestureDetector(
+              onTap: onRemove,
+              child: Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.9),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.06),
+                      blurRadius: 6,
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.favorite_rounded,
+                  size: 15,
+                  color: Color(0xFFF43F5E),
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
-class _ShopChip extends StatelessWidget {
-  final bool isDark;
-  final String label;
-  final Color accent;
-  final bool selected;
+// ─── Add Button ───────────────────────────────────────────────────────────────
+class _AddButton extends StatelessWidget {
+  final bool isAdded;
   final VoidCallback onTap;
-  const _ShopChip({
-    required this.isDark,
-    required this.label,
-    required this.accent,
-    required this.selected,
-    required this.onTap,
-  });
+  const _AddButton({required this.isAdded, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    final unselectedBg = isDark
-        ? WishlistColors.cardFill
-        : WishlistColors.cardLight;
-    final unselectedBorder = isDark
-        ? WishlistColors.cardBorder
-        : WishlistColors.borderLight;
-    final unselectedText = isDark ? Colors.white70 : Colors.grey[700];
-
-    return InkWell(
+    return GestureDetector(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(999),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
         decoration: BoxDecoration(
-          color: selected
-              ? accent.withValues(alpha: isDark ? 0.2 : 0.1)
-              : unselectedBg,
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(
-            color: selected ? accent.withValues(alpha: 0.35) : unselectedBorder,
-          ),
+          color: isAdded ? const Color(0xFF059669) : const Color(0xFFEA580C),
+          borderRadius: BorderRadius.circular(99),
+          boxShadow: [
+            BoxShadow(
+              color:
+                  (isAdded ? const Color(0xFF059669) : const Color(0xFFEA580C))
+                      .withOpacity(0.25),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w700,
-            color: selected ? accent : unselectedText,
-            letterSpacing: selected ? 0.2 : 0,
-          ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              isAdded ? Icons.done_rounded : Icons.add_rounded,
+              size: 14,
+              color: Colors.white,
+            ),
+            const SizedBox(width: 3),
+            Text(
+              isAdded ? 'Added' : 'Add',
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-/// ---------------------------------------------------------------------
-/// Wishlist item card — same card shell as ProfileScreen's _MenuRow:
-/// rounded 16, soft border + shadow, colored icon-badge language reused
-/// for the quick-action buttons, and a small pill for the sale tag
-/// instead of a diagonal ribbon.
-/// ---------------------------------------------------------------------
-class _WishlistCard extends StatefulWidget {
-  final bool isDark;
-  final WishlistItem item;
-  final VoidCallback onRemove;
-  const _WishlistCard({
-    required this.isDark,
-    required this.item,
-    required this.onRemove,
-  });
-
-  @override
-  State<_WishlistCard> createState() => _WishlistCardState();
-}
-
-class _WishlistCardState extends State<_WishlistCard> {
-  bool _removing = false;
-
-  void _handleRemove() {
-    setState(() => _removing = true);
-    Future.delayed(const Duration(milliseconds: 140), widget.onRemove);
-  }
+// ─── Floating Cart Dock ───────────────────────────────────────────────────────
+class _CartDock extends StatelessWidget {
+  const _CartDock();
 
   @override
   Widget build(BuildContext context) {
-    final item = widget.item;
-    final isDark = widget.isDark;
-    final cardBg = isDark ? WishlistColors.cardFill : WishlistColors.cardLight;
-    final cardBorderColor = isDark
-        ? WishlistColors.cardBorder
-        : WishlistColors.borderLight;
-    final titleColor = isDark ? Colors.white : const Color(0xFF1D1E20);
-    final subtitleColor = isDark
-        ? WishlistColors.textDescription
-        : Colors.grey[600];
-
-    return Dismissible(
-      key: ValueKey(item.id),
-      direction: DismissDirection.endToStart,
-      onDismissed: (_) => widget.onRemove(),
-      background: Container(
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.symmetric(horizontal: 22),
-        decoration: BoxDecoration(
-          color: const Color(0xFFEF4444).withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: const Icon(
-          Icons.delete_outline_rounded,
-          color: Color(0xFFEF4444),
-        ),
-      ),
-      child: AnimatedOpacity(
-        opacity: _removing ? 0 : 1,
-        duration: const Duration(milliseconds: 140),
-        child: Container(
-          decoration: BoxDecoration(
-            color: cardBg,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: cardBorderColor, width: 1),
-            boxShadow: [
-              BoxShadow(
-                color: isDark
-                    ? Colors.black.withValues(alpha: 0.2)
-                    : Colors.black.withValues(alpha: 0.05),
-                blurRadius: 12,
-                offset: const Offset(0, 3),
-              ),
-            ],
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.96),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFE2E8F0).withOpacity(0.8)),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0F172A).withOpacity(0.10),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
           ),
-          padding: const EdgeInsets.all(12),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Stack(
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: SizedBox(
-                      width: 76,
-                      height: 76,
-                      child: Image.network(item.imageUrl, fit: BoxFit.cover),
-                    ),
+        ],
+      ),
+      child: Row(
+        children: [
+          // Icon
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF7ED),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(
+              Icons.storefront_rounded,
+              size: 20,
+              color: Color(0xFFEA580C),
+            ),
+          ),
+          const SizedBox(width: 10),
+          // Text
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'The Burger Foundry',
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF0F172A),
                   ),
-                  if (item.onSale)
-                    Positioned(
-                      top: 6,
-                      left: 6,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 7,
-                          vertical: 3,
-                        ),
-                        decoration: BoxDecoration(
-                          color: WishlistColors.primary,
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: Text(
-                          '-${item.discountPercent}%',
-                          style: const TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                SizedBox(height: 1),
+                Text(
+                  '3 items saved from this menu',
+                  style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          // CTA
+          GestureDetector(
+            onTap: () {},
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF0F172A),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.08),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
                 ],
               ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 6,
-                          height: 6,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: item.shop.color,
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            item.shop.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: item.shop.color,
-                              letterSpacing: 0.2,
-                            ),
-                          ),
-                        ),
-                      ],
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: const [
+                  Text(
+                    'Order Spot',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      item.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                        color: titleColor,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      item.category,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: subtitleColor,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.baseline,
-                          textBaseline: TextBaseline.alphabetic,
-                          children: [
-                            Text(
-                              '\$${item.price.toStringAsFixed(2)}',
-                              style: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w700,
-                                color: WishlistColors.primary,
-                              ),
-                            ),
-                            if (item.onSale) ...[
-                              const SizedBox(width: 6),
-                              Text(
-                                '\$${item.originalPrice!.toStringAsFixed(2)}',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w500,
-                                  color: subtitleColor,
-                                  decoration: TextDecoration.lineThrough,
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                        Row(
-                          children: [
-                            _IconBadgeButton(
-                              isDark: isDark,
-                              icon: Icons.add_shopping_cart_rounded,
-                              color: const Color(0xFF3B82F6),
-                              onTap: () {},
-                            ),
-                            const SizedBox(width: 8),
-                            _IconBadgeButton(
-                              isDark: isDark,
-                              icon: Icons.favorite_rounded,
-                              color: WishlistColors.primary,
-                              onTap: _handleRemove,
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+                  ),
+                  SizedBox(width: 4),
+                  Icon(
+                    Icons.arrow_forward_rounded,
+                    size: 13,
+                    color: Colors.white,
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
 }
 
-/// Small square icon badge — the same visual language as the 42x42
-/// colored icon badges on ProfileScreen's menu rows, sized down for
-/// inline card actions.
-class _IconBadgeButton extends StatelessWidget {
-  final bool isDark;
-  final IconData icon;
-  final Color color;
-  final VoidCallback onTap;
-  const _IconBadgeButton({
-    required this.isDark,
-    required this.icon,
-    required this.color,
-    required this.onTap,
-  });
+// ─── Bottom Navigation ────────────────────────────────────────────────────────
+class _BottomNav extends StatelessWidget {
+  final int _current = 1;
+
+  _BottomNav();
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(10),
-      child: Container(
-        width: 32,
-        height: 32,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: isDark ? 0.2 : 0.1),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Icon(icon, size: 15, color: color),
+    const items = [
+      (Icons.explore_rounded, Icons.explore_outlined, 'Explore'),
+      (Icons.favorite_rounded, Icons.favorite_border_rounded, 'Saved'),
+      (Icons.receipt_long_rounded, Icons.receipt_long_outlined, 'Orders'),
+      (Icons.account_circle_rounded, Icons.account_circle_outlined, 'Profile'),
+    ];
+
+    return Container(
+      decoration: const BoxDecoration(
+        color: Color(0xF7FFFFFF),
+        border: Border(top: BorderSide(color: Color(0xFFF1F5F9), width: 1)),
       ),
-    );
-  }
-}
-
-/// ---------------------------------------------------------------------
-/// Sort bottom sheet — rows styled like ProfileScreen's menu items
-/// ---------------------------------------------------------------------
-class _SortSheet extends StatelessWidget {
-  final bool isDark;
-  final SortMode selected;
-  final ValueChanged<SortMode> onSelect;
-  const _SortSheet({
-    required this.isDark,
-    required this.selected,
-    required this.onSelect,
-  });
-
-  static const _options = [
-    (SortMode.recent, 'Recently Added', Icons.schedule_rounded),
-    (SortMode.priceLowHigh, 'Price: Low to High', Icons.arrow_upward_rounded),
-    (SortMode.priceHighLow, 'Price: High to Low', Icons.arrow_downward_rounded),
-    (SortMode.shopAz, 'Shop Name (A–Z)', Icons.storefront_rounded),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    final titleColor = isDark ? Colors.white : const Color(0xFF1D1E20);
-    final handleColor = isDark
-        ? WishlistColors.cardBorder
-        : WishlistColors.borderLight;
-    final subtitleColor = isDark
-        ? WishlistColors.textDescription
-        : Colors.grey[600];
-
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 16),
-                decoration: BoxDecoration(
-                  color: handleColor,
-                  borderRadius: BorderRadius.circular(999),
-                ),
-              ),
-            ),
-            Text(
-              'Sort by',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                color: titleColor,
-              ),
-            ),
-            const SizedBox(height: 12),
-            for (final (mode, label, icon) in _options)
-              InkWell(
-                onTap: () => onSelect(mode),
-                borderRadius: BorderRadius.circular(12),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: Row(
+      child: SafeArea(
+        top: false,
+        child: SizedBox(
+          height: 64,
+          child: Row(
+            children: List.generate(items.length, (i) {
+              final (activeIco, idleIco, label) = items[i];
+              final isActive = i == _current;
+              return Expanded(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () {},
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: WishlistColors.primary.withValues(
-                            alpha: mode == selected ? (isDark ? 0.2 : 0.1) : 0,
-                          ),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Icon(
-                          icon,
-                          size: 18,
-                          color: mode == selected
-                              ? WishlistColors.primary
-                              : subtitleColor,
+                      Icon(
+                        isActive ? activeIco : idleIco,
+                        size: 22,
+                        color: isActive
+                            ? const Color(0xFFEA580C)
+                            : const Color(0xFF94A3B8),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        label,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: isActive
+                              ? FontWeight.w600
+                              : FontWeight.w500,
+                          color: isActive
+                              ? const Color(0xFFEA580C)
+                              : const Color(0xFF94A3B8),
                         ),
                       ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Text(
-                          label,
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: mode == selected
-                                ? FontWeight.w700
-                                : FontWeight.w500,
-                            color: mode == selected
-                                ? titleColor
-                                : subtitleColor,
-                          ),
-                        ),
-                      ),
-                      if (mode == selected)
-                        const Icon(
-                          Icons.check_circle_rounded,
-                          size: 18,
-                          color: WishlistColors.primary,
-                        ),
                     ],
                   ),
                 ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// ---------------------------------------------------------------------
-/// Empty state — same circular icon treatment as the avatar edit badge
-/// on ProfileScreen
-/// ---------------------------------------------------------------------
-class _EmptyState extends StatelessWidget {
-  final bool isDark;
-  final bool hasQuery;
-  const _EmptyState({required this.isDark, required this.hasQuery});
-
-  @override
-  Widget build(BuildContext context) {
-    final titleColor = isDark ? Colors.white : const Color(0xFF1D1E20);
-    final subtextColor = isDark
-        ? WishlistColors.textDescription
-        : Colors.grey[600];
-
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 40),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 76,
-              height: 76,
-              decoration: BoxDecoration(
-                color: WishlistColors.primary.withValues(
-                  alpha: isDark ? 0.2 : 0.1,
-                ),
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: isDark
-                        ? Colors.black.withValues(alpha: 0.3)
-                        : Colors.black.withValues(alpha: 0.06),
-                    blurRadius: 14,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Icon(
-                hasQuery
-                    ? Icons.search_off_rounded
-                    : Icons.favorite_border_rounded,
-                color: WishlistColors.primary,
-                size: 32,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              hasQuery ? 'No matches found' : 'Your wishlist is empty',
-              style: TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.w700,
-                color: titleColor,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              hasQuery
-                  ? 'Try a different search term or clear your filters.'
-                  : 'Tap the heart on any dish to save it here for later.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color: subtextColor,
-                height: 1.4,
-              ),
-            ),
-          ],
+              );
+            }),
+          ),
         ),
       ),
     );

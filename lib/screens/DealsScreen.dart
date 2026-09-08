@@ -423,12 +423,12 @@ class HotDealsRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 196,
+      height: 192,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 20),
         itemCount: previewDeals.take(3).length,
-        separatorBuilder: (_, __) => const SizedBox(width: 14),
+        separatorBuilder: (_, __) => const SizedBox(width: 12),
         itemBuilder: (context, i) =>
             _DealCard(deal: previewDeals.take(3).elementAt(i)),
       ),
@@ -449,8 +449,8 @@ class _DealCard extends StatelessWidget {
         ).push(MaterialPageRoute(builder: (_) => const FoodDetailsScreen()));
       },
       child: Container(
-        width: 285,
-        height: 196,
+        width: 280,
+        height: 192,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
           boxShadow: [

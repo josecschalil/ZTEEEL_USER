@@ -327,32 +327,6 @@ class _ProfileHeader extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 14),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-          decoration: BoxDecoration(
-            color: ProfileColors.primary.withValues(alpha: isDark ? 0.2 : 0.1),
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(
-              color: ProfileColors.primary.withValues(alpha: 0.3),
-            ),
-          ),
-          child: const Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.stars_rounded, color: ProfileColors.primary, size: 18),
-              SizedBox(width: 8),
-              Text(
-                'GOLD MEMBER',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color: ProfileColors.primary,
-                  letterSpacing: 1.2,
-                ),
-              ),
-            ],
-          ),
-        ),
       ],
     );
   }
@@ -426,7 +400,7 @@ class _MenuRow extends StatelessWidget {
       Widget? targetPage;
       switch (item.menupage) {
         case 'WishlistScreen()':
-          targetPage = const WishlistScreen();
+          targetPage = const Wishlistscreen();
           break;
         case 'SavedShopScreen()':
           targetPage = const SavedRestaurantsScreen();
