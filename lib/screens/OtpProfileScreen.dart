@@ -110,13 +110,16 @@ class _OtpScreenState extends State<OtpScreen> with TickerProviderStateMixin {
     if (result['success'] == true) {
       _fillOtp(result['otp'] as String?);
       _startCountdown();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('OTP resent successfully.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('OTP resent successfully.')));
       return;
     }
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(result['error'] as String), backgroundColor: AppColors.orangeDim),
+      SnackBar(
+        content: Text(result['error'] as String),
+        backgroundColor: AppColors.orangeDim,
+      ),
     );
   }
 
@@ -164,7 +167,10 @@ class _OtpScreenState extends State<OtpScreen> with TickerProviderStateMixin {
     }
     _shakeAc.forward(from: 0);
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(result['error'] as String), backgroundColor: AppColors.orangeDim),
+      SnackBar(
+        content: Text(result['error'] as String),
+        backgroundColor: AppColors.orangeDim,
+      ),
     );
   }
 
@@ -442,7 +448,11 @@ class _OtpScreenState extends State<OtpScreen> with TickerProviderStateMixin {
                           // ── Sticky footer ──────────────────────
                           _reveal(
                             4,
-                            _Footer(filled: _filled, isLoading: _isLoading, onVerify: _verify),
+                            _Footer(
+                              filled: _filled,
+                              isLoading: _isLoading,
+                              onVerify: _verify,
+                            ),
                           ),
                         ],
                       ),
@@ -530,7 +540,11 @@ class _Footer extends StatelessWidget {
   final bool filled;
   final bool isLoading;
   final VoidCallback onVerify;
-  const _Footer({required this.filled, required this.isLoading, required this.onVerify});
+  const _Footer({
+    required this.filled,
+    required this.isLoading,
+    required this.onVerify,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -560,8 +574,22 @@ class _Footer extends StatelessWidget {
                 ),
               ),
               child: isLoading
-                  ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: AppColors.textWhite))
-                  : const Text('Verify & Continue', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, letterSpacing: .3)),
+                  ? const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.5,
+                        color: AppColors.textWhite,
+                      ),
+                    )
+                  : const Text(
+                      'Verify & Continue',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: .3,
+                      ),
+                    ),
             ),
           ),
           const SizedBox(height: 16),

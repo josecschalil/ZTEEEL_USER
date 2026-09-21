@@ -76,9 +76,8 @@ class _SplashScreenState extends State<SplashScreen>
           Navigator.of(context).pushReplacement(
             PageRouteBuilder(
               transitionDuration: const Duration(milliseconds: 600),
-              pageBuilder: (_, __, ___) => loggedIn
-                  ? HomeDiscoveryScreen()
-                  : const LoginScreen(),
+              pageBuilder: (_, __, ___) =>
+                  loggedIn ? HomeDiscoveryScreen() : const LoginScreen(),
               transitionsBuilder: (_, animation, __, child) {
                 return FadeTransition(opacity: animation, child: child);
               },

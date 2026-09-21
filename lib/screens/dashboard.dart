@@ -355,7 +355,7 @@ class _HomeDiscoveryScreenState extends State<HomeDiscoveryScreen> {
         deals: dashboardDeals(_liveDeals),
         onSeeAllDeals: () => setState(() => _navIndex = 1),
       ),
-      DealsScreen(isDark: isDark, initialDeals: _liveDeals),
+      HotDealsRow(),
       const SizedBox.shrink(), // Index 2 reserved for central FAB Scan button
       const MainCartScreenPage(showBottomNav: false),
       ProfileScreen(
@@ -446,7 +446,9 @@ class _HomeDiscoveryView extends StatelessWidget {
             child: ListView(
               padding: const EdgeInsets.only(bottom: 28),
               children: [
-                const SizedBox(height: 12),
+                const SizedBox(height: 7),
+                HotDealsRow(previewDeals: deals),
+                const SizedBox(height: 28),
                 _SectionHeader(
                   title: 'Popular Food Items',
                   onSeeAll: () {
@@ -460,13 +462,6 @@ class _HomeDiscoveryView extends StatelessWidget {
                 ),
                 const SizedBox(height: 14),
                 _PopularFoodGrid(isDark: isDark),
-                const SizedBox(height: 28),
-                _SectionHeader(
-                  title: 'Hot Deals Near You 🔥',
-                  onSeeAll: onSeeAllDeals,
-                ),
-                const SizedBox(height: 14),
-                HotDealsRow(previewDeals: deals),
                 const SizedBox(height: 28),
                 _SectionHeader(
                   title: 'Best Restaurants',

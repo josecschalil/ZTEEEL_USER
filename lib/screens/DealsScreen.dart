@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'FoodDetailScreen.dart';
 import '../config/api_config.dart';
 import '../services/offer_service.dart';
+import 'dart:async';
 
 /// Shared color tokens (same as dashboard AppColorss)
 class _DealsColors {
@@ -29,31 +30,35 @@ class Deal {
 Future<List<Deal>> dealsFromOffers(List<Map<String, dynamic>> offers) async {
   final vendors = <String, Future<Map<String, dynamic>?>>{};
   final menus = <String, Future<List<Map<String, dynamic>>>>{};
-  final hydrated = await Future.wait(offers.asMap().entries.map((entry) async {
-    final offer = entry.value;
-    final fallback = deals[entry.key % deals.length];
-    final vendorId = offer['vendor']?.toString() ?? '';
-    if (vendorId.isEmpty) return fallback;
-    final vendor = await vendors.putIfAbsent(
-      vendorId,
-      () => OfferService.fetchVendor(vendorId),
-    );
-    final menu = await menus.putIfAbsent(
-      vendorId,
-      () => OfferService.fetchVendorMenu(vendorId),
-    );
-    final discount = double.tryParse(offer['discount_percentage']?.toString() ?? '');
-    return Deal(
-      title: _offerText(offer['title'], fallback.title),
-      restaurant: _offerText(vendor?['business_name'], fallback.restaurant),
-      distance: fallback.distance,
-      discount: discount == null
-          ? fallback.discount
-          : '${discount.toStringAsFixed(discount % 1 == 0 ? 0 : 1)}% OFF',
-      timeLeft: _offerTimeLeft(offer['ends_at']) ?? fallback.timeLeft,
-      imageUrl: _offerImage(offer, menu) ?? fallback.imageUrl,
-    );
-  }));
+  final hydrated = await Future.wait(
+    offers.asMap().entries.map((entry) async {
+      final offer = entry.value;
+      final fallback = deals[entry.key % deals.length];
+      final vendorId = offer['vendor']?.toString() ?? '';
+      if (vendorId.isEmpty) return fallback;
+      final vendor = await vendors.putIfAbsent(
+        vendorId,
+        () => OfferService.fetchVendor(vendorId),
+      );
+      final menu = await menus.putIfAbsent(
+        vendorId,
+        () => OfferService.fetchVendorMenu(vendorId),
+      );
+      final discount = double.tryParse(
+        offer['discount_percentage']?.toString() ?? '',
+      );
+      return Deal(
+        title: _offerText(offer['title'], fallback.title),
+        restaurant: _offerText(vendor?['business_name'], fallback.restaurant),
+        distance: fallback.distance,
+        discount: discount == null
+            ? fallback.discount
+            : '${discount.toStringAsFixed(discount % 1 == 0 ? 0 : 1)}% OFF',
+        timeLeft: _offerTimeLeft(offer['ends_at']) ?? fallback.timeLeft,
+        imageUrl: _offerImage(offer, menu) ?? fallback.imageUrl,
+      );
+    }),
+  );
   return hydrated;
 }
 
@@ -62,16 +67,21 @@ String _offerText(Object? value, String fallback) {
   return text.isEmpty ? fallback : text;
 }
 
-String? _offerImage(Map<String, dynamic> offer, List<Map<String, dynamic>> menu) {
+String? _offerImage(
+  Map<String, dynamic> offer,
+  List<Map<String, dynamic>> menu,
+) {
   final targets = offer['targets'];
   final itemIds = targets is Map ? targets['item_ids'] : null;
   final categoryIds = targets is Map ? targets['category_ids'] : null;
   for (final category in menu) {
-    final categoryMatches = categoryIds is List && categoryIds.contains(category['id']?.toString());
+    final categoryMatches =
+        categoryIds is List && categoryIds.contains(category['id']?.toString());
     final items = category['menu_items'];
     if (items is! List) continue;
     for (final item in items.whereType<Map>()) {
-      final matches = categoryMatches ||
+      final matches =
+          categoryMatches ||
           (itemIds is List && itemIds.contains(item['id']?.toString())) ||
           (itemIds is! List && categoryIds is! List);
       if (!matches) continue;
@@ -130,315 +140,112 @@ const deals = [
         'https://lh3.googleusercontent.com/aida-public/AB6AXuD4yhPin6dzd-0bzsMiqqxvvUt4eAfu6HTxkb3DYB2THXb5sagbjYSFDbkvCxjzxusQ5dWZfaRvXoq8qyJ8ACdiGbOtBoi4StQfmdpWtxfMDDOKxb_FfqRgdCmcx7tEt6Jg4w6nZRHbKit8KD9do6rpyv5ztqJla4UiiAJPNjRWxApaV0lYy8kQYFKgSmBBeW6U6yndkJdUiE4s9N6gPfR91oID-PtuospqsPqEOBlETl8irRRgka1_hH9yTIY8UvuntkKdc5zVoqO7',
   ),
 ];
+// ─────────────────────────────────────────────────────────────────────
+// REPLACEMENT for HotDealsRow and _FeaturedDealCard in DealsScreen.dart
+// Drop these two classes in place of the old ones. Everything else
+// (Deal model, DealsScreen, DealBadge, etc.) stays exactly the same.
+// ─────────────────────────────────────────────────────────────────────
 
-/// ─────────────────────────────────────────────────────────────────────
-/// DealsScreen — full-page view of all active deals.
-/// Can be used as a standalone pushed screen OR embedded in the
-/// dashboard's IndexedStack as the Deals tab (index 1).
-/// ─────────────────────────────────────────────────────────────────────
-class DealsScreen extends StatefulWidget {
-  final bool isDark;
-  final List<Deal> initialDeals;
-  const DealsScreen({super.key, required this.isDark, this.initialDeals = const []});
+/// HotDealsRow — auto-advancing, non-swipeable featured deal carousel.
+/// Cards transition in place inside a fixed-size container (fade + soft
+/// scale), with a small page indicator overlaid in the card's
+/// bottom-right corner instead of a separate dot row underneath.
+class HotDealsRow extends StatefulWidget {
+  final List<Deal> previewDeals;
+  const HotDealsRow({super.key, this.previewDeals = deals});
 
   @override
-  State<DealsScreen> createState() => _DealsScreenState();
+  State<HotDealsRow> createState() => _HotDealsRowState();
 }
 
-class _DealsScreenState extends State<DealsScreen> {
-  static const _pageSize = 10;
-  final _searchController = TextEditingController();
-  final _scrollController = ScrollController();
-  List<Deal> _allDeals = deals;
-  String _query = '';
-  int _visibleCount = _pageSize;
+class _HotDealsRowState extends State<HotDealsRow> {
+  static const _interval = Duration(seconds: 4);
+  Timer? _timer;
+  int _activeIndex = 0;
 
   @override
   void initState() {
     super.initState();
-    if (widget.initialDeals.isNotEmpty) _allDeals = widget.initialDeals;
-    _scrollController.addListener(_loadMoreOnScroll);
-    _loadDeals();
+    _startAutoPlay();
   }
 
-  Future<void> _loadDeals() async {
-    final offers = await OfferService.fetchOffers();
-    if (!mounted || offers.isEmpty) return;
-    final loaded = await dealsFromOffers(offers);
-    if (!mounted || loaded.isEmpty) return;
-    setState(() => _allDeals = loaded);
+  void _startAutoPlay() {
+    _timer?.cancel();
+    final total = widget.previewDeals.take(3).length;
+    if (total <= 1) return;
+    _timer = Timer.periodic(_interval, (_) {
+      if (!mounted) return;
+      setState(() => _activeIndex = (_activeIndex + 1) % total);
+    });
   }
 
-  void _loadMoreOnScroll() {
-    if (_scrollController.position.extentAfter > 240 ||
-        _visibleCount >= _filteredDeals.length) return;
-    setState(() => _visibleCount += _pageSize);
-  }
-
-  List<Deal> get _filteredDeals {
-    final query = _query.trim().toLowerCase();
-    if (query.isEmpty) return _allDeals;
-    return _allDeals.where((deal) =>
-        deal.title.toLowerCase().contains(query) ||
-        deal.restaurant.toLowerCase().contains(query) ||
-        deal.discount.toLowerCase().contains(query)).toList();
+  void _goTo(int index) {
+    setState(() => _activeIndex = index);
+    _startAutoPlay(); // reset the clock so it doesn't jump right after a tap
   }
 
   @override
   void dispose() {
-    _searchController.dispose();
-    _scrollController.dispose();
+    _timer?.cancel();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 14),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Exclusive Deals 🔥',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -0.4,
-                    color: widget.isDark
-                        ? Colors.white
-                        : const Color(0xFF1D1E20),
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: _DealsColors.primary.withAlpha(
-                      widget.isDark ? 35 : 20,
-                    ),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                  '${_allDeals.length} Active',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: _DealsColors.primary,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+    final featuredDeals = widget.previewDeals.take(3).toList();
+    if (featuredDeals.isEmpty) return const SizedBox.shrink();
+    final index = _activeIndex.clamp(0, featuredDeals.length - 1);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      child: SizedBox(
+        height: 220,
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 550),
+          switchInCurve: Curves.easeOutCubic,
+          switchOutCurve: Curves.easeInCubic,
+          transitionBuilder: (child, animation) {
+            final fade = animation;
+            final scale = Tween<double>(begin: 0.97, end: 1.0).animate(
+              CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
+            );
+            return FadeTransition(
+              opacity: fade,
+              child: ScaleTransition(scale: scale, child: child),
+            );
+          },
+          layoutBuilder: (currentChild, previousChildren) => Stack(
+            fit: StackFit.expand,
+            children: [
+              ...previousChildren,
+              if (currentChild != null) currentChild,
+            ],
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-            child: TextField(
-              controller: _searchController,
-              onChanged: (value) => setState(() {
-                _query = value;
-                _visibleCount = _pageSize;
-              }),
-              decoration: InputDecoration(
-                hintText: 'Search offers',
-                prefixIcon: const Icon(Icons.search_rounded),
-                filled: true,
-                fillColor: widget.isDark ? const Color(0xFF281E19) : Colors.white,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-            ),
+          child: _FeaturedDealCard(
+            key: ValueKey(index),
+            deal: featuredDeals[index],
+            pageCount: featuredDeals.length,
+            activeIndex: index,
+            onDotTap: _goTo,
           ),
-          Expanded(
-            child: ListView.separated(
-              controller: _scrollController,
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
-              itemCount: _filteredDeals.take(_visibleCount).length,
-              separatorBuilder: (_, __) => const SizedBox(height: 16),
-              itemBuilder: (context, i) {
-                final deal = _filteredDeals.take(_visibleCount).elementAt(i);
-                return GestureDetector(
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => const FoodDetailsScreen(),
-                      ),
-                    );
-                  },
-                  child: Container(
-                    height: 200,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withAlpha(35),
-                          blurRadius: 14,
-                          offset: const Offset(0, 6),
-                        ),
-                      ],
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(20),
-                      child: Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          Image.network(deal.imageUrl, fit: BoxFit.cover),
-                          DecoratedBox(
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.bottomCenter,
-                                end: Alignment.topCenter,
-                                colors: [
-                                  Colors.black.withAlpha(220),
-                                  Colors.black.withAlpha(100),
-                                  Colors.transparent,
-                                ],
-                                stops: const [0.0, 0.55, 1.0],
-                              ),
-                            ),
-                          ),
-                          Positioned(
-                            top: 14,
-                            left: 14,
-                            child: DealBadge(text: deal.discount, filled: true),
-                          ),
-                          Positioned(
-                            top: 14,
-                            right: 14,
-                            child: DealBadge(
-                              text: deal.timeLeft,
-                              filled: false,
-                              icon: Icons.timer_outlined,
-                            ),
-                          ),
-                          Positioned(
-                            bottom: 14,
-                            left: 14,
-                            right: 14,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  deal.title,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 18,
-                                    letterSpacing: -0.3,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  '${deal.restaurant} • ${deal.distance}',
-                                  style: TextStyle(
-                                    color: Colors.white.withAlpha(210),
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
 }
 
-/// ─────────────────────────────────────────────────────────────────────
-/// DealBadge — reusable pill badge for deal cards (discount / timer).
-/// Used by both DealsScreen and the HotDealsRow on the dashboard.
-/// ─────────────────────────────────────────────────────────────────────
-class DealBadge extends StatelessWidget {
-  final String text;
-  final bool filled;
-  final IconData? icon;
-  const DealBadge({
-    super.key,
-    required this.text,
-    required this.filled,
-    this.icon,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: filled ? _DealsColors.primary : Colors.black.withAlpha(120),
-        borderRadius: BorderRadius.circular(8),
-        border: filled
-            ? null
-            : Border.all(color: Colors.white.withAlpha(50), width: 1),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (icon != null) ...[
-            Icon(icon, size: 13, color: Colors.white),
-            const SizedBox(width: 4),
-          ],
-          Text(
-            text,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.2,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// ─────────────────────────────────────────────────────────────────────
-/// HotDealsRow — horizontal scroll preview used on the dashboard home.
-/// Extracted here so both dashboard and DealsScreen share the same
-/// Deal model and data.
-/// ─────────────────────────────────────────────────────────────────────
-class HotDealsRow extends StatelessWidget {
-  final List<Deal> previewDeals;
-  const HotDealsRow({super.key, this.previewDeals = deals});
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 192,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        itemCount: previewDeals.take(3).length,
-        separatorBuilder: (_, __) => const SizedBox(width: 12),
-        itemBuilder: (context, i) =>
-            _DealCard(deal: previewDeals.take(3).elementAt(i)),
-      ),
-    );
-  }
-}
-
-class _DealCard extends StatelessWidget {
+class _FeaturedDealCard extends StatelessWidget {
   final Deal deal;
-  const _DealCard({required this.deal});
+  final int pageCount;
+  final int activeIndex;
+  final ValueChanged<int>? onDotTap;
+  const _FeaturedDealCard({
+    super.key,
+    required this.deal,
+    this.pageCount = 1,
+    this.activeIndex = 0,
+    this.onDotTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -449,20 +256,18 @@ class _DealCard extends StatelessWidget {
         ).push(MaterialPageRoute(builder: (_) => const FoodDetailsScreen()));
       },
       child: Container(
-        width: 280,
-        height: 192,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withAlpha(35),
-              blurRadius: 14,
-              offset: const Offset(0, 6),
+              color: Colors.black.withAlpha(45),
+              blurRadius: 20,
+              offset: const Offset(0, 9),
             ),
           ],
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(24),
           child: Stack(
             fit: StackFit.expand,
             children: [
@@ -473,56 +278,102 @@ class _DealCard extends StatelessWidget {
                     begin: Alignment.bottomCenter,
                     end: Alignment.topCenter,
                     colors: [
-                      Colors.black.withAlpha(220),
-                      Colors.black.withAlpha(100),
-                      Colors.transparent,
+                      Colors.black.withAlpha(238),
+                      Colors.black.withAlpha(150),
+                      Colors.black.withAlpha(18),
                     ],
-                    stops: const [0.0, 0.55, 1.0],
+                    stops: const [0.0, 0.58, 1.0],
                   ),
                 ),
               ),
               Positioned(
-                top: 14,
-                left: 14,
-                child: DealBadge(text: deal.discount, filled: true),
-              ),
-              Positioned(
-                top: 14,
-                right: 14,
-                child: DealBadge(
-                  text: deal.timeLeft,
-                  filled: false,
-                  icon: Icons.timer_outlined,
+                top: 16,
+                left: 16,
+                child: Text(
+                  deal.discount,
+                  style: const TextStyle(
+                    color: _DealsColors.primary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.1,
+                  ),
                 ),
               ),
               Positioned(
-                bottom: 14,
-                left: 14,
-                right: 14,
+                top: 16,
+                right: 16,
+                child: Text(
+                  deal.timeLeft,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: 1.1,
+                  ),
+                ),
+              ),
+              Positioned(
+                bottom: 18,
+                left: 18,
+                right: 18,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    Text(
+                      'LIMITED-TIME OFFER',
+                      style: TextStyle(
+                        color: Colors.white.withAlpha(210),
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 1.1,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
                     Text(
                       deal.title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         color: Colors.white,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 17,
-                        letterSpacing: -0.3,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 22,
+                        letterSpacing: -0.5,
                         height: 1.2,
                       ),
                     ),
-                    const SizedBox(height: 3),
-                    Text(
-                      '${deal.restaurant} • ${deal.distance}',
-                      style: TextStyle(
-                        color: Colors.white.withAlpha(210),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                      ),
+                    const SizedBox(height: 5),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            '${deal.restaurant} • ${deal.distance}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: Colors.white.withAlpha(215),
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (pageCount > 1) ...[
+                              const SizedBox(height: 8),
+                              _CornerPageDots(
+                                count: pageCount,
+                                activeIndex: activeIndex,
+                                onDotTap: onDotTap,
+                              ),
+                            ],
+                          ],
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -531,6 +382,42 @@ class _DealCard extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Tiny page-indicator dots meant to sit in a card's bottom-right corner.
+class _CornerPageDots extends StatelessWidget {
+  final int count;
+  final int activeIndex;
+  final ValueChanged<int>? onDotTap;
+  const _CornerPageDots({
+    required this.count,
+    required this.activeIndex,
+    this.onDotTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: List.generate(count, (i) {
+        final active = i == activeIndex;
+        return GestureDetector(
+          onTap: onDotTap == null ? null : () => onDotTap!(i),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOut,
+            margin: const EdgeInsets.only(left: 4),
+            width: active ? 14 : 5,
+            height: 5,
+            decoration: BoxDecoration(
+              color: active ? Colors.white : Colors.white.withAlpha(110),
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ),
+        );
+      }),
     );
   }
 }
