@@ -17,7 +17,6 @@ class ProfileColors {
 
   static ThemeData get lightTheme => ThemeData(
     useMaterial3: true,
-    fontFamily: 'PlusJakartaSans',
     scaffoldBackgroundColor: bgLight,
     colorScheme: ColorScheme.fromSeed(
       seedColor: primary,
@@ -27,7 +26,6 @@ class ProfileColors {
 
   static ThemeData get darkTheme => ThemeData(
     useMaterial3: true,
-    fontFamily: 'PlusJakartaSans',
     scaffoldBackgroundColor: bgDeep,
     colorScheme: ColorScheme.fromSeed(
       seedColor: primary,

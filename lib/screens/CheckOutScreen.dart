@@ -9,7 +9,6 @@ class CheckoutColors {
 
   static ThemeData get lightTheme => ThemeData(
     useMaterial3: true,
-    fontFamily: 'PlusJakartaSans',
     scaffoldBackgroundColor: backgroundLight,
     colorScheme: ColorScheme.fromSeed(
       seedColor: primary,
@@ -19,7 +18,6 @@ class CheckoutColors {
 
   static ThemeData get darkTheme => ThemeData(
     useMaterial3: true,
-    fontFamily: 'PlusJakartaSans',
     scaffoldBackgroundColor: backgroundDark,
     colorScheme: ColorScheme.fromSeed(
       seedColor: primary,

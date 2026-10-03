@@ -11,7 +11,6 @@ class SearchColors {
 
   static ThemeData get theme => ThemeData(
     useMaterial3: true,
-    fontFamily: 'PlusJakartaSans',
     scaffoldBackgroundColor: backgroundLight,
     colorScheme: ColorScheme.fromSeed(
       seedColor: primary,

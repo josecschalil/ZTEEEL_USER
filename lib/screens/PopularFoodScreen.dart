@@ -217,7 +217,6 @@ class _Header extends StatelessWidget {
                 Text(
                   'Popular Food Items',
                   style: TextStyle(
-                    fontFamily: 'PlusJakartaSans',
                     fontSize: 20,
                     fontWeight: FontWeight.w800,
                     color: AppColors.textPrimary,
@@ -228,7 +227,6 @@ class _Header extends StatelessWidget {
                 Text(
                   'Ranked by what people are ordering this week',
                   style: TextStyle(
-                    fontFamily: 'PlusJakartaSans',
                     fontSize: 12.5,
                     color: AppColors.textSecondary,
                   ),
@@ -282,7 +280,6 @@ class _FilterRow extends StatelessWidget {
                 child: Text(
                   f.label,
                   style: TextStyle(
-                    fontFamily: 'PlusJakartaSans',
                     fontSize: 12.5,
                     fontWeight: FontWeight.w600,
                     color: isActive ? Colors.white : AppColors.textSecondary,
@@ -349,7 +346,6 @@ class _FeaturedTile extends StatelessWidget {
                       Text(
                         '#$rank Most Ordered This Week',
                         style: const TextStyle(
-                          fontFamily: 'PlusJakartaSans',
                           fontSize: 11.5,
                           fontWeight: FontWeight.w700,
                           color: Colors.white,
@@ -366,7 +362,6 @@ class _FeaturedTile extends StatelessWidget {
                 Text(
                   item.name,
                   style: const TextStyle(
-                    fontFamily: 'PlusJakartaSans',
                     fontSize: 26,
                     fontWeight: FontWeight.w800,
                     color: Colors.white,
@@ -424,7 +419,6 @@ class _StatPill extends StatelessWidget {
           Text(
             label,
             style: const TextStyle(
-              fontFamily: 'PlusJakartaSans',
               fontSize: 11,
               fontWeight: FontWeight.w600,
               color: Colors.white,
@@ -538,7 +532,6 @@ class _GridTile extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
-                fontFamily: 'PlusJakartaSans',
                 fontSize: 15,
                 fontWeight: FontWeight.w800,
                 color: Colors.white,
@@ -552,7 +545,6 @@ class _GridTile extends StatelessWidget {
                 Text(
                   item.rating.toStringAsFixed(1),
                   style: const TextStyle(
-                    fontFamily: 'PlusJakartaSans',
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
                     color: Colors.white,
@@ -562,7 +554,6 @@ class _GridTile extends StatelessWidget {
                 Text(
                   '· ${item.orderCountLabel} orders',
                   style: TextStyle(
-                    fontFamily: 'PlusJakartaSans',
                     fontSize: 10.5,
                     color: Colors.white.withOpacity(0.85),
                   ),
@@ -601,7 +592,6 @@ class _RankBadge extends StatelessWidget {
       child: Text(
         '$rank',
         style: TextStyle(
-          fontFamily: 'PlusJakartaSans',
           fontSize: 11,
           fontWeight: FontWeight.w800,
           color: isTopThree ? AppColors.primary : AppColors.textSecondary,
@@ -755,7 +745,6 @@ class _EmptyState extends StatelessWidget {
             const Text(
               'Nothing trending here yet',
               style: TextStyle(
-                fontFamily: 'PlusJakartaSans',
                 fontSize: 15,
                 fontWeight: FontWeight.w700,
                 color: AppColors.textPrimary,
@@ -765,11 +754,7 @@ class _EmptyState extends StatelessWidget {
             const Text(
               'Check back soon or try a different filter.',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontFamily: 'PlusJakartaSans',
-                fontSize: 13,
-                color: AppColors.textSecondary,
-              ),
+              style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
             ),
           ],
         ),

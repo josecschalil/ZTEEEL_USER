@@ -49,7 +49,6 @@ class SavedColors {
 
   static ThemeData get theme => ThemeData(
     useMaterial3: true,
-    fontFamily: 'PlusJakartaSans',
     scaffoldBackgroundColor: bgLight,
     colorScheme: ColorScheme.fromSeed(
       seedColor: primary,

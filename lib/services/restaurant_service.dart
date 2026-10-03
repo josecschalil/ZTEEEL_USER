@@ -6,9 +6,9 @@ import 'package:zteel_user/config/api_config.dart';
 class RestaurantService {
   RestaurantService._();
 
-  /// Builds a public restaurant feed from the existing offer feed and public
-  /// vendor-detail endpoint. An empty list lets the UI retain its local
-  /// fallback content when the backend has no currently promoted restaurants.
+  /// Builds a public restaurant feed from real vendors referenced by active
+  /// offers. Requests are deliberately limited and sequential because the
+  /// vendor-detail endpoint throttles concurrent bursts.
   static Future<List<Map<String, dynamic>>> fetchRestaurants() async {
     try {
       final response = await http.get(Uri.parse(ApiConfig.offerFeedUrl));
@@ -27,10 +27,12 @@ class RestaurantService {
           .where((id) => id.isNotEmpty)
           .toSet();
 
-      final vendors = await Future.wait(
-        vendorIds.map((id) => _fetchVendor(id)),
-      );
-      return vendors.whereType<Map<String, dynamic>>().toList();
+      final vendors = <Map<String, dynamic>>[];
+      for (final vendorId in vendorIds.take(3)) {
+        final vendor = await _fetchVendor(vendorId);
+        if (vendor != null) vendors.add(vendor);
+      }
+      return vendors;
     } catch (_) {
       return const [];
     }

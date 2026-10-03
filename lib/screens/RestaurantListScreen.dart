@@ -68,6 +68,11 @@ class RestaurantListing {
 
 enum _QuickFilter { openNow, nearby, topRated, freeDelivery }
 
+/// An optional starting filter for callers that open restaurant discovery from
+/// a focused action on the Home feed. The screen remains fully usable without
+/// a preset, preserving existing callers.
+enum RestaurantBrowsePreset { under30Minutes, rated4Plus }
+
 extension on _QuickFilter {
   String get label {
     switch (this) {
@@ -116,11 +121,13 @@ extension on _SortOption {
 class NearbyRestaurantsScreen extends StatefulWidget {
   final List<RestaurantListing>? restaurants;
   final ValueChanged<RestaurantListing>? onRestaurantSelected;
+  final RestaurantBrowsePreset? preset;
 
   const NearbyRestaurantsScreen({
     super.key,
     this.restaurants,
     this.onRestaurantSelected,
+    this.preset,
   });
 
   @override
@@ -172,6 +179,16 @@ class _NearbyRestaurantsScreenState extends State<NearbyRestaurantsScreen> {
 
       if (_activeFilters.contains(_QuickFilter.freeDelivery) &&
           !r.hasFreeDelivery) {
+        return false;
+      }
+
+      if (widget.preset == RestaurantBrowsePreset.under30Minutes &&
+          r.etaMins > 30) {
+        return false;
+      }
+
+      if (widget.preset == RestaurantBrowsePreset.rated4Plus &&
+          r.rating < 4.0) {
         return false;
       }
 

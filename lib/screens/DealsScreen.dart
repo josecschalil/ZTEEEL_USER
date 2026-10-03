@@ -11,6 +11,7 @@ class _DealsColors {
 
 /// Deal data model
 class Deal {
+  final String? vendorId;
   final String title;
   final String restaurant;
   final String distance;
@@ -18,6 +19,7 @@ class Deal {
   final String timeLeft;
   final String imageUrl;
   const Deal({
+    this.vendorId,
     required this.title,
     required this.restaurant,
     required this.distance,
@@ -48,6 +50,7 @@ Future<List<Deal>> dealsFromOffers(List<Map<String, dynamic>> offers) async {
         offer['discount_percentage']?.toString() ?? '',
       );
       return Deal(
+        vendorId: vendorId.isEmpty ? null : vendorId,
         title: _offerText(offer['title'], fallback.title),
         restaurant: _offerText(vendor?['business_name'], fallback.restaurant),
         distance: fallback.distance,

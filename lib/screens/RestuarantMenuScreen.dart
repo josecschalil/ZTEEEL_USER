@@ -16,7 +16,6 @@ class MenuColors {
 
   static ThemeData get lightTheme => ThemeData(
     useMaterial3: true,
-    fontFamily: 'PlusJakartaSans',
     scaffoldBackgroundColor: bgLight,
     colorScheme: ColorScheme.fromSeed(
       seedColor: primary,
@@ -152,7 +151,9 @@ const _categoryPills = [
 ];
 
 List<MenuCategory> _mapCategories(List<Map<String, dynamic>> data) {
-  final fallbackItems = _categories.expand((category) => category.items).toList();
+  final fallbackItems = _categories
+      .expand((category) => category.items)
+      .toList();
   var fallbackIndex = 0;
 
   final categories = <MenuCategory>[];
@@ -160,7 +161,8 @@ List<MenuCategory> _mapCategories(List<Map<String, dynamic>> data) {
     final itemData = category['menu_items'];
     if (itemData is! List || itemData.isEmpty) continue;
 
-    final fallbackCategory = _categories[categories.length % _categories.length];
+    final fallbackCategory =
+        _categories[categories.length % _categories.length];
     final items = <MenuItem>[];
     for (final item in itemData.whereType<Map>()) {
       final fallback = fallbackItems[fallbackIndex % fallbackItems.length];
@@ -171,7 +173,8 @@ List<MenuCategory> _mapCategories(List<Map<String, dynamic>> data) {
           id: item['id']?.toString() ?? fallback.id,
           name: _menuText(item['name'], fallback.name),
           description: _menuText(item['description'], fallback.description),
-          price: double.tryParse(item['price']?.toString() ?? '') ??
+          price:
+              double.tryParse(item['price']?.toString() ?? '') ??
               fallback.price,
           imageUrl: _menuImageUrl(image, fallback.imageUrl),
           badge: fallback.badge,
@@ -477,7 +480,10 @@ class _HeroSection extends StatelessWidget {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          Image.network(imageUrl?.isNotEmpty == true ? imageUrl! : _heroImageUrl, fit: BoxFit.cover),
+          Image.network(
+            imageUrl?.isNotEmpty == true ? imageUrl! : _heroImageUrl,
+            fit: BoxFit.cover,
+          ),
           DecoratedBox(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -1163,148 +1169,148 @@ class _MenuItemCard extends StatelessWidget {
             ),
           ],
         ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // ── Left: text content ──────────────────────────────────
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // VEG / NON-VEG dot indicator
-                Row(
-                  children: [
-                    Container(
-                      width: 14,
-                      height: 14,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.rectangle,
-                        border: Border.all(
-                          color: item.tag == 'VEG'
-                              ? Colors.green
-                              : const Color(0xFFB91C1C),
-                          width: 1.5,
-                        ),
-                        borderRadius: BorderRadius.circular(3),
-                      ),
-                      child: Center(
-                        child: Container(
-                          width: 7,
-                          height: 7,
-                          decoration: BoxDecoration(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ── Left: text content ──────────────────────────────────
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // VEG / NON-VEG dot indicator
+                  Row(
+                    children: [
+                      Container(
+                        width: 14,
+                        height: 14,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.rectangle,
+                          border: Border.all(
                             color: item.tag == 'VEG'
                                 ? Colors.green
                                 : const Color(0xFFB91C1C),
-                            shape: BoxShape.circle,
+                            width: 1.5,
+                          ),
+                          borderRadius: BorderRadius.circular(3),
+                        ),
+                        child: Center(
+                          child: Container(
+                            width: 7,
+                            height: 7,
+                            decoration: BoxDecoration(
+                              color: item.tag == 'VEG'
+                                  ? Colors.green
+                                  : const Color(0xFFB91C1C),
+                              shape: BoxShape.circle,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                    if (item.badge != null) ...[
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 7,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: MenuColors.primary.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          item.badge!,
-                          style: const TextStyle(
-                            fontSize: 9,
-                            fontWeight: FontWeight.w800,
-                            color: MenuColors.primary,
-                            letterSpacing: 0.4,
+                      if (item.badge != null) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 7,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: MenuColors.primary.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            item.badge!,
+                            style: const TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w800,
+                              color: MenuColors.primary,
+                              letterSpacing: 0.4,
+                            ),
                           ),
                         ),
-                      ),
+                      ],
                     ],
-                  ],
-                ),
-                const SizedBox(height: 8),
-                // Name
-                Text(
-                  item.name,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    height: 1.25,
-                    color: isDark ? Colors.white : const Color(0xFF1D1E20),
                   ),
-                ),
-                const SizedBox(height: 5),
-                // Description
-                Text(
-                  item.description,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 12,
-                    height: 1.45,
-                    color: isDark
-                        ? MenuColors.textMutedDark
-                        : const Color(0xFF8A8A9A),
+                  const SizedBox(height: 8),
+                  // Name
+                  Text(
+                    item.name,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      height: 1.25,
+                      color: isDark ? Colors.white : const Color(0xFF1D1E20),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 12),
-                // Price
-                Text(
-                  '\$${item.price.toStringAsFixed(2)}',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    color: MenuColors.primary,
-                    letterSpacing: -0.3,
+                  const SizedBox(height: 5),
+                  // Description
+                  Text(
+                    item.description,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 12,
+                      height: 1.45,
+                      color: isDark
+                          ? MenuColors.textMutedDark
+                          : const Color(0xFF8A8A9A),
+                    ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 12),
+                  // Price
+                  Text(
+                    '\$${item.price.toStringAsFixed(2)}',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: MenuColors.primary,
+                      letterSpacing: -0.3,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(width: 14),
-          // ── Right: image + add/stepper ──────────────────────────
-          SizedBox(
-            width: 96,
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                // Food image
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: Image.network(
-                    item.imageUrl,
-                    width: 96,
-                    height: 96,
-                    fit: BoxFit.cover,
+            const SizedBox(width: 14),
+            // ── Right: image + add/stepper ──────────────────────────
+            SizedBox(
+              width: 96,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  // Food image
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.network(
+                      item.imageUrl,
+                      width: 96,
+                      height: 96,
+                      fit: BoxFit.cover,
+                    ),
                   ),
-                ),
-                // Add / Stepper button — overlaps bottom centre of image
-                Positioned(
-                  bottom: -14,
-                  left: 0,
-                  right: 0,
-                  child: Center(
-                    child: quantity == 0
-                        ? _AddButton(onAdd: onAdd)
-                        : _StepperButton(
-                            quantity: quantity,
-                            onAdd: onAdd,
-                            onRemove: onRemove,
-                          ),
+                  // Add / Stepper button — overlaps bottom centre of image
+                  Positioned(
+                    bottom: -14,
+                    left: 0,
+                    right: 0,
+                    child: Center(
+                      child: quantity == 0
+                          ? _AddButton(onAdd: onAdd)
+                          : _StepperButton(
+                              quantity: quantity,
+                              onAdd: onAdd,
+                              onRemove: onRemove,
+                            ),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          // Space so the bottom of the card accommodates the overlapping button
-          const SizedBox(height: 14),
-        ],
+            // Space so the bottom of the card accommodates the overlapping button
+            const SizedBox(height: 14),
+          ],
+        ),
       ),
-    ),
     );
   }
 }
@@ -1528,7 +1534,10 @@ class _MenuView extends StatelessWidget {
         _CategoryPills(
           selected: selectedPill,
           isDark: isDark,
-          labels: ['All Items', ...categories.map((category) => category.title)],
+          labels: [
+            'All Items',
+            ...categories.map((category) => category.title),
+          ],
           onSelect: onSelectPill,
         ),
         _TodaysOffers(isDark: isDark),

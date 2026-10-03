@@ -64,7 +64,6 @@ class LocationColors {
 
   static ThemeData get theme => ThemeData(
     useMaterial3: true,
-    fontFamily: 'PlusJakartaSans',
     scaffoldBackgroundColor: backgroundLight,
     colorScheme: ColorScheme.fromSeed(
       seedColor: primary,
@@ -182,10 +181,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen>
       final response = await http
           .get(
             uri,
-            headers: {
-              'User-Agent': _userAgent,
-              'Accept-Language': 'en',
-            },
+            headers: {'User-Agent': _userAgent, 'Accept-Language': 'en'},
           )
           .timeout(const Duration(seconds: 8));
 
@@ -344,15 +340,16 @@ class _LocationPickerScreenState extends State<LocationPickerScreen>
   String _shortAddress(Map<String, dynamic> data, LatLng point) {
     final address = data['address'];
     if (address is! Map) return _coordinateAddress(point);
-    final values = [
-      address['road'],
-      address['neighbourhood'] ?? address['suburb'],
-      address['city'] ?? address['town'] ?? address['village'],
-    ]
-        .map((value) => value?.toString().trim() ?? '')
-        .where((value) => value.isNotEmpty)
-        .toSet()
-        .toList();
+    final values =
+        [
+              address['road'],
+              address['neighbourhood'] ?? address['suburb'],
+              address['city'] ?? address['town'] ?? address['village'],
+            ]
+            .map((value) => value?.toString().trim() ?? '')
+            .where((value) => value.isNotEmpty)
+            .toSet()
+            .toList();
     return values.isEmpty ? _coordinateAddress(point) : values.join(', ');
   }
 

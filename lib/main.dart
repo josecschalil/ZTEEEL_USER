@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'app_colors.dart';
+import 'app_typography.dart';
 import 'screens/splash_screen.dart';
 
 void main() {
@@ -14,10 +14,7 @@ class ZteelApp extends StatelessWidget {
     return MaterialApp(
       title: 'Zteel',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: AppColors.orangeWarm),
-        useMaterial3: true,
-      ),
+      theme: AppTypography.lightTheme(),
       home: const SplashScreen(),
     );
   }

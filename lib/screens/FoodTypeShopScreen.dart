@@ -7,7 +7,7 @@
 // (e.g. "Margherita Pizza" at one place, "Farmhouse Special" at another),
 // so each listing pairs the shop with the specific item it sells.
 //
-// Visually matches LocationColors / PlusJakartaSans from the location
+// Visually matches the shared Manrope typography from the application theme.
 // picker screen: white background, restrained orange accent used only
 // for the few things that need it (rating pill, price, CTA-ish bits) —
 // everything else stays neutral ink/slate so the page doesn't feel
@@ -318,7 +318,6 @@ class _Header extends StatelessWidget {
                     Text(
                       foodType,
                       style: const TextStyle(
-                        fontFamily: 'PlusJakartaSans',
                         fontSize: 20,
                         fontWeight: FontWeight.w800,
                         color: AppColors.textPrimary,
@@ -329,7 +328,6 @@ class _Header extends StatelessWidget {
                     Text(
                       '$resultCount ${resultCount == 1 ? 'shop' : 'shops'} near you',
                       style: const TextStyle(
-                        fontFamily: 'PlusJakartaSans',
                         fontSize: 12.5,
                         color: AppColors.textSecondary,
                       ),
@@ -354,14 +352,12 @@ class _Header extends StatelessWidget {
                     controller: searchController,
                     onChanged: onSearchChanged,
                     style: const TextStyle(
-                      fontFamily: 'PlusJakartaSans',
                       fontSize: 14,
                       color: AppColors.textPrimary,
                     ),
                     decoration: const InputDecoration(
                       hintText: 'Search shop or dish name',
                       hintStyle: TextStyle(
-                        fontFamily: 'PlusJakartaSans',
                         color: AppColors.textMuted,
                         fontSize: 13.5,
                       ),
@@ -401,7 +397,6 @@ class _Header extends StatelessWidget {
                       Text(
                         'Sort',
                         style: TextStyle(
-                          fontFamily: 'PlusJakartaSans',
                           fontSize: 13,
                           fontWeight: FontWeight.w700,
                           color: AppColors.textSecondary,
@@ -461,7 +456,6 @@ class _FilterRow extends StatelessWidget {
                 child: Text(
                   filter.label,
                   style: TextStyle(
-                    fontFamily: 'PlusJakartaSans',
                     fontSize: 12.5,
                     fontWeight: FontWeight.w600,
                     color: isActive
@@ -523,7 +517,6 @@ class _ShopListingCard extends StatelessWidget {
                         child: const Text(
                           'PROMOTED',
                           style: TextStyle(
-                            fontFamily: 'PlusJakartaSans',
                             fontSize: 9,
                             fontWeight: FontWeight.w700,
                             color: Colors.white,
@@ -538,7 +531,6 @@ class _ShopListingCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        fontFamily: 'PlusJakartaSans',
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
                         color: AppColors.textPrimary,
@@ -550,7 +542,6 @@ class _ShopListingCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        fontFamily: 'PlusJakartaSans',
                         fontSize: 12.5,
                         color: AppColors.textSecondary,
                       ),
@@ -571,7 +562,6 @@ class _ShopListingCard extends StatelessWidget {
                         Text(
                           '${listing.deliveryTimeMins} mins',
                           style: const TextStyle(
-                            fontFamily: 'PlusJakartaSans',
                             fontSize: 12,
                             color: AppColors.textSecondary,
                           ),
@@ -582,7 +572,6 @@ class _ShopListingCard extends StatelessWidget {
                         Text(
                           '${listing.distanceKm.toStringAsFixed(1)} km',
                           style: const TextStyle(
-                            fontFamily: 'PlusJakartaSans',
                             fontSize: 12,
                             color: AppColors.textSecondary,
                           ),
@@ -595,7 +584,6 @@ class _ShopListingCard extends StatelessWidget {
                         Text(
                           '₹${listing.priceForOne} for one',
                           style: const TextStyle(
-                            fontFamily: 'PlusJakartaSans',
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
                             color: AppColors.textPrimary,
@@ -615,7 +603,6 @@ class _ShopListingCard extends StatelessWidget {
                             child: Text(
                               listing.offerLabel!,
                               style: const TextStyle(
-                                fontFamily: 'PlusJakartaSans',
                                 fontSize: 11,
                                 fontWeight: FontWeight.w700,
                                 color: AppColors.primary,
@@ -664,7 +651,6 @@ class _RatingPill extends StatelessWidget {
           Text(
             rating.toStringAsFixed(1),
             style: TextStyle(
-              fontFamily: 'PlusJakartaSans',
               fontSize: 11.5,
               fontWeight: FontWeight.w700,
               color: good ? AppColors.success : AppColors.primary,
@@ -795,7 +781,6 @@ class _SortSheet extends StatelessWidget {
           const Text(
             'Sort by',
             style: TextStyle(
-              fontFamily: 'PlusJakartaSans',
               fontSize: 16,
               fontWeight: FontWeight.w800,
               color: AppColors.textPrimary,
@@ -823,7 +808,6 @@ class _SortSheet extends StatelessWidget {
                     Text(
                       option.label,
                       style: TextStyle(
-                        fontFamily: 'PlusJakartaSans',
                         fontSize: 14,
                         fontWeight: option == current
                             ? FontWeight.w700
@@ -874,7 +858,6 @@ class _EmptyState extends StatelessWidget {
             const Text(
               'No shops match right now',
               style: TextStyle(
-                fontFamily: 'PlusJakartaSans',
                 fontSize: 15,
                 fontWeight: FontWeight.w700,
                 color: AppColors.textPrimary,
@@ -884,11 +867,7 @@ class _EmptyState extends StatelessWidget {
             const Text(
               'Try clearing a filter or searching a different term.',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontFamily: 'PlusJakartaSans',
-                fontSize: 13,
-                color: AppColors.textSecondary,
-              ),
+              style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
             ),
           ],
         ),
