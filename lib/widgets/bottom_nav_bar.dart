@@ -19,7 +19,7 @@ class AppBottomNavBar extends StatelessWidget {
     final items = [
       (Icons.home_rounded, 'Home'),
       (Icons.local_offer_rounded, 'Deals'),
-      (Icons.restaurant_rounded, 'Restaurants'),
+      (Icons.receipt_long_rounded, 'My Orders'),
       (Icons.shopping_cart_rounded, 'Cart'),
       (Icons.person_rounded, 'Profile'),
     ];

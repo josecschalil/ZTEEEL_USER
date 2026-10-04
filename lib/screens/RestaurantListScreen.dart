@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../config/api_config.dart';
+import '../services/restaurant_service.dart';
 import 'RestuarantMenuScreen.dart';
 
 /// ---------------------------------------------------------------------------
@@ -33,6 +35,67 @@ class AppColors {
 }
 
 typedef RestaurantListScreen = NearbyRestaurantsScreen;
+
+RestaurantListing restaurantListingFromVendor(Map<String, dynamic> vendor) {
+  final image = vendor['cover_image'] ?? vendor['icon_image'];
+  final imageUrl = image is String && image.isNotEmpty
+      ? (image.startsWith('http://') || image.startsWith('https://')
+            ? image
+            : '${ApiConfig.baseUrl}${image.startsWith('/') ? '' : '/'}$image')
+      : null;
+
+  final id = vendor['id']?.toString() ?? '';
+  final name = vendor['business_name']?.toString().trim() ?? 'Restaurant';
+
+  final List<String> cuisines = [];
+  if (vendor['cuisines'] is List) {
+    for (final c in vendor['cuisines'] as List) {
+      final str = c?.toString().trim() ?? '';
+      if (str.isNotEmpty) cuisines.add(str);
+    }
+  } else if (vendor['shop_description']?.toString().trim().isNotEmpty == true) {
+    cuisines.addAll(
+      vendor['shop_description']
+          .toString()
+          .split('·')
+          .map((s) => s.trim())
+          .where((s) => s.isNotEmpty),
+    );
+  }
+  if (cuisines.isEmpty) cuisines.add('Multi-Cuisine');
+
+  bool isPromoted = false;
+  bool hasFreeDelivery = false;
+  if (vendor['best_offer'] is Map) {
+    isPromoted = true;
+    final bestOffer = vendor['best_offer'] as Map;
+    if (bestOffer['title']?.toString().toLowerCase().contains('free delivery') == true) {
+      hasFreeDelivery = true;
+    }
+  }
+
+  final distanceKm = double.tryParse(vendor['distance_km']?.toString() ?? '') ?? 1.2;
+  final etaMins = int.tryParse(vendor['eta_minutes']?.toString() ?? vendor['eta']?.toString().replaceAll(RegExp(r'[^0-9]'), '') ?? '') ?? 25;
+  final rating = double.tryParse(vendor['rating']?.toString() ?? vendor['average_rating']?.toString() ?? '') ?? 4.8;
+  final reviewCount = int.tryParse(vendor['review_count']?.toString() ?? vendor['rating_count']?.toString() ?? '') ?? 120;
+  final isOpenNow = vendor['is_open_now'] is bool ? vendor['is_open_now'] as bool : true;
+
+  return RestaurantListing(
+    id: id,
+    name: name,
+    imageUrl: imageUrl,
+    fallbackIcon: Icons.restaurant_rounded,
+    cuisines: cuisines,
+    rating: rating,
+    reviewCount: reviewCount,
+    distanceKm: distanceKm,
+    etaMins: etaMins,
+    isOpenNow: isOpenNow,
+    isPromoted: isPromoted,
+    hasFreeDelivery: hasFreeDelivery,
+    priceLevel: '₹₹',
+  );
+}
 
 class RestaurantListing {
   final String id;
@@ -136,7 +199,8 @@ class NearbyRestaurantsScreen extends StatefulWidget {
 }
 
 class _NearbyRestaurantsScreenState extends State<NearbyRestaurantsScreen> {
-  late final List<RestaurantListing> _all;
+  List<RestaurantListing> _all = [];
+  bool _isLoading = false;
   final TextEditingController _searchController = TextEditingController();
 
   final Set<_QuickFilter> _activeFilters = {};
@@ -146,7 +210,41 @@ class _NearbyRestaurantsScreenState extends State<NearbyRestaurantsScreen> {
   @override
   void initState() {
     super.initState();
-    _all = widget.restaurants ?? sampleRestaurants();
+    if (widget.restaurants != null && widget.restaurants!.isNotEmpty) {
+      _all = List.from(widget.restaurants!);
+    } else if (RestaurantService.cachedRestaurants.isNotEmpty) {
+      _all = RestaurantService.cachedRestaurants
+          .map(restaurantListingFromVendor)
+          .toList();
+      _loadLiveRestaurants(isSilent: true);
+    } else {
+      _loadLiveRestaurants();
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant NearbyRestaurantsScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.restaurants != null && widget.restaurants!.isNotEmpty) {
+      setState(() {
+        _all = List.from(widget.restaurants!);
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _loadLiveRestaurants({bool isSilent = false}) async {
+    if (!isSilent && _all.isEmpty) {
+      setState(() => _isLoading = true);
+    }
+    final vendors = await RestaurantService.fetchRestaurants();
+    if (!mounted) return;
+    setState(() {
+      if (vendors.isNotEmpty) {
+        _all = vendors.map(restaurantListingFromVendor).toList();
+      }
+      _isLoading = false;
+    });
   }
 
   @override
@@ -282,9 +380,15 @@ class _NearbyRestaurantsScreenState extends State<NearbyRestaurantsScreen> {
               },
             ),
             Expanded(
-              child: results.isEmpty
-                  ? const _EmptyState()
-                  : ListView(
+              child: _isLoading
+                  ? const Center(
+                      child: CircularProgressIndicator(
+                        color: AppColors.primary,
+                      ),
+                    )
+                  : results.isEmpty
+                      ? const _EmptyState()
+                      : ListView(
                       physics: const BouncingScrollPhysics(),
                       padding: const EdgeInsets.only(bottom: 32),
                       children: [
@@ -1170,127 +1274,4 @@ class _EmptyState extends StatelessWidget {
   }
 }
 
-/// ---------------------------------------------------------------------------
-/// Sample data — unchanged from the original screen.
-/// ---------------------------------------------------------------------------
-
-List<RestaurantListing> sampleRestaurants() {
-  return const [
-    RestaurantListing(
-      id: 'r1',
-      name: "Napoli's Kitchen",
-      imageUrl:
-          'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=600&fit=crop',
-      fallbackIcon: Icons.local_pizza,
-      cuisines: ['Italian', 'Pizza'],
-      rating: 4.6,
-      reviewCount: 812,
-      distanceKm: 0.8,
-      etaMins: 25,
-      isOpenNow: true,
-      isPromoted: true,
-      hasFreeDelivery: true,
-      priceLevel: '₹₹',
-    ),
-    RestaurantListing(
-      id: 'r2',
-      name: 'Spice Route',
-      imageUrl:
-          'https://images.unsplash.com/photo-1552566626-52f8b828add9?w=600&fit=crop',
-      fallbackIcon: Icons.rice_bowl,
-      cuisines: ['North Indian', 'Biryani'],
-      rating: 4.4,
-      reviewCount: 654,
-      distanceKm: 1.2,
-      etaMins: 32,
-      isOpenNow: true,
-      priceLevel: '₹₹',
-    ),
-    RestaurantListing(
-      id: 'r3',
-      name: 'Wich Please',
-      imageUrl:
-          'https://images.unsplash.com/photo-1466978913421-dad2ebd01d17?w=600&fit=crop',
-      fallbackIcon: Icons.lunch_dining,
-      cuisines: ['Burgers', 'American'],
-      rating: 4.2,
-      reviewCount: 305,
-      distanceKm: 1.5,
-      etaMins: 28,
-      isOpenNow: true,
-      hasFreeDelivery: true,
-      priceLevel: '₹',
-    ),
-    RestaurantListing(
-      id: 'r4',
-      name: 'Sakura Sushi Bar',
-      imageUrl:
-          'https://images.unsplash.com/photo-1579027989536-b7b1f875659b?w=600&fit=crop',
-      fallbackIcon: Icons.set_meal,
-      cuisines: ['Japanese', 'Sushi'],
-      rating: 4.7,
-      reviewCount: 421,
-      distanceKm: 2.3,
-      etaMins: 40,
-      isOpenNow: false,
-      priceLevel: '₹₹₹',
-    ),
-    RestaurantListing(
-      id: 'r5',
-      name: 'Green Bowl Co.',
-      imageUrl:
-          'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=600&fit=crop',
-      fallbackIcon: Icons.eco,
-      cuisines: ['Healthy', 'Salads'],
-      rating: 4.1,
-      reviewCount: 96,
-      distanceKm: 1.9,
-      etaMins: 22,
-      isOpenNow: true,
-      hasFreeDelivery: true,
-      priceLevel: '₹₹',
-    ),
-    RestaurantListing(
-      id: 'r6',
-      name: 'Momo Street',
-      imageUrl:
-          'https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=600&fit=crop',
-      fallbackIcon: Icons.dinner_dining,
-      cuisines: ['Tibetan', 'Street Food'],
-      rating: 4.5,
-      reviewCount: 288,
-      distanceKm: 2.6,
-      etaMins: 35,
-      isOpenNow: true,
-      priceLevel: '₹',
-    ),
-    RestaurantListing(
-      id: 'r7',
-      name: 'La Pasta Casa',
-      imageUrl:
-          'https://lh3.googleusercontent.com/aida-public/AB6AXuBJSMfmwvvapG0ZHxYVePZV8uQK-WLKaOEBlNU9foogkBwzEY19ieziXMxOYMCX9IYuRqVLhcqWCTifN7QdZEEqEN8lDswHzWTC85QA716MmM_ZSZMnzW02rcdwwDJooMYoPnPnf3aPk-VikoWOdXQ20ZaHpC25Efb0cY9Ny4akg6_z0o_MckdyPF8P-9Pc5aqeflowj9BIXYHyx56_gOS9liUE9vu4vySXUoDz4bJZ3C_YHKPo8OqOLiFZ4ZtqCMc5fqX9v0UzPaKn',
-      fallbackIcon: Icons.ramen_dining,
-      cuisines: ['Italian', 'Continental'],
-      rating: 3.9,
-      reviewCount: 142,
-      distanceKm: 3.1,
-      etaMins: 45,
-      isOpenNow: true,
-      priceLevel: '₹₹₹',
-    ),
-    RestaurantListing(
-      id: 'r8',
-      name: 'Taco Fiesta',
-      imageUrl:
-          'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=600&fit=crop',
-      fallbackIcon: Icons.tapas,
-      cuisines: ['Mexican'],
-      rating: 4.3,
-      reviewCount: 178,
-      distanceKm: 1.1,
-      etaMins: 27,
-      isOpenNow: false,
-      priceLevel: '₹₹',
-    ),
-  ];
-}
+List<RestaurantListing> sampleRestaurants() => const [];

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/cart_service.dart';
 
 class FoodItemColors {
   static const primary = Color(0xFFEE5B2B);
@@ -16,6 +17,9 @@ class FoodItemColors {
 
 class FoodItemPage extends StatefulWidget {
   final String id;
+  final String? vendorId;
+  final String? vendorName;
+  final String? vendorCoverImage;
   final String name;
   final String category;
   final double price;
@@ -28,10 +32,14 @@ class FoodItemPage extends StatefulWidget {
   final List<String> photos; // 1-3 photos
   final int initialQuantity;
   final ValueChanged<int>? onQuantityChanged;
+  final Future<void> Function(int quantity)? onAddToCart;
 
   const FoodItemPage({
     super.key,
     this.id = 'item_1',
+    this.vendorId,
+    this.vendorName,
+    this.vendorCoverImage,
     required this.name,
     required this.category,
     required this.price,
@@ -44,6 +52,7 @@ class FoodItemPage extends StatefulWidget {
     required this.photos,
     this.initialQuantity = 1,
     this.onQuantityChanged,
+    this.onAddToCart,
   });
 
   @override
@@ -54,6 +63,7 @@ class _FoodItemPageState extends State<FoodItemPage> {
   late final PageController _photoPageController;
   int _activePhotoIndex = 0;
   late int _quantity;
+  bool _isAdding = false;
 
   @override
   void initState() {
@@ -77,6 +87,96 @@ class _FoodItemPageState extends State<FoodItemPage> {
     if (_quantity > 1) {
       setState(() => _quantity--);
       widget.onQuantityChanged?.call(_quantity);
+    }
+  }
+
+  Future<void> _handleAddToCart() async {
+    if (_isAdding) return;
+    setState(() => _isAdding = true);
+
+    try {
+      if (widget.onAddToCart != null) {
+        await widget.onAddToCart!(_quantity);
+      } else {
+        final res = await CartService.addItem(
+          menuItemId: widget.id,
+          quantity: _quantity,
+          vendorId: widget.vendorId,
+          vendorName: widget.vendorName,
+          vendorCoverImage: widget.vendorCoverImage,
+          itemName: widget.name,
+          unitPrice: widget.originalPrice ?? widget.price,
+          discountedPrice: widget.price,
+          itemImage: widget.photos.isNotEmpty ? widget.photos.first : null,
+          itemDescription: widget.description,
+        );
+
+        if (!mounted) return;
+
+        if (res['conflict'] == true) {
+          final shouldClear = await showDialog<bool>(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: const Text('Start New Basket?'),
+              content: const Text(
+                'Your cart currently contains items from another restaurant. Would you like to clear your cart and start fresh with this order?',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: FoodItemColors.primary),
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: const Text('Start New', style: TextStyle(color: Colors.white)),
+                ),
+              ],
+            ),
+          );
+
+          if (shouldClear == true) {
+            await CartService.clearCart();
+            await CartService.addItem(
+              menuItemId: widget.id,
+              quantity: _quantity,
+              vendorId: widget.vendorId,
+              vendorName: widget.vendorName,
+              vendorCoverImage: widget.vendorCoverImage,
+              itemName: widget.name,
+              unitPrice: widget.originalPrice ?? widget.price,
+              discountedPrice: widget.price,
+              itemImage: widget.photos.isNotEmpty ? widget.photos.first : null,
+              itemDescription: widget.description,
+            );
+          } else {
+            return;
+          }
+        }
+      }
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Added $_quantity x "${widget.name}" to cart!'),
+          backgroundColor: FoodItemColors.primary,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      Navigator.of(context).pop(true);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to add to cart: $e'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isAdding = false);
     }
   }
 
@@ -453,25 +553,24 @@ class _FoodItemPageState extends State<FoodItemPage> {
                             borderRadius: BorderRadius.circular(14),
                           ),
                         ),
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Added $_quantity x "${widget.name}" to cart!'),
-                              behavior: SnackBarBehavior.floating,
-                              duration: const Duration(seconds: 2),
-                            ),
-                          );
-                          Navigator.of(context).pop();
-                        },
-                        child: Text(
-                          'ADD TO CART • \$${totalPrice.toStringAsFixed(2)}',
-                          style: const TextStyle(
-                            fontSize: 13.5,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
+                        onPressed: _isAdding ? null : _handleAddToCart,
+                        child: _isAdding
+                            ? const SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2.5,
+                                ),
+                              )
+                            : Text(
+                                '${widget.initialQuantity > 0 ? "UPDATE CART" : "ADD TO CART"} • \$${totalPrice.toStringAsFixed(2)}',
+                                style: const TextStyle(
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
                       ),
                     ),
                   ),

@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'QrScreen.dart';
+import 'RecentOrderScreen.dart';
+import '../services/cart_service.dart';
+import '../services/redemption_service.dart';
 
 class CheckoutColors {
   static const primary = Color(0xFFEE5B2B);
@@ -26,114 +29,430 @@ class CheckoutColors {
   );
 }
 
-/// ---------------------------------------------------------------------
-/// Data model
-/// ---------------------------------------------------------------------
-class SelectionItem {
-  final String id;
-  final String name;
-  final String description;
-  final double unitPrice;
-  final String imageUrl;
-  int quantity;
-  SelectionItem({
-    required this.id,
-    required this.name,
-    required this.description,
-    required this.unitPrice,
-    required this.imageUrl,
-    required this.quantity,
-  });
-}
-
 class CheckoutScreen extends StatefulWidget {
-  const CheckoutScreen({super.key});
+  final String? vendorId;
+  final bool checkoutAll;
+
+  const CheckoutScreen({
+    super.key,
+    this.vendorId,
+    this.checkoutAll = false,
+  });
 
   @override
   State<CheckoutScreen> createState() => _CheckoutScreenState();
 }
 
 class _CheckoutScreenState extends State<CheckoutScreen> {
-  final List<SelectionItem> _items = [
-    SelectionItem(
-      id: 'fries',
-      name: 'Truffle Fries',
-      description: 'Large size with garlic aioli',
-      unitPrice: 12.00,
-      imageUrl:
-          'https://lh3.googleusercontent.com/aida-public/AB6AXuDdkzjMAvBHCfwRW6c8Z0PRDiECvHocxOxi_c7mQzkbyM1Hp8Bjalia5vtRppGwuanih6Mc5VELW-QN9xOnl9iZI4lEsCix4MECxUPaxKGCLxtBTavse6JuRJKa2dL0FWuckkntr-4Con3ZglO0mYRyoULvbFYX9AN3pksQS9WQi0YOnB0mh2G5VSG9hAjK1dIw6l7qPd-LrAu7mouA66Egm5dgQ7dyc1rh4WwFdGfb3nbwpL-SxRZ-TQbyfd3IQwV-cSY5SbCWmz16',
-      quantity: 1,
-    ),
-    SelectionItem(
-      id: 'burger_combo',
-      name: 'Beef Burger Combo',
-      description: 'Includes drink and sides',
-      unitPrice: 13.00,
-      imageUrl:
-          'https://lh3.googleusercontent.com/aida-public/AB6AXuDBn2CcBKm9v3EMYD765j4K_BUS5odWdUdF-SNaW7KJa4OoU0He3o-A1x90LLNn6hUurctOhgnx1OdWBvbV4rRjQk256pVUGKYSuijyu0-MgnQa1eC6jTpmSqdkHxu6fWoQmUggA6vv6A6klfgiWmUkYXRKX-UH8wyGFGf3jqIz8Z_DvCSvJdl353AOFcBpeyZ7V6gPKxhy36BLB805UKKTFq8igR8IqZfGog0lDqWE6myfkMFUyHKiXw1zHAb__pLHOIS4YA1LAD1z',
-      quantity: 2,
-    ),
-  ];
+  bool _isLoading = false;
+  bool _isGeneratingQr = false;
+  String? _selectedRewardOptionId;
 
-  static const double _discountRate = 0.25;
-  static const double _freeItemTarget = 40.00;
+  @override
+  void initState() {
+    super.initState();
+    _loadCart();
+    CartService.cartNotifier.addListener(_onCartChanged);
+    CartService.basketsNotifier.addListener(_onCartChanged);
+  }
 
-  double get _subtotal =>
-      _items.fold(0, (sum, item) => sum + item.unitPrice * item.quantity);
-  double get _discount => _subtotal * _discountRate;
-  double get _totalPayable => _subtotal - _discount;
-  double get _amountToFreeItem =>
-      (_freeItemTarget - _totalPayable).clamp(0, _freeItemTarget);
-  double get _progress => (_totalPayable / _freeItemTarget).clamp(0, 1);
+  @override
+  void dispose() {
+    CartService.cartNotifier.removeListener(_onCartChanged);
+    CartService.basketsNotifier.removeListener(_onCartChanged);
+    super.dispose();
+  }
 
-  void _increment(SelectionItem item) => setState(() => item.quantity++);
-  void _decrement(SelectionItem item) => setState(() {
-    if (item.quantity > 1) item.quantity--;
-  });
+  void _onCartChanged() {
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _loadCart() async {
+    setState(() => _isLoading = true);
+    await CartService.fetchCart();
+    if (mounted) {
+      final cart = _getActiveCart();
+      _selectedRewardOptionId = cart?.reward?.selectedOption?.id;
+      setState(() => _isLoading = false);
+    }
+  }
+
+  CartData? _getActiveCart() {
+    if (widget.vendorId != null && widget.vendorId!.isNotEmpty) {
+      return CartService.getBasket(widget.vendorId) ?? CartService.currentCart;
+    }
+    return CartService.currentCart;
+  }
+
+  Future<void> _increment(CartItemModel item, {String? vendorId}) async {
+    await CartService.updateQuantity(
+      cartItemId: item.id,
+      quantity: item.quantity + 1,
+      vendorId: vendorId,
+    );
+  }
+
+  Future<void> _decrement(CartItemModel item, {String? vendorId}) async {
+    await CartService.updateQuantity(
+      cartItemId: item.id,
+      quantity: item.quantity - 1,
+      vendorId: vendorId,
+    );
+  }
+
+  Future<void> _selectRewardOption(String optionId) async {
+    setState(() => _selectedRewardOptionId = optionId);
+    final targetVendor = widget.vendorId ?? _getActiveCart()?.vendor?.id;
+    await CartService.selectRewardOption(optionId, vendorId: targetVendor);
+  }
+
+  Future<void> _onGenerateQr() async {
+    if (widget.checkoutAll) {
+      final baskets = CartService.allBaskets;
+      if (baskets.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Your cart is empty.'),
+            backgroundColor: CheckoutColors.primary,
+          ),
+        );
+        return;
+      }
+
+      setState(() => _isGeneratingQr = true);
+      final result = await RedemptionService.generateAllRedemptions();
+      if (!mounted) return;
+      setState(() => _isGeneratingQr = false);
+
+      if (result['success'] == true && result['sessions'] is List) {
+        final sessions = result['sessions'] as List<RedemptionSessionData>;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${sessions.length} separate shop orders created! QR codes are active.'),
+            backgroundColor: const Color(0xFF10B981),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const OrdersScreen(),
+          ),
+        );
+      } else {
+        final errorMsg = result['error']?.toString() ?? 'Unable to generate redemption sessions.';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMsg),
+            backgroundColor: Colors.red.shade700,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      return;
+    }
+
+    final cart = _getActiveCart();
+    if (cart == null || cart.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Your cart is empty.'),
+          backgroundColor: CheckoutColors.primary,
+        ),
+      );
+      return;
+    }
+
+    final hasFreeItemMilestone = cart.reward?.milestone?.hasFreeItem == true ||
+        cart.appliedMilestone?.hasFreeItem == true;
+    final hasRewardOptions = (cart.reward?.availableOptions.isNotEmpty ?? false) ||
+        (cart.appliedMilestone?.rewardOptions.isNotEmpty ?? false);
+
+    if (hasFreeItemMilestone && hasRewardOptions && cart.reward?.selectedOption == null && _selectedRewardOptionId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select your free milestone reward item above!'),
+          backgroundColor: CheckoutColors.primary,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isGeneratingQr = true);
+    final result = await RedemptionService.generateRedemption(vendorId: widget.vendorId ?? cart.vendor?.id);
+    if (!mounted) return;
+    setState(() => _isGeneratingQr = false);
+
+    if (result['success'] == true && result['data'] is RedemptionSessionData) {
+      final session = result['data'] as RedemptionSessionData;
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => RedeemQrScreen(session: session),
+        ),
+      );
+    } else {
+      final errorMsg = result['error']?.toString() ?? 'Unable to generate redemption session.';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errorMsg),
+          backgroundColor: Colors.red.shade700,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
+    if (widget.checkoutAll) {
+      return _buildCheckoutAllView(isDark);
+    }
+
+    final cart = _getActiveCart() ?? const CartData();
+    final subtotal = cart.subtotal;
+    final discount = cart.totalDiscount;
+    final totalPayable = cart.finalTotal;
+
+    // Calculate milestone progress
+    final reward = cart.reward;
+    final nextMilestone = cart.nextMilestone ?? reward?.nextMilestone;
+    final appliedMilestone = cart.appliedMilestone ?? reward?.milestone;
+
+    double amountToNext = reward?.amountToNext ?? 0.0;
+    double progress = 1.0;
+    if (nextMilestone != null && nextMilestone.thresholdAmount > 0) {
+      final target = nextMilestone.thresholdAmount;
+      if (amountToNext <= 0) {
+        amountToNext = (target - cart.eligibleSubtotal).clamp(0.0, target);
+      }
+      progress = (cart.eligibleSubtotal / target).clamp(0.0, 1.0);
+    } else if (appliedMilestone != null) {
+      amountToNext = 0.0;
+      progress = 1.0;
+    }
+
+    final availableRewards = reward?.availableOptions.isNotEmpty == true
+        ? reward!.availableOptions
+        : (appliedMilestone?.rewardOptions ?? const []);
+
+    final hasMilestones = (cart.milestones.isNotEmpty) ||
+        appliedMilestone != null ||
+        nextMilestone != null ||
+        (reward != null &&
+            (reward.milestone != null ||
+                reward.nextMilestone != null ||
+                reward.availableOptions.isNotEmpty));
+
     return Scaffold(
+      backgroundColor: isDark ? CheckoutColors.backgroundDark : CheckoutColors.backgroundLight,
       body: SafeArea(
         child: Column(
           children: [
-            _Header(isDark: isDark),
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 24,
+            _Header(
+              isDark: isDark,
+              vendorName: cart.vendor?.businessName,
+            ),
+            if (_isLoading)
+              const Expanded(
+                child: Center(
+                  child: CircularProgressIndicator(color: CheckoutColors.primary),
                 ),
-                children: [
-                  for (final item in _items)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 16),
-                      child: _SelectionItemCard(
-                        item: item,
-                        isDark: isDark,
-                        onIncrement: () => _increment(item),
-                        onDecrement: () => _decrement(item),
+              )
+            else if (cart.isEmpty)
+              _buildEmptyView(isDark)
+            else
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 24,
+                  ),
+                  children: [
+                    for (final item in cart.items)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: _SelectionItemCard(
+                          item: item,
+                          isDark: isDark,
+                          onIncrement: () => _increment(item, vendorId: cart.vendor?.id),
+                          onDecrement: () => _decrement(item, vendorId: cart.vendor?.id),
+                        ),
                       ),
+                    _AddMoreItemsButton(
+                      isDark: isDark,
+                      onTap: () => Navigator.of(context).maybePop(),
                     ),
-                  _AddMoreItemsButton(isDark: isDark),
-                  const SizedBox(height: 24),
-                  _RewardsProgressCard(
-                    isDark: isDark,
-                    amountToFreeItem: _amountToFreeItem,
-                    progress: _progress,
+                    if (hasMilestones) ...[
+                      const SizedBox(height: 24),
+                      _RewardsProgressCard(
+                        isDark: isDark,
+                        amountToFreeItem: amountToNext,
+                        progress: progress,
+                        milestoneName: nextMilestone?.name ?? appliedMilestone?.name,
+                        isUnlocked: appliedMilestone != null,
+                        availableRewards: availableRewards,
+                        selectedRewardId: _selectedRewardOptionId ?? reward?.selectedOption?.id,
+                        onSelectReward: _selectRewardOption,
+                      ),
+                    ],
+                    const SizedBox(height: 16),
+                    _PriceBreakdownCard(
+                      isDark: isDark,
+                      subtotal: subtotal,
+                      discount: discount,
+                      total: totalPayable,
+                    ),
+                    const SizedBox(height: 16),
+                    _GenerateQrButton(
+                      isDark: isDark,
+                      isLoading: _isGeneratingQr,
+                      onPressed: _onGenerateQr,
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCheckoutAllView(bool isDark) {
+    final baskets = CartService.allBaskets;
+    final grandSubtotal = CartService.grandSubtotal;
+    final grandSavings = CartService.grandSavings;
+    final grandTotal = CartService.grandTotal;
+
+    return Scaffold(
+      backgroundColor: isDark ? CheckoutColors.backgroundDark : CheckoutColors.backgroundLight,
+      body: SafeArea(
+        child: Column(
+          children: [
+            _Header(
+              isDark: isDark,
+              vendorName: '${baskets.length} Separate Shop Orders',
+            ),
+            if (_isLoading)
+              const Expanded(
+                child: Center(
+                  child: CircularProgressIndicator(color: CheckoutColors.primary),
+                ),
+              )
+            else if (baskets.isEmpty)
+              _buildEmptyView(isDark)
+            else
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 24,
                   ),
-                  const SizedBox(height: 16),
-                  _PriceBreakdownCard(
-                    isDark: isDark,
-                    subtotal: _subtotal,
-                    discount: _discount,
-                    total: _totalPayable,
-                  ),
-                  const SizedBox(height: 16),
-                  _GenerateQrButton(isDark: isDark),
-                ],
+                  children: [
+                    for (final basket in baskets) ...[
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.storefront_rounded,
+                              color: CheckoutColors.primary,
+                              size: 18,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              basket.vendor?.businessName ?? 'Restaurant',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: isDark ? Colors.white : Colors.black87,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      for (final item in basket.items)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: _SelectionItemCard(
+                            item: item,
+                            isDark: isDark,
+                            onIncrement: () => _increment(item, vendorId: basket.vendor?.id),
+                            onDecrement: () => _decrement(item, vendorId: basket.vendor?.id),
+                          ),
+                        ),
+                      const SizedBox(height: 12),
+                    ],
+                    _AddMoreItemsButton(
+                      isDark: isDark,
+                      onTap: () => Navigator.of(context).maybePop(),
+                    ),
+                    const SizedBox(height: 16),
+                    _PriceBreakdownCard(
+                      isDark: isDark,
+                      subtotal: grandSubtotal,
+                      discount: grandSavings,
+                      total: grandTotal,
+                    ),
+                    const SizedBox(height: 16),
+                    _GenerateQrButton(
+                      isDark: isDark,
+                      isLoading: _isGeneratingQr,
+                      title: 'Generate All QR Codes (${baskets.length} Orders)',
+                      subtitle: 'Generates separate QR redemption vouchers for each restaurant.',
+                      onPressed: _onGenerateQr,
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyView(bool isDark) {
+    return Expanded(
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.shopping_basket_outlined,
+              size: 64,
+              color: isDark ? Colors.grey[600] : Colors.grey[400],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Your cart is empty',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: isDark ? Colors.white : Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Add items from a restaurant menu to proceed.',
+              style: TextStyle(
+                fontSize: 13,
+                color: isDark ? Colors.grey[400] : Colors.grey[600],
+              ),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).maybePop(),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: CheckoutColors.primary,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: const Text(
+                'Explore Menu',
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
               ),
             ),
           ],
@@ -148,21 +467,19 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 /// ---------------------------------------------------------------------
 class _Header extends StatelessWidget {
   final bool isDark;
-  const _Header({required this.isDark});
+  final String? vendorName;
+  const _Header({required this.isDark, this.vendorName});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color:
-            (isDark
-                    ? CheckoutColors.backgroundDark
-                    : CheckoutColors.backgroundLight)
-                .withOpacity(0.95),
+        color: (isDark ? CheckoutColors.backgroundDark : CheckoutColors.backgroundLight)
+            .withValues(alpha: 0.95),
         border: Border(
           bottom: BorderSide(
-            color: isDark ? Colors.white.withOpacity(0.1) : Colors.grey[200]!,
+            color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.grey[200]!,
           ),
         ),
       ),
@@ -181,14 +498,31 @@ class _Header extends StatelessWidget {
             ),
           ),
           Expanded(
-            child: Text(
-              'Your Selection',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: isDark ? Colors.white : Colors.black,
-              ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Your Selection',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : Colors.black,
+                  ),
+                ),
+                if (vendorName != null && vendorName!.isNotEmpty)
+                  Text(
+                    vendorName!,
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? Colors.grey[400] : Colors.grey[600],
+                    ),
+                  ),
+              ],
             ),
           ),
           const SizedBox(width: 40),
@@ -202,10 +536,11 @@ class _Header extends StatelessWidget {
 /// Selection item card with quantity stepper
 /// ---------------------------------------------------------------------
 class _SelectionItemCard extends StatelessWidget {
-  final SelectionItem item;
+  final CartItemModel item;
   final bool isDark;
   final VoidCallback onIncrement;
   final VoidCallback onDecrement;
+
   const _SelectionItemCard({
     required this.item,
     required this.isDark,
@@ -215,14 +550,16 @@ class _SelectionItemCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final lineTotal = item.unitPrice * item.quantity;
+    final lineTotal = item.lineTotal;
+    final hasDiscount = item.lineDiscount > 0;
+
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: isDark ? Colors.white.withOpacity(0.05) : Colors.white,
+        color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[100]!,
+          color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey[100]!,
         ),
         boxShadow: isDark
             ? null
@@ -239,11 +576,27 @@ class _SelectionItemCard extends StatelessWidget {
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(8),
-            child: Image.network(
-              item.imageUrl,
+            child: Container(
               width: 80,
               height: 80,
-              fit: BoxFit.cover,
+              color: isDark ? const Color(0xFF332019) : const Color(0xFFF3F4F6),
+              child: item.imageUrl != null && item.imageUrl!.isNotEmpty
+                  ? Image.network(
+                      item.imageUrl!,
+                      width: 80,
+                      height: 80,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const Icon(
+                        Icons.restaurant_rounded,
+                        color: CheckoutColors.primary,
+                        size: 32,
+                      ),
+                    )
+                  : const Icon(
+                      Icons.restaurant_rounded,
+                      color: CheckoutColors.primary,
+                      size: 32,
+                    ),
             ),
           ),
           const SizedBox(width: 16),
@@ -264,7 +617,9 @@ class _SelectionItemCard extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.only(bottom: 12, top: 2),
                   child: Text(
-                    item.description,
+                    item.description?.isNotEmpty == true
+                        ? item.description!
+                        : '${item.itemType.toUpperCase()} • \$${item.unitPrice.toStringAsFixed(2)} each',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
@@ -276,18 +631,34 @@ class _SelectionItemCard extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      '\$${lineTotal.toStringAsFixed(2)}',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: CheckoutColors.primary,
-                      ),
+                    Row(
+                      children: [
+                        Text(
+                          '\$${lineTotal.toStringAsFixed(2)}',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                            color: CheckoutColors.primary,
+                          ),
+                        ),
+                        if (hasDiscount) ...[
+                          const SizedBox(width: 6),
+                          Text(
+                            '\$${item.subtotal.toStringAsFixed(2)}',
+                            style: TextStyle(
+                              decoration: TextDecoration.lineThrough,
+                              fontSize: 11,
+                              color: isDark ? Colors.grey[500] : Colors.grey[400],
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                     Container(
                       padding: const EdgeInsets.all(2),
                       decoration: BoxDecoration(
                         color: isDark
-                            ? Colors.white.withOpacity(0.1)
+                            ? Colors.white.withValues(alpha: 0.1)
                             : Colors.grey[100],
                         borderRadius: BorderRadius.circular(999),
                       ),
@@ -357,7 +728,7 @@ class _StepperButton extends StatelessWidget {
           shape: BoxShape.circle,
           color: filled
               ? CheckoutColors.primary
-              : (isDark ? Colors.white.withOpacity(0.2) : Colors.white),
+              : (isDark ? Colors.white.withValues(alpha: 0.2) : Colors.white),
           boxShadow: filled
               ? null
               : const [BoxShadow(color: Colors.black12, blurRadius: 2)],
@@ -379,12 +750,13 @@ class _StepperButton extends StatelessWidget {
 /// ---------------------------------------------------------------------
 class _AddMoreItemsButton extends StatelessWidget {
   final bool isDark;
-  const _AddMoreItemsButton({required this.isDark});
+  final VoidCallback onTap;
+  const _AddMoreItemsButton({required this.isDark, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: () {},
+      onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: DottedBorderBox(
         isDark: isDark,
@@ -414,8 +786,6 @@ class _AddMoreItemsButton extends StatelessWidget {
   }
 }
 
-/// Simple dashed-border container (CustomPaint) approximating the
-/// `border-dashed` Tailwind utility used for "Add more items".
 class DottedBorderBox extends StatelessWidget {
   final Widget child;
   final bool isDark;
@@ -425,7 +795,7 @@ class DottedBorderBox extends StatelessWidget {
   Widget build(BuildContext context) {
     return CustomPaint(
       painter: _DashedBorderPainter(
-        color: isDark ? Colors.white.withOpacity(0.2) : Colors.grey[300]!,
+        color: isDark ? Colors.white.withValues(alpha: 0.2) : Colors.grey[300]!,
         radius: 12,
       ),
       child: child,
@@ -476,10 +846,21 @@ class _RewardsProgressCard extends StatelessWidget {
   final bool isDark;
   final double amountToFreeItem;
   final double progress;
+  final String? milestoneName;
+  final bool isUnlocked;
+  final List<RewardOption> availableRewards;
+  final String? selectedRewardId;
+  final ValueChanged<String>? onSelectReward;
+
   const _RewardsProgressCard({
     required this.isDark,
     required this.amountToFreeItem,
     required this.progress,
+    this.milestoneName,
+    this.isUnlocked = false,
+    this.availableRewards = const [],
+    this.selectedRewardId,
+    this.onSelectReward,
   });
 
   @override
@@ -487,10 +868,12 @@ class _RewardsProgressCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: isDark ? Colors.white.withOpacity(0.05) : Colors.white,
+        color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[100]!,
+          color: isUnlocked
+              ? const Color(0xFF10B981).withValues(alpha: 0.5)
+              : (isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey[100]!),
         ),
       ),
       child: Column(
@@ -498,33 +881,46 @@ class _RewardsProgressCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(
-                Icons.card_giftcard,
-                color: CheckoutColors.primary,
+              Icon(
+                isUnlocked ? Icons.stars_rounded : Icons.card_giftcard,
+                color: isUnlocked ? const Color(0xFF10B981) : CheckoutColors.primary,
                 size: 20,
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: RichText(
-                  text: TextSpan(
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                      color: isDark ? Colors.grey[200] : Colors.grey[700],
-                    ),
-                    children: [
-                      const TextSpan(text: 'Spend '),
-                      TextSpan(
-                        text: '\$${amountToFreeItem.toStringAsFixed(2)}',
+                child: isUnlocked
+                    ? Text(
+                        milestoneName != null ? '🎉 $milestoneName Unlocked!' : '🎉 Milestone Reward Unlocked!',
                         style: const TextStyle(
-                          color: CheckoutColors.primary,
+                          fontSize: 13,
                           fontWeight: FontWeight.bold,
+                          color: Color(0xFF10B981),
+                        ),
+                      )
+                    : RichText(
+                        text: TextSpan(
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                            color: isDark ? Colors.grey[200] : Colors.grey[700],
+                          ),
+                          children: [
+                            const TextSpan(text: 'Spend '),
+                            TextSpan(
+                              text: '\$${amountToFreeItem.toStringAsFixed(2)}',
+                              style: const TextStyle(
+                                color: CheckoutColors.primary,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            TextSpan(
+                              text: milestoneName != null
+                                   ? ' more to unlock $milestoneName!'
+                                  : ' more to unlock a FREE reward item!',
+                            ),
+                          ],
                         ),
                       ),
-                      const TextSpan(text: ' more to unlock a FREE item!'),
-                    ],
-                  ),
-                ),
               ),
             ],
           ),
@@ -536,18 +932,18 @@ class _RewardsProgressCard extends StatelessWidget {
                 Container(
                   height: 8,
                   color: isDark
-                      ? Colors.white.withOpacity(0.1)
+                      ? Colors.white.withValues(alpha: 0.1)
                       : Colors.grey[200],
                 ),
                 FractionallySizedBox(
-                  widthFactor: progress,
+                  widthFactor: progress.clamp(0.0, 1.0),
                   child: Container(
                     height: 8,
                     decoration: BoxDecoration(
-                      color: CheckoutColors.primary,
+                      color: isUnlocked ? const Color(0xFF10B981) : CheckoutColors.primary,
                       boxShadow: [
                         BoxShadow(
-                          color: CheckoutColors.primary.withOpacity(0.5),
+                          color: (isUnlocked ? const Color(0xFF10B981) : CheckoutColors.primary).withValues(alpha: 0.5),
                           blurRadius: 8,
                         ),
                       ],
@@ -562,16 +958,78 @@ class _RewardsProgressCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               _ProgressMarker(
-                label: '\$0',
+                label: 'Start',
                 color: isDark ? Colors.grey[500]! : Colors.grey[400]!,
               ),
-              _ProgressMarker(label: 'Cashback', color: CheckoutColors.primary),
               _ProgressMarker(
-                label: 'Free Item',
-                color: isDark ? Colors.grey[500]! : Colors.grey[400]!,
+                label: 'Discount',
+                color: CheckoutColors.primary,
+              ),
+              _ProgressMarker(
+                label: isUnlocked ? 'Unlocked!' : 'Reward',
+                color: isUnlocked ? const Color(0xFF10B981) : (isDark ? Colors.grey[500]! : Colors.grey[400]!),
               ),
             ],
           ),
+
+          // Available reward gifts picker
+          if (availableRewards.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Text(
+              'Choose your Free Reward:',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: isDark ? Colors.grey[300] : Colors.grey[800],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: availableRewards.map((opt) {
+                final isSelected = opt.id == selectedRewardId;
+                return InkWell(
+                  onTap: () => onSelectReward?.call(opt.id),
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? const Color(0xFF10B981).withValues(alpha: 0.15)
+                          : (isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey[100]),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: isSelected ? const Color(0xFF10B981) : Colors.transparent,
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          isSelected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+                          size: 14,
+                          color: isSelected ? const Color(0xFF10B981) : Colors.grey,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          opt.name,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                            color: isSelected
+                                ? const Color(0xFF10B981)
+                                : (isDark ? Colors.white : Colors.black87),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
         ],
       ),
     );
@@ -624,13 +1082,15 @@ class _PriceBreakdownCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final discountPct = subtotal > 0 && discount > 0 ? ((discount / subtotal) * 100).toInt() : 0;
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: isDark ? Colors.white.withOpacity(0.05) : Colors.white,
+        color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[100]!,
+          color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey[100]!,
         ),
       ),
       child: Column(
@@ -667,27 +1127,29 @@ class _PriceBreakdownCard extends StatelessWidget {
                       color: isDark ? Colors.grey[400] : Colors.grey[500],
                     ),
                   ),
-                  const SizedBox(width: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? Colors.green.withOpacity(0.2)
-                          : Colors.green[100],
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(
-                      '25% OFF',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        color: isDark ? Colors.green[300] : Colors.green[700],
+                  if (discountPct > 0) ...[
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? Colors.green.withValues(alpha: 0.2)
+                            : Colors.green[100],
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        '$discountPct% OFF',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? Colors.green[300] : Colors.green[700],
+                        ),
                       ),
                     ),
-                  ),
+                  ],
                 ],
               ),
               Text(
@@ -703,7 +1165,7 @@ class _PriceBreakdownCard extends StatelessWidget {
             padding: const EdgeInsets.symmetric(vertical: 12),
             child: Divider(
               height: 1,
-              color: isDark ? Colors.white.withOpacity(0.1) : Colors.grey[200],
+              color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.grey[200],
             ),
           ),
           Row(
@@ -738,7 +1200,18 @@ class _PriceBreakdownCard extends StatelessWidget {
 /// ---------------------------------------------------------------------
 class _GenerateQrButton extends StatelessWidget {
   final bool isDark;
-  const _GenerateQrButton({required this.isDark});
+  final bool isLoading;
+  final String? title;
+  final String? subtitle;
+  final VoidCallback onPressed;
+
+  const _GenerateQrButton({
+    required this.isDark,
+    required this.isLoading,
+    this.title,
+    this.subtitle,
+    required this.onPressed,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -748,37 +1221,41 @@ class _GenerateQrButton extends StatelessWidget {
           width: double.infinity,
           height: 56,
           child: ElevatedButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const QrScreen()),
-              );
-            },
+            onPressed: isLoading ? null : onPressed,
             style: ElevatedButton.styleFrom(
               backgroundColor: CheckoutColors.primary,
               foregroundColor: Colors.white,
               elevation: 6,
-              shadowColor: CheckoutColors.primary.withOpacity(0.25),
+              shadowColor: CheckoutColors.primary.withValues(alpha: 0.25),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
-            child: const Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.qr_code_2, size: 22),
-                SizedBox(width: 8),
-                Text(
-                  'Generate QR Code',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-              ],
-            ),
+            child: isLoading
+                ? const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2.5,
+                    ),
+                  )
+                : Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.qr_code_2, size: 22),
+                      const SizedBox(width: 8),
+                      Text(
+                        title ?? 'Generate QR Code',
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
           ),
         ),
         const SizedBox(height: 16),
         Text(
-          'Show the QR code at the counter to redeem your offer.',
+          subtitle ?? 'Show the QR code at the counter to redeem your order.',
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 11,

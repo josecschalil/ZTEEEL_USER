@@ -1,101 +1,216 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
-import 'FoodDetailScreen.dart';
 import '../config/api_config.dart';
 import '../services/offer_service.dart';
-import 'dart:async';
+import '../services/restaurant_service.dart';
+import 'RestuarantMenuScreen.dart';
 
-/// Shared color tokens (same as dashboard AppColorss)
-class _DealsColors {
+/// ---------------------------------------------------------------------
+/// Color tokens
+/// ---------------------------------------------------------------------
+class DealsColors {
   static const primary = Color(0xFFEE5B2B);
+  static const primaryDeep = Color(0xFFD94819);
+  static const primarySoft = Color(0xFFFFF1EB);
+  static const bgLight = Color(0xFFFAFAFC);
+  static const bgDark = Color(0xFF1E1714);
+  static const cardLight = Colors.white;
+  static const cardDark = Color(0xFF281E19);
+  static const borderLight = Color(0xFFF0F0F3);
+  static const borderDark = Color(0xFF3D2B23);
+  static const textPrimary = Color(0xFF1D1E20);
+  static const textMutedLight = Color(0xFF8A8A9A);
+  static const textMutedDark = Color(0xFFC9A092);
+  static const green = Color(0xFF10B981);
+  static const amber = Color(0xFFF59E0B);
+  static const purple = Color(0xFF8B5CF6);
 }
 
-/// Deal data model
+/// ---------------------------------------------------------------------
+/// Enriched Deal Model
+/// ---------------------------------------------------------------------
 class Deal {
+  final String? id;
   final String? vendorId;
   final String title;
+  final String description;
   final String restaurant;
+  final String? restaurantImage;
+  final String cuisine;
+  final double rating;
+  final int reviewCount;
   final String distance;
   final String discount;
+  final double discountPercent;
+  final String scopeType;
   final String timeLeft;
   final String imageUrl;
+  final bool isFlash;
+  final bool isMega;
+  final DateTime? endsAt;
+
   const Deal({
+    this.id,
     this.vendorId,
     required this.title,
+    this.description = '',
     required this.restaurant,
+    this.restaurantImage,
+    this.cuisine = 'Multi-Cuisine',
+    this.rating = 4.8,
+    this.reviewCount = 120,
     required this.distance,
     required this.discount,
+    this.discountPercent = 0.0,
+    this.scopeType = 'all_menu',
     required this.timeLeft,
     required this.imageUrl,
+    this.isFlash = false,
+    this.isMega = false,
+    this.endsAt,
   });
+
+  factory Deal.fromBackend({
+    required Map<String, dynamic> offer,
+    Map<String, dynamic>? vendor,
+    String? fallbackImage,
+  }) {
+    final id = offer['id']?.toString();
+    final vendorId = offer['vendor']?.toString() ?? vendor?['id']?.toString() ?? '';
+    final title = offer['title']?.toString().trim() ?? 'Special Deal';
+    final desc = offer['description']?.toString().trim() ?? '';
+    final discountPct = double.tryParse(offer['discount_percentage']?.toString() ?? '') ?? 0.0;
+    final scopeType = offer['scope_type']?.toString() ?? 'all_menu';
+
+    final vName = vendor?['business_name']?.toString().trim() ?? 'Restaurant Partner';
+    final vImg = _resolveImageUrl(vendor?['cover_image']?.toString() ?? vendor?['icon_image']?.toString() ?? '');
+
+    String cuisine = 'Multi-Cuisine';
+    if (vendor?['cuisines'] is List && (vendor?['cuisines'] as List).isNotEmpty) {
+      cuisine = (vendor?['cuisines'] as List).join(' · ');
+    } else if (vendor?['category']?.toString().isNotEmpty == true) {
+      cuisine = vendor!['category'].toString();
+    }
+
+    final rating = double.tryParse(vendor?['rating']?.toString() ?? vendor?['average_rating']?.toString() ?? '') ?? 4.8;
+    final reviews = int.tryParse(vendor?['review_count']?.toString() ?? vendor?['rating_count']?.toString() ?? '') ?? 140;
+    final dist = vendor?['distance_km'] != null ? '${vendor!['distance_km']} km' : '1.2 km';
+
+    DateTime? endsAt;
+    String timeLeft = 'Limited Time';
+    if (offer['ends_at'] != null) {
+      endsAt = DateTime.tryParse(offer['ends_at'].toString())?.toLocal();
+      if (endsAt != null) {
+        final diff = endsAt.difference(DateTime.now());
+        if (diff.isNegative) {
+          timeLeft = 'Ending soon';
+        } else if (diff.inDays > 0) {
+          timeLeft = '${diff.inDays}d left';
+        } else if (diff.inHours > 0) {
+          timeLeft = '${diff.inHours}h ${diff.inMinutes % 60}m left';
+        } else {
+          timeLeft = '${diff.inMinutes.clamp(1, 59)}m left';
+        }
+      }
+    }
+
+    String img = fallbackImage ?? '';
+    if (vImg.isNotEmpty && img.isEmpty) {
+      img = vImg;
+    }
+    if (img.isEmpty) {
+      img = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600';
+    }
+
+    final discountLabel = discountPct > 0
+        ? '${discountPct.toStringAsFixed(discountPct % 1 == 0 ? 0 : 1)}% OFF'
+        : 'SPECIAL DEAL';
+
+    return Deal(
+      id: id,
+      vendorId: vendorId.isNotEmpty ? vendorId : null,
+      title: title,
+      description: desc,
+      restaurant: vName,
+      restaurantImage: vImg.isNotEmpty ? vImg : null,
+      cuisine: cuisine,
+      rating: rating,
+      reviewCount: reviews,
+      distance: dist,
+      discount: discountLabel,
+      discountPercent: discountPct,
+      scopeType: scopeType,
+      timeLeft: timeLeft,
+      imageUrl: img,
+      isFlash: discountPct >= 30 || timeLeft.contains('m left') || timeLeft.contains('h left'),
+      isMega: discountPct >= 25,
+      endsAt: endsAt,
+    );
+  }
 }
+
+String _resolveImageUrl(String path) {
+  if (path.isEmpty) return '';
+  if (path.startsWith('http://') || path.startsWith('https://')) return path;
+  return '${ApiConfig.baseUrl}${path.startsWith('/') ? '' : '/'}$path';
+}
+
+/// Fallback sample deals
+const deals = [
+  Deal(
+    title: 'Golden Hour Feast — 40% Off',
+    restaurant: 'Saffron Gourmet House',
+    distance: '1.2 km',
+    discount: '40% OFF',
+    discountPercent: 40,
+    timeLeft: '2h 15m left',
+    imageUrl: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=600',
+    cuisine: 'North Indian · Biryani',
+    isFlash: true,
+    isMega: true,
+  ),
+  Deal(
+    title: 'Double Smash Burgers Combo',
+    restaurant: 'Urban Burger Grill',
+    distance: '0.8 km',
+    discount: '50% OFF',
+    discountPercent: 50,
+    timeLeft: '45m left',
+    imageUrl: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600',
+    cuisine: 'American · Fast Food',
+    isFlash: true,
+    isMega: true,
+  ),
+  Deal(
+    title: 'Fresh Berry Bowls & Juices',
+    restaurant: 'The Salad Project',
+    distance: '2.5 km',
+    discount: '20% OFF',
+    discountPercent: 20,
+    timeLeft: '5h left',
+    imageUrl: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=600',
+    cuisine: 'Healthy · Salads · Bowls',
+  ),
+];
 
 Future<List<Deal>> dealsFromOffers(List<Map<String, dynamic>> offers) async {
-  final vendors = <String, Future<Map<String, dynamic>?>>{};
-  final menus = <String, Future<List<Map<String, dynamic>>>>{};
-  final hydrated = await Future.wait(
-    offers.asMap().entries.map((entry) async {
-      final offer = entry.value;
-      final fallback = deals[entry.key % deals.length];
-      final vendorId = offer['vendor']?.toString() ?? '';
-      if (vendorId.isEmpty) return fallback;
-      final vendor = await vendors.putIfAbsent(
-        vendorId,
-        () => OfferService.fetchVendor(vendorId),
-      );
-      final menu = await menus.putIfAbsent(
-        vendorId,
-        () => OfferService.fetchVendorMenu(vendorId),
-      );
-      final discount = double.tryParse(
-        offer['discount_percentage']?.toString() ?? '',
-      );
-      return Deal(
-        vendorId: vendorId.isEmpty ? null : vendorId,
-        title: _offerText(offer['title'], fallback.title),
-        restaurant: _offerText(vendor?['business_name'], fallback.restaurant),
-        distance: fallback.distance,
-        discount: discount == null
-            ? fallback.discount
-            : '${discount.toStringAsFixed(discount % 1 == 0 ? 0 : 1)}% OFF',
-        timeLeft: _offerTimeLeft(offer['ends_at']) ?? fallback.timeLeft,
-        imageUrl: _offerImage(offer, menu) ?? fallback.imageUrl,
-      );
-    }),
-  );
-  return hydrated;
-}
+  final vendors = await RestaurantService.fetchRestaurants();
+  final vMap = {for (var v in vendors) v['id']?.toString() ?? '': v};
 
-String _offerText(Object? value, String fallback) {
-  final text = value?.toString().trim() ?? '';
-  return text.isEmpty ? fallback : text;
-}
-
-String? _offerImage(
-  Map<String, dynamic> offer,
-  List<Map<String, dynamic>> menu,
-) {
-  final targets = offer['targets'];
-  final itemIds = targets is Map ? targets['item_ids'] : null;
-  final categoryIds = targets is Map ? targets['category_ids'] : null;
-  for (final category in menu) {
-    final categoryMatches =
-        categoryIds is List && categoryIds.contains(category['id']?.toString());
-    final items = category['menu_items'];
-    if (items is! List) continue;
-    for (final item in items.whereType<Map>()) {
-      final matches =
-          categoryMatches ||
-          (itemIds is List && itemIds.contains(item['id']?.toString())) ||
-          (itemIds is! List && categoryIds is! List);
-      if (!matches) continue;
-      final image = item['image']?.toString() ?? '';
-      if (image.isEmpty) continue;
-      return image.startsWith('http')
-          ? image
-          : '${ApiConfig.baseUrl}${image.startsWith('/') ? '' : '/'}$image';
-    }
+  final list = <Deal>[];
+  for (int i = 0; i < offers.length; i++) {
+    final offer = offers[i];
+    final vId = offer['vendor']?.toString() ?? '';
+    final vendor = vMap[vId];
+    list.add(
+      Deal.fromBackend(
+        offer: offer,
+        vendor: vendor,
+        fallbackImage: i < deals.length ? deals[i].imageUrl : null,
+      ),
+    );
   }
-  return null;
+  return list.isNotEmpty ? list : deals;
 }
 
 List<Deal> dashboardDeals(List<Deal> liveDeals) {
@@ -103,56 +218,1267 @@ List<Deal> dashboardDeals(List<Deal> liveDeals) {
   return [...liveDeals, ...deals.skip(liveDeals.length)].take(3).toList();
 }
 
-String? _offerTimeLeft(Object? value) {
-  final end = DateTime.tryParse(value?.toString() ?? '')?.toLocal();
-  if (end == null) return null;
-  final difference = end.difference(DateTime.now());
-  if (difference.isNegative) return 'Ending soon';
-  if (difference.inDays > 0) return '${difference.inDays}d left';
-  if (difference.inHours > 0) return '${difference.inHours}h left';
-  return '${difference.inMinutes.clamp(1, 59)}m left';
+/// ---------------------------------------------------------------------
+/// Main DealsScreen Page
+/// ---------------------------------------------------------------------
+class DealsScreen extends StatefulWidget {
+  const DealsScreen({super.key});
+
+  @override
+  State<DealsScreen> createState() => _DealsScreenState();
 }
 
-/// Sample deals data
-const deals = [
-  Deal(
-    title: 'Cheesy Delight Pizza',
-    restaurant: 'Pizza Hut',
-    distance: '1.2km away',
-    discount: '20% OFF',
-    timeLeft: '2h left',
-    imageUrl:
-        'https://lh3.googleusercontent.com/aida-public/AB6AXuBJSMfmwvvapG0ZHxYVePZV8uQK-WLKaOEBlNU9foogkBwzEY19ieziXMxOYMCX9IYuRqVLhcqWCTifN7QdZEEqEN8lDswHzWTC85QA716MmM_ZSZMnzW02rcdwwDJooMYoPnPnf3aPk-VikoWOdXQ20ZaHpC25Efb0cY9Ny4akg6_z0o_MckdyPF8P-9Pc5aqeflowj9BIXYHyx56_gOS9liUE9vu4vySXUoDz4bJZ3C_YHKPo8OqOLiFZ4ZtqCMc5fqX9v0UzPaKn',
-  ),
-  Deal(
-    title: 'Double Beef Smash',
-    restaurant: 'Burger King',
-    distance: '0.8km away',
-    discount: '50% OFF',
-    timeLeft: '45m left',
-    imageUrl:
-        'https://lh3.googleusercontent.com/aida-public/AB6AXuAQajB08E40GIXc8XWyyyJMRfiC-vn1pldnjNsBeT4QKpDSVuRPNQiF_8Xk7LRwrIYXJxmOvomxzJt0g1Mb_vFTw03CabQfXbrnowLWkLGvTcQApK-VYIWfGXD-eU6-Mr2ZxcrCB1y52q3uNdCnHoOtbB4c0y3OXzn8IKuMQUNSr1UiZok0k27xh3YuHhZJLw9l1ZPXTbm4vGTIpX6ZbJuOTXN3CMD3aNLeddYUY_4mTJJjgQW83l3ZJlgse1qM9CR25MIsOBKXjG7p',
-  ),
-  Deal(
-    title: 'Morning Berry Bowl',
-    restaurant: 'Fresh & Green',
-    distance: '2.5km away',
-    discount: '15% OFF',
-    timeLeft: '5h left',
-    imageUrl:
-        'https://lh3.googleusercontent.com/aida-public/AB6AXuD4yhPin6dzd-0bzsMiqqxvvUt4eAfu6HTxkb3DYB2THXb5sagbjYSFDbkvCxjzxusQ5dWZfaRvXoq8qyJ8ACdiGbOtBoi4StQfmdpWtxfMDDOKxb_FfqRgdCmcx7tEt6Jg4w6nZRHbKit8KD9do6rpyv5ztqJla4UiiAJPNjRWxApaV0lYy8kQYFKgSmBBeW6U6yndkJdUiE4s9N6gPfR91oID-PtuospqsPqEOBlETl8irRRgka1_hH9yTIY8UvuntkKdc5zVoqO7',
-  ),
-];
-// ─────────────────────────────────────────────────────────────────────
-// REPLACEMENT for HotDealsRow and _FeaturedDealCard in DealsScreen.dart
-// Drop these two classes in place of the old ones. Everything else
-// (Deal model, DealsScreen, DealBadge, etc.) stays exactly the same.
-// ─────────────────────────────────────────────────────────────────────
+typedef HotDealsScreen = DealsScreen;
 
-/// HotDealsRow — auto-advancing, non-swipeable featured deal carousel.
-/// Cards transition in place inside a fixed-size container (fade + soft
-/// scale), with a small page indicator overlaid in the card's
-/// bottom-right corner instead of a separate dot row underneath.
+class _DealsScreenState extends State<DealsScreen> {
+  bool _isLoading = true;
+  List<Deal> _allDeals = [];
+  String _selectedFilter = 'All Deals';
+  String _searchQuery = '';
+  final TextEditingController _searchCtrl = TextEditingController();
+
+  final List<String> _filters = [
+    'All Deals',
+    '⚡ Mega Deals (25%+)',
+    '🍕 Whole Menu',
+    '🍱 Category Specials',
+    '⏰ Ending Soon',
+    '⭐ Top Rated',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDeals();
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadDeals() async {
+    setState(() => _isLoading = true);
+    try {
+      final rawOffers = await OfferService.fetchOffers();
+      if (rawOffers.isNotEmpty) {
+        final parsed = await dealsFromOffers(rawOffers);
+        if (mounted) {
+          setState(() {
+            _allDeals = parsed;
+            _isLoading = false;
+          });
+          return;
+        }
+      }
+    } catch (_) {}
+
+    if (mounted) {
+      setState(() {
+        _allDeals = deals;
+        _isLoading = false;
+      });
+    }
+  }
+
+  List<Deal> get _filteredDeals {
+    var list = List<Deal>.from(_allDeals);
+
+    // Apply Filter Tab
+    if (_selectedFilter == '⚡ Mega Deals (25%+)') {
+      list = list.where((d) => d.discountPercent >= 25 || d.isMega).toList();
+    } else if (_selectedFilter == '🍕 Whole Menu') {
+      list = list.where((d) => d.scopeType == 'all_menu').toList();
+    } else if (_selectedFilter == '🍱 Category Specials') {
+      list = list.where((d) => d.scopeType == 'category_set' || d.scopeType == 'item_set').toList();
+    } else if (_selectedFilter == '⏰ Ending Soon') {
+      list = list.where((d) => d.timeLeft.contains('m left') || d.timeLeft.contains('h left') || d.timeLeft.contains('soon')).toList();
+    } else if (_selectedFilter == '⭐ Top Rated') {
+      list = list.where((d) => d.rating >= 4.8).toList();
+    }
+
+    // Apply Search Query
+    if (_searchQuery.trim().isNotEmpty) {
+      final q = _searchQuery.toLowerCase().trim();
+      list = list.where((d) {
+        return d.title.toLowerCase().contains(q) ||
+            d.restaurant.toLowerCase().contains(q) ||
+            d.cuisine.toLowerCase().contains(q) ||
+            d.discount.toLowerCase().contains(q);
+      }).toList();
+    }
+
+    return list;
+  }
+
+  void _navigateToMenu(Deal deal) {
+    if (deal.vendorId != null && deal.vendorId!.isNotEmpty) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => RestaurantMenuScreen(
+            vendorId: deal.vendorId,
+            restaurantName: deal.restaurant,
+            heroImageUrl: deal.imageUrl,
+            cuisine: deal.cuisine,
+          ),
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = isDark ? DealsColors.bgDark : DealsColors.bgLight;
+
+    final spotlightDeals = _allDeals.where((d) => d.discountPercent >= 20 || d.isMega).take(4).toList();
+    final flashDeals = _allDeals.where((d) => d.isFlash || d.timeLeft.contains('m left') || d.timeLeft.contains('h left')).toList();
+
+    return Scaffold(
+      backgroundColor: bgColor,
+      body: SafeArea(
+        bottom: false,
+        child: RefreshIndicator(
+          color: DealsColors.primary,
+          onRefresh: _loadDeals,
+          child: CustomScrollView(
+            slivers: [
+              // Sticky App Header
+              SliverToBoxAdapter(
+                child: _DealsHeader(
+                  isDark: isDark,
+                  dealCount: _allDeals.length,
+                  onRefresh: _loadDeals,
+                ),
+              ),
+
+              // Search Bar
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                  child: _SearchBar(
+                    isDark: isDark,
+                    controller: _searchCtrl,
+                    onChanged: (val) => setState(() => _searchQuery = val),
+                    onClear: () {
+                      _searchCtrl.clear();
+                      setState(() => _searchQuery = '');
+                    },
+                  ),
+                ),
+              ),
+
+              // Filter Tabs
+              SliverToBoxAdapter(
+                child: SizedBox(
+                  height: 42,
+                  child: ListView.separated(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    scrollDirection: Axis.horizontal,
+                    itemCount: _filters.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: 8),
+                    itemBuilder: (context, i) {
+                      final filter = _filters[i];
+                      final isSelected = filter == _selectedFilter;
+                      return _FilterPill(
+                        label: filter,
+                        isSelected: isSelected,
+                        isDark: isDark,
+                        onTap: () => setState(() => _selectedFilter = filter),
+                      );
+                    },
+                  ),
+                ),
+              ),
+
+              if (_isLoading)
+                const SliverFillRemaining(
+                  child: Center(
+                    child: CircularProgressIndicator(color: DealsColors.primary),
+                  ),
+                )
+              else ...[
+                // Spotlight Hero Section (only when no search query active)
+                if (_searchQuery.isEmpty && _selectedFilter == 'All Deals' && spotlightDeals.isNotEmpty) ...[
+                  const SliverToBoxAdapter(child: SizedBox(height: 18)),
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: _SectionTitle(
+                        title: '🔥 Spotlight Deals',
+                        subtitle: 'Top handpicked discounts right now',
+                        isDark: isDark,
+                      ),
+                    ),
+                  ),
+                  const SliverToBoxAdapter(child: SizedBox(height: 12)),
+                  SliverToBoxAdapter(
+                    child: _SpotlightCarousel(
+                      deals: spotlightDeals.isNotEmpty ? spotlightDeals : deals,
+                      onDealTap: _navigateToMenu,
+                      isDark: isDark,
+                    ),
+                  ),
+                ],
+
+                // Flash Sales Section
+                if (_searchQuery.isEmpty && _selectedFilter == 'All Deals' && flashDeals.isNotEmpty) ...[
+                  const SliverToBoxAdapter(child: SizedBox(height: 24)),
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: _SectionTitle(
+                        title: '⚡ Flash Sales & Happy Hours',
+                        subtitle: 'Expiring soon • Auto-applied at checkout',
+                        isDark: isDark,
+                      ),
+                    ),
+                  ),
+                  const SliverToBoxAdapter(child: SizedBox(height: 12)),
+                  SliverToBoxAdapter(
+                    child: SizedBox(
+                      height: 190,
+                      child: ListView.separated(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        scrollDirection: Axis.horizontal,
+                        itemCount: flashDeals.length,
+                        separatorBuilder: (_, __) => const SizedBox(width: 14),
+                        itemBuilder: (context, i) {
+                          return _FlashDealCard(
+                            deal: flashDeals[i],
+                            isDark: isDark,
+                            onTap: () => _navigateToMenu(flashDeals[i]),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ],
+
+                // All Deals List / Filtered Results
+                const SliverToBoxAdapter(child: SizedBox(height: 24)),
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: _SectionTitle(
+                      title: _selectedFilter == 'All Deals' ? '🏷️ All Offers Near You' : '🏷️ $_selectedFilter',
+                      subtitle: '${_filteredDeals.length} deals available around you',
+                      isDark: isDark,
+                    ),
+                  ),
+                ),
+                const SliverToBoxAdapter(child: SizedBox(height: 12)),
+
+                if (_filteredDeals.isEmpty)
+                  SliverToBoxAdapter(
+                    child: _EmptyDealsView(
+                      isDark: isDark,
+                      onReset: () {
+                        _searchCtrl.clear();
+                        setState(() {
+                          _searchQuery = '';
+                          _selectedFilter = 'All Deals';
+                        });
+                      },
+                    ),
+                  )
+                else
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
+                    sliver: SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, i) {
+                          final deal = _filteredDeals[i];
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 14),
+                            child: _ModernDealCard(
+                              deal: deal,
+                              isDark: isDark,
+                              onTap: () => _navigateToMenu(deal),
+                            ),
+                          );
+                        },
+                        childCount: _filteredDeals.length,
+                      ),
+                    ),
+                  ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// ---------------------------------------------------------------------
+/// Top Header
+/// ---------------------------------------------------------------------
+class _DealsHeader extends StatelessWidget {
+  final bool isDark;
+  final int dealCount;
+  final VoidCallback onRefresh;
+
+  const _DealsHeader({
+    required this.isDark,
+    required this.dealCount,
+    required this.onRefresh,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final textPrimary = isDark ? Colors.white : const Color(0xFF1D1E20);
+    final textMuted = isDark ? DealsColors.textMutedDark : const Color(0xFF8E8E93);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: DealsColors.primary.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.bolt_rounded, size: 14, color: DealsColors.primary),
+                        const SizedBox(width: 4),
+                        Text(
+                          '$dealCount LIVE OFFERS',
+                          style: const TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.5,
+                            color: DealsColors.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Explore Top Deals',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -0.5,
+                  color: textPrimary,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                'Automatic discounts • No promo codes required',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: textMuted,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+          GestureDetector(
+            onTap: onRefresh,
+            child: Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: isDark ? DealsColors.cardDark : Colors.white,
+                border: Border.all(
+                  color: isDark ? DealsColors.borderDark : DealsColors.borderLight,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.refresh_rounded,
+                color: DealsColors.primary,
+                size: 20,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// ---------------------------------------------------------------------
+/// Search Bar
+/// ---------------------------------------------------------------------
+class _SearchBar extends StatelessWidget {
+  final bool isDark;
+  final TextEditingController controller;
+  final ValueChanged<String> onChanged;
+  final VoidCallback onClear;
+
+  const _SearchBar({
+    required this.isDark,
+    required this.controller,
+    required this.onChanged,
+    required this.onClear,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final bg = isDark ? DealsColors.cardDark : Colors.white;
+    final border = isDark ? DealsColors.borderDark : DealsColors.borderLight;
+    final text = isDark ? Colors.white : DealsColors.textPrimary;
+    final hint = isDark ? DealsColors.textMutedDark : const Color(0xFF9CA3AF);
+
+    return Container(
+      height: 46,
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          const SizedBox(width: 12),
+          const Icon(Icons.search_rounded, color: DealsColors.primary, size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: TextField(
+              controller: controller,
+              onChanged: onChanged,
+              style: TextStyle(fontSize: 14, color: text, fontWeight: FontWeight.w500),
+              decoration: InputDecoration(
+                hintText: 'Search deals, dishes or restaurants...',
+                hintStyle: TextStyle(fontSize: 13, color: hint),
+                border: InputBorder.none,
+                isDense: true,
+                contentPadding: EdgeInsets.zero,
+              ),
+            ),
+          ),
+          if (controller.text.isNotEmpty)
+            GestureDetector(
+              onTap: onClear,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                child: Icon(Icons.close_rounded, size: 18, color: hint),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// ---------------------------------------------------------------------
+/// Filter Pill
+/// ---------------------------------------------------------------------
+class _FilterPill extends StatelessWidget {
+  final String label;
+  final bool isSelected;
+  final bool isDark;
+  final VoidCallback onTap;
+
+  const _FilterPill({
+    required this.label,
+    required this.isSelected,
+    required this.isDark,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? DealsColors.primary
+              : (isDark ? DealsColors.cardDark : Colors.white),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected
+                ? DealsColors.primary
+                : (isDark ? DealsColors.borderDark : DealsColors.borderLight),
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: DealsColors.primary.withValues(alpha: 0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
+        ),
+        child: Center(
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+              color: isSelected
+                  ? Colors.white
+                  : (isDark ? Colors.white70 : const Color(0xFF4B5563)),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// ---------------------------------------------------------------------
+/// Section Title
+/// ---------------------------------------------------------------------
+class _SectionTitle extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final bool isDark;
+
+  const _SectionTitle({
+    required this.title,
+    required this.subtitle,
+    required this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.3,
+            color: isDark ? Colors.white : DealsColors.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          subtitle,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: isDark ? DealsColors.textMutedDark : const Color(0xFF8A8A9A),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// ---------------------------------------------------------------------
+/// Spotlight Hero Carousel
+/// ---------------------------------------------------------------------
+class _SpotlightCarousel extends StatefulWidget {
+  final List<Deal> deals;
+  final ValueChanged<Deal> onDealTap;
+  final bool isDark;
+
+  const _SpotlightCarousel({
+    required this.deals,
+    required this.onDealTap,
+    required this.isDark,
+  });
+
+  @override
+  State<_SpotlightCarousel> createState() => _SpotlightCarouselState();
+}
+
+class _SpotlightCarouselState extends State<_SpotlightCarousel> {
+  int _activePage = 0;
+  late final PageController _pageController;
+  Timer? _autoTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController(viewportFraction: 0.92);
+    _startAutoPlay();
+  }
+
+  void _startAutoPlay() {
+    _autoTimer?.cancel();
+    if (widget.deals.length <= 1) return;
+    _autoTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (!mounted) return;
+      final next = (_activePage + 1) % widget.deals.length;
+      _pageController.animateToPage(
+        next,
+        duration: const Duration(milliseconds: 600),
+        curve: Curves.easeOutCubic,
+      );
+    });
+  }
+
+  @override
+  void dispose() {
+    _autoTimer?.cancel();
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 215,
+      child: PageView.builder(
+        controller: _pageController,
+        itemCount: widget.deals.length,
+        onPageChanged: (i) => setState(() => _activePage = i),
+        itemBuilder: (context, i) {
+          final deal = widget.deals[i];
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: _SpotlightCard(
+              deal: deal,
+              isDark: widget.isDark,
+              onTap: () => widget.onDealTap(deal),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _SpotlightCard extends StatelessWidget {
+  final Deal deal;
+  final bool isDark;
+  final VoidCallback onTap;
+
+  const _SpotlightCard({
+    required this.deal,
+    required this.isDark,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(22),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.18),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(22),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Image.network(
+                deal.imageUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Container(
+                  color: const Color(0xFF281E19),
+                  child: const Center(
+                    child: Icon(Icons.restaurant_rounded, color: DealsColors.primary, size: 48),
+                  ),
+                ),
+              ),
+              // Gradient Shade
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.bottomCenter,
+                    end: Alignment.topCenter,
+                    colors: [
+                      Colors.black.withValues(alpha: 0.95),
+                      Colors.black.withValues(alpha: 0.55),
+                      Colors.black.withValues(alpha: 0.1),
+                    ],
+                    stops: const [0.0, 0.6, 1.0],
+                  ),
+                ),
+              ),
+              // Top Badges
+              Positioned(
+                top: 14,
+                left: 14,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: DealsColors.primary,
+                    borderRadius: BorderRadius.circular(10),
+                    boxShadow: [
+                      BoxShadow(
+                        color: DealsColors.primary.withValues(alpha: 0.4),
+                        blurRadius: 8,
+                      ),
+                    ],
+                  ),
+                  child: Text(
+                    deal.discount,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 14,
+                right: 14,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.65),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.white24),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.timer_outlined, size: 12, color: Colors.amberAccent),
+                      const SizedBox(width: 4),
+                      Text(
+                        deal.timeLeft,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              // Bottom Details
+              Positioned(
+                bottom: 16,
+                left: 16,
+                right: 16,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            deal.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 19,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: -0.4,
+                              height: 1.2,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Text(
+                                deal.restaurant,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              const Text('•', style: TextStyle(color: Colors.white60)),
+                              const SizedBox(width: 6),
+                              Text(
+                                deal.distance,
+                                style: const TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Claim',
+                            style: TextStyle(
+                              color: DealsColors.primary,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          SizedBox(width: 4),
+                          Icon(Icons.arrow_forward_rounded, size: 14, color: DealsColors.primary),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// ---------------------------------------------------------------------
+/// Flash Sales Mini Card
+/// ---------------------------------------------------------------------
+class _FlashDealCard extends StatelessWidget {
+  final Deal deal;
+  final bool isDark;
+  final VoidCallback onTap;
+
+  const _FlashDealCard({
+    required this.deal,
+    required this.isDark,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cardBg = isDark ? DealsColors.cardDark : Colors.white;
+    final cardBorder = isDark ? DealsColors.borderDark : DealsColors.borderLight;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 240,
+        decoration: BoxDecoration(
+          color: cardBg,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: cardBorder),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Image Header
+            Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
+                  child: Image.network(
+                    deal.imageUrl,
+                    width: 240,
+                    height: 100,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(
+                      width: 240,
+                      height: 100,
+                      color: const Color(0xFF332019),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  top: 8,
+                  left: 8,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEF4444),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.local_fire_department_rounded, size: 12, color: Colors.white),
+                        const SizedBox(width: 3),
+                        Text(
+                          deal.discount,
+                          style: const TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                Positioned(
+                  bottom: 8,
+                  right: 8,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.7),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      deal.timeLeft,
+                      style: const TextStyle(
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            // Info Body
+            Padding(
+              padding: const EdgeInsets.all(10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    deal.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w700,
+                      color: isDark ? Colors.white : DealsColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          deal.restaurant,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            color: isDark ? DealsColors.textMutedDark : const Color(0xFF6B7280),
+                          ),
+                        ),
+                      ),
+                      Text(
+                        deal.distance,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: DealsColors.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// ---------------------------------------------------------------------
+/// Modern Horizontal Deal Card
+/// ---------------------------------------------------------------------
+class _ModernDealCard extends StatelessWidget {
+  final Deal deal;
+  final bool isDark;
+  final VoidCallback onTap;
+
+  const _ModernDealCard({
+    required this.deal,
+    required this.isDark,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cardBg = isDark ? DealsColors.cardDark : Colors.white;
+    final cardBorder = isDark ? DealsColors.borderDark : DealsColors.borderLight;
+    final textPrimary = isDark ? Colors.white : DealsColors.textPrimary;
+    final textMuted = isDark ? DealsColors.textMutedDark : const Color(0xFF6B7280);
+
+    final isAllMenu = deal.scopeType == 'all_menu';
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: cardBg,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: cardBorder),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+              blurRadius: 12,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Food / Restaurant Thumbnail
+              Stack(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(14),
+                    child: Container(
+                      width: 96,
+                      height: 96,
+                      color: isDark ? const Color(0xFF332019) : const Color(0xFFF3F4F6),
+                      child: Image.network(
+                        deal.imageUrl,
+                        width: 96,
+                        height: 96,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const Icon(
+                          Icons.restaurant_rounded,
+                          color: DealsColors.primary,
+                          size: 32,
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    top: 6,
+                    left: 6,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: DealsColors.primary,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        deal.discount,
+                        style: const TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(width: 14),
+
+              // Content details
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            deal.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w800,
+                              color: textPrimary,
+                              height: 1.2,
+                            ),
+                          ),
+                        ),
+                        const Icon(
+                          Icons.chevron_right_rounded,
+                          size: 18,
+                          color: DealsColors.primary,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      deal.restaurant,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? Colors.white70 : const Color(0xFF374151),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: isAllMenu
+                                ? const Color(0xFF10B981).withValues(alpha: 0.12)
+                                : DealsColors.primary.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            isAllMenu ? 'Whole Menu' : 'Category Special',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: isAllMenu ? const Color(0xFF10B981) : DealsColors.primary,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          deal.distance,
+                          style: TextStyle(fontSize: 11, color: textMuted),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.timer_outlined, size: 12, color: DealsColors.primary),
+                            const SizedBox(width: 4),
+                            Text(
+                              deal.timeLeft,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: DealsColors.primary,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const Text(
+                          'Auto-applied',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF10B981),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// ---------------------------------------------------------------------
+/// Empty State View
+/// ---------------------------------------------------------------------
+class _EmptyDealsView extends StatelessWidget {
+  final bool isDark;
+  final VoidCallback onReset;
+
+  const _EmptyDealsView({required this.isDark, required this.onReset});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(28),
+      decoration: BoxDecoration(
+        color: isDark ? DealsColors.cardDark : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: isDark ? DealsColors.borderDark : DealsColors.borderLight),
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: DealsColors.primary.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.local_offer_outlined,
+              color: DealsColors.primary,
+              size: 36,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'No matching deals found',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: isDark ? Colors.white : DealsColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Try searching for another dish or restaurant name, or clear active filters.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 12.5,
+              color: isDark ? DealsColors.textMutedDark : const Color(0xFF6B7280),
+            ),
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: onReset,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: DealsColors.primary,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text('Show All Deals', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// ---------------------------------------------------------------------
+/// Backward Compatibility for HotDealsRow
+/// ---------------------------------------------------------------------
 class HotDealsRow extends StatefulWidget {
   final List<Deal> previewDeals;
   const HotDealsRow({super.key, this.previewDeals = deals});
@@ -182,11 +1508,6 @@ class _HotDealsRowState extends State<HotDealsRow> {
     });
   }
 
-  void _goTo(int index) {
-    setState(() => _activeIndex = index);
-    _startAutoPlay(); // reset the clock so it doesn't jump right after a tap
-  }
-
   @override
   void dispose() {
     _timer?.cancel();
@@ -203,224 +1524,27 @@ class _HotDealsRowState extends State<HotDealsRow> {
       padding: const EdgeInsets.symmetric(horizontal: 10),
       child: SizedBox(
         height: 220,
-        child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 550),
-          switchInCurve: Curves.easeOutCubic,
-          switchOutCurve: Curves.easeInCubic,
-          transitionBuilder: (child, animation) {
-            final fade = animation;
-            final scale = Tween<double>(begin: 0.97, end: 1.0).animate(
-              CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
-            );
-            return FadeTransition(
-              opacity: fade,
-              child: ScaleTransition(scale: scale, child: child),
-            );
+        child: _SpotlightCard(
+          deal: featuredDeals[index],
+          isDark: Theme.of(context).brightness == Brightness.dark,
+          onTap: () {
+            final deal = featuredDeals[index];
+            if (deal.vendorId != null) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => RestaurantMenuScreen(
+                    vendorId: deal.vendorId,
+                    restaurantName: deal.restaurant,
+                    heroImageUrl: deal.imageUrl,
+                    cuisine: deal.cuisine,
+                  ),
+                ),
+              );
+            }
           },
-          layoutBuilder: (currentChild, previousChildren) => Stack(
-            fit: StackFit.expand,
-            children: [
-              ...previousChildren,
-              if (currentChild != null) currentChild,
-            ],
-          ),
-          child: _FeaturedDealCard(
-            key: ValueKey(index),
-            deal: featuredDeals[index],
-            pageCount: featuredDeals.length,
-            activeIndex: index,
-            onDotTap: _goTo,
-          ),
         ),
       ),
-    );
-  }
-}
-
-class _FeaturedDealCard extends StatelessWidget {
-  final Deal deal;
-  final int pageCount;
-  final int activeIndex;
-  final ValueChanged<int>? onDotTap;
-  const _FeaturedDealCard({
-    super.key,
-    required this.deal,
-    this.pageCount = 1,
-    this.activeIndex = 0,
-    this.onDotTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        Navigator.of(
-          context,
-        ).push(MaterialPageRoute(builder: (_) => const FoodDetailsScreen()));
-      },
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withAlpha(45),
-              blurRadius: 20,
-              offset: const Offset(0, 9),
-            ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(24),
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              Image.network(deal.imageUrl, fit: BoxFit.cover),
-              DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.bottomCenter,
-                    end: Alignment.topCenter,
-                    colors: [
-                      Colors.black.withAlpha(238),
-                      Colors.black.withAlpha(150),
-                      Colors.black.withAlpha(18),
-                    ],
-                    stops: const [0.0, 0.58, 1.0],
-                  ),
-                ),
-              ),
-              Positioned(
-                top: 16,
-                left: 16,
-                child: Text(
-                  deal.discount,
-                  style: const TextStyle(
-                    color: _DealsColors.primary,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 1.1,
-                  ),
-                ),
-              ),
-              Positioned(
-                top: 16,
-                right: 16,
-                child: Text(
-                  deal.timeLeft,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    letterSpacing: 1.1,
-                  ),
-                ),
-              ),
-              Positioned(
-                bottom: 18,
-                left: 18,
-                right: 18,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'LIMITED-TIME OFFER',
-                      style: TextStyle(
-                        color: Colors.white.withAlpha(210),
-                        fontSize: 10,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 1.1,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      deal.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 22,
-                        letterSpacing: -0.5,
-                        height: 1.2,
-                      ),
-                    ),
-                    const SizedBox(height: 5),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            '${deal.restaurant} • ${deal.distance}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: Colors.white.withAlpha(215),
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (pageCount > 1) ...[
-                              const SizedBox(height: 8),
-                              _CornerPageDots(
-                                count: pageCount,
-                                activeIndex: activeIndex,
-                                onDotTap: onDotTap,
-                              ),
-                            ],
-                          ],
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Tiny page-indicator dots meant to sit in a card's bottom-right corner.
-class _CornerPageDots extends StatelessWidget {
-  final int count;
-  final int activeIndex;
-  final ValueChanged<int>? onDotTap;
-  const _CornerPageDots({
-    required this.count,
-    required this.activeIndex,
-    this.onDotTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: List.generate(count, (i) {
-        final active = i == activeIndex;
-        return GestureDetector(
-          onTap: onDotTap == null ? null : () => onDotTap!(i),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 220),
-            curve: Curves.easeOut,
-            margin: const EdgeInsets.only(left: 4),
-            width: active ? 14 : 5,
-            height: 5,
-            decoration: BoxDecoration(
-              color: active ? Colors.white : Colors.white.withAlpha(110),
-              borderRadius: BorderRadius.circular(4),
-            ),
-          ),
-        );
-      }),
     );
   }
 }

@@ -1,5 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+import '../services/redemption_service.dart';
+import 'RecentOrderScreen.dart';
 
 class RedeemColors {
   static const primary = Color(0xFFEE5B2B);
@@ -28,72 +32,129 @@ class RedeemColors {
   );
 }
 
-/// ---------------------------------------------------------------------
-/// Data model
-/// ---------------------------------------------------------------------
-class OrderLine {
-  final String name;
-  final String note;
-  final int qty;
-  final double price;
-  final String imageUrl;
-  const OrderLine({
-    required this.name,
-    required this.note,
-    required this.qty,
-    required this.price,
-    required this.imageUrl,
-  });
-}
-
-const _qrImageUrl =
-    'https://lh3.googleusercontent.com/aida-public/AB6AXuCiwAHQDrj0p32lEw2TPch6QPSA02g4Lybd31wSWSOaehf2VggO85ApS4MeSDJyXjaDrBXhIP6YwXQ10hYuC8ESazxkLOXIcocF7_4abWbRKZgCzPfjeafh06j6Lh5Rgyx_UXIoaaCZmALDxaWpbgzr1cLFPL3Ry7U2d7jk6ov-m0KCqtm0bkydSU4XN6Ke8n2gIgHBL0247vAG_YXzpnWFJebSBU330yrem4R_Rl1GhEgiEYYqQEiJ9OxwjZtMv0D5uZeRkMzeeSI_';
-
-const _orderLines = [
-  OrderLine(
-    name: 'Spicy Tuna Roll Set',
-    note: 'Extra spicy mayo, No avocado',
-    qty: 2,
-    price: 12.00,
-    imageUrl:
-        'https://lh3.googleusercontent.com/aida-public/AB6AXuBCs0Nd2oMwUr5W2YUnSYTZt8Dg3PnE8JvCszWLfOfkv4icNjJzDp2De8LOxwY2yPxlNtH9Rv469qVczZt7p1Bo2VWrjyZrUvg58OlAdowqrErJLyA5eqBa38Lodnk2cqskLGBjNOOv-zZq3k3i9bjTQR2ET6A-xrnss5TEpK1K1oIu9U2Xmfj7K3MV5P8UOsCmOLBZ8-q3duq_HFvvcMnaEmil_T0kf34nbiRitoJM2y5V9ecnQZKFE-a0zNc7HlQp9JXrHoDwJQEJ',
-  ),
-  OrderLine(
-    name: 'Miso Soup',
-    note: 'Hot served',
-    qty: 1,
-    price: 3.50,
-    imageUrl:
-        'https://lh3.googleusercontent.com/aida-public/AB6AXuAzVwyx5UJyBlkILUTxyC6woyMOJdGQHNMZcrQZyLzdU1ZwSyW5Jn5OVdi-uUtezcHjo-q5BdB43aCAB44bO4_UQ40vqMg2rUbeDPfRAdks1b6UQermDb6MH5iF0geKrfMudwQBLHCL5NWn_qvRofQtdWGB1L3wLZtFsotLQpa6fXwqYUcbRay34zGjrX0-6whqyIZFqo1R1Wv5IocBTySU6TtrMk2FTmjJrYlB-FqX8aoQZoWN1y6rAJFaFIro74FBs8WaSnT6opxK',
-  ),
-];
-
 typedef QrScreen = RedeemQrScreen;
 
 /// ---------------------------------------------------------------------
 /// Main screen
 /// ---------------------------------------------------------------------
 class RedeemQrScreen extends StatefulWidget {
-  const RedeemQrScreen({super.key});
+  final RedemptionSessionData? session;
+  final String? qrCode;
+  final bool openedFromOrdersScreen;
+
+  const RedeemQrScreen({
+    super.key,
+    this.session,
+    this.qrCode,
+    this.openedFromOrdersScreen = false,
+  });
 
   @override
   State<RedeemQrScreen> createState() => _RedeemQrScreenState();
 }
 
 class _RedeemQrScreenState extends State<RedeemQrScreen> {
-  Duration _remaining = const Duration(hours: 0, minutes: 14, seconds: 59);
+  RedemptionSessionData? _session;
+  bool _isLoading = false;
+  Duration _remaining = const Duration(minutes: 5);
   Timer? _ticker;
-
-  static const double _discountRate = 0.20;
-
-  double get _subtotal =>
-      _orderLines.fold(0, (sum, l) => sum + l.price * l.qty);
-  double get _discount => _subtotal * _discountRate;
-  double get _total => _subtotal - _discount;
+  Timer? _statusPoller;
+  bool _hasTriggeredCompletion = false;
 
   @override
   void initState() {
     super.initState();
+    _session = widget.session;
+    if (_session != null) {
+      _initTimer();
+      if (_session!.isConfirmed) {
+        _onOrderCompletedDetected();
+      } else {
+        _startStatusPolling();
+      }
+    } else {
+      _loadSession();
+    }
+  }
+
+  Future<void> _loadSession() async {
+    setState(() => _isLoading = true);
+    if (widget.qrCode != null && widget.qrCode!.isNotEmpty) {
+      final res = await RedemptionService.getQRDetail(widget.qrCode!);
+      if (mounted) {
+        setState(() {
+          _session = res;
+          _isLoading = false;
+        });
+        if (res != null) {
+          _initTimer();
+          if (res.isConfirmed) {
+            _onOrderCompletedDetected();
+          } else {
+            _startStatusPolling();
+          }
+        }
+      }
+    } else {
+      final list = await RedemptionService.getCustomerRedemptions();
+      if (mounted) {
+        setState(() {
+          _session = list.isNotEmpty ? list.first : null;
+          _isLoading = false;
+        });
+        if (_session != null) {
+          _initTimer();
+          if (_session!.isConfirmed) {
+            _onOrderCompletedDetected();
+          } else {
+            _startStatusPolling();
+          }
+        }
+      }
+    }
+  }
+
+  void _onOrderCompletedDetected() {
+    if (_hasTriggeredCompletion) return;
+    _hasTriggeredCompletion = true;
+    _statusPoller?.cancel();
+    _ticker?.cancel();
+    if (!mounted) return;
+
+    HapticFeedback.mediumImpact();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Order verified & marked as completed!'),
+        backgroundColor: RedeemColors.primary,
+        behavior: SnackBarBehavior.floating,
+        duration: Duration(seconds: 2),
+      ),
+    );
+
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (!mounted) return;
+      if (widget.openedFromOrdersScreen && Navigator.of(context).canPop()) {
+        Navigator.of(context).pop(true);
+      } else {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (_) => const OrdersScreen(initialTabIndex: 1),
+          ),
+        );
+      }
+    });
+  }
+
+  void _initTimer() {
+    _ticker?.cancel();
+    if (_session?.expiresAt != null) {
+      final now = DateTime.now();
+      final diff = _session!.expiresAt!.difference(now);
+      _remaining = diff.isNegative ? Duration.zero : diff;
+    } else {
+      _remaining = const Duration(minutes: 5);
+    }
+
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted) return;
       setState(() {
@@ -106,10 +167,100 @@ class _RedeemQrScreenState extends State<RedeemQrScreen> {
     });
   }
 
+  void _startStatusPolling() {
+    _statusPoller?.cancel();
+    if (_session == null || !_session!.isPending) return;
+
+    _statusPoller = Timer.periodic(const Duration(milliseconds: 1500), (_) async {
+      if (!mounted || _session == null || !_session!.isPending) {
+        _statusPoller?.cancel();
+        return;
+      }
+      final updated = await RedemptionService.getQRDetail(_session!.qrCode);
+      if (mounted && updated != null) {
+        if (updated.status.toLowerCase() != _session!.status.toLowerCase() ||
+            updated.isConfirmed != _session!.isConfirmed ||
+            updated.isExpired != _session!.isExpired) {
+          setState(() {
+            _session = updated;
+          });
+          if (updated.isConfirmed) {
+            _onOrderCompletedDetected();
+          } else if (!updated.isPending) {
+            _statusPoller?.cancel();
+          }
+        }
+      }
+    });
+  }
+
   @override
   void dispose() {
     _ticker?.cancel();
+    _statusPoller?.cancel();
     super.dispose();
+  }
+
+  void _showExpandQrModal(BuildContext context, String qrData) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                _session?.vendor?.businessName ?? 'Scan QR Code',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: 260,
+                height: 260,
+                child: QrImageView(
+                  data: qrData,
+                  version: QrVersions.auto,
+                  size: 260.0,
+                  eyeStyle: const QrEyeStyle(
+                    eyeShape: QrEyeShape.square,
+                    color: Color(0xFF1E1714),
+                  ),
+                  dataModuleStyle: const QrDataModuleStyle(
+                    dataModuleShape: QrDataModuleShape.square,
+                    color: Color(0xFF1E1714),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Order #${qrData.replaceAll('-', '').substring(0, qrData.replaceAll('-', '').length >= 8 ? 8 : qrData.replaceAll('-', '').length).toUpperCase()}',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF5C5751),
+                ),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: RedeemColors.primary,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: const Text('Close', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -119,35 +270,71 @@ class _RedeemQrScreenState extends State<RedeemQrScreen> {
     final minutes = (_remaining.inMinutes % 60).toString().padLeft(2, '0');
     final seconds = (_remaining.inSeconds % 60).toString().padLeft(2, '0');
 
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: isDark ? RedeemColors.backgroundDark : RedeemColors.backgroundLight,
+        body: const Center(
+          child: CircularProgressIndicator(color: RedeemColors.primary),
+        ),
+      );
+    }
+
+    final session = _session;
+    final qrData = session?.qrCode ?? 'C571267D';
+    final cleanQr = qrData.replaceAll('-', '').toUpperCase();
+    final shortOrderId = cleanQr.length >= 8 ? cleanQr.substring(0, 8) : cleanQr;
+
     return Scaffold(
+      backgroundColor: isDark ? RedeemColors.backgroundDark : RedeemColors.backgroundLight,
       body: SafeArea(
         child: Column(
           children: [
             _Header(isDark: isDark),
             Expanded(
-              child: ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: RefreshIndicator(
+                color: RedeemColors.primary,
+                onRefresh: _loadSession,
+                child: ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
                 children: [
                   const SizedBox(height: 8),
                   _QrCard(
                     isDark: isDark,
+                    qrData: qrData,
+                    orderId: 'Order #$shortOrderId',
                     hours: hours,
                     minutes: minutes,
                     seconds: seconds,
+                    status: session?.status ?? 'pending',
+                    vendorName: session?.vendor?.businessName,
+                    onExpand: () => _showExpandQrModal(context, qrData),
                   ),
                   const SizedBox(height: 24),
-                  _OrderSummary(isDark: isDark),
+                  _OrderSummary(
+                    isDark: isDark,
+                    items: session?.items ?? const [],
+                  ),
                   const SizedBox(height: 16),
                   _TotalCard(
-                    subtotal: _subtotal,
-                    discount: _discount,
-                    total: _total,
+                    subtotal: session?.subtotal ?? 0.0,
+                    discount: session?.totalDiscount ?? 0.0,
+                    total: session?.finalTotal ?? 0.0,
+                    discountLabel: session != null && session.totalDiscount > 0
+                        ? '${((session.totalDiscount / (session.subtotal > 0 ? session.subtotal : 1)) * 100).toInt()}% OFF'
+                        : 'Savings Applied',
                   ),
                   const SizedBox(height: 24),
                 ],
               ),
             ),
-            _BottomActionBar(isDark: isDark),
+          ),
+            _BottomActionBar(
+              isDark: isDark,
+              onDone: () {
+                Navigator.of(context).popUntil((route) => route.isFirst);
+              },
+            ),
           ],
         ),
       ),
@@ -166,9 +353,8 @@ class _Header extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-      color:
-          (isDark ? RedeemColors.backgroundDark : RedeemColors.backgroundLight)
-              .withOpacity(0.95),
+      color: (isDark ? RedeemColors.backgroundDark : RedeemColors.backgroundLight)
+          .withValues(alpha: 0.95),
       child: Row(
         children: [
           SizedBox(
@@ -216,22 +402,36 @@ class _Header extends StatelessWidget {
 }
 
 /// ---------------------------------------------------------------------
-/// QR code card (now also hosts the compact countdown chip)
+/// QR code card
 /// ---------------------------------------------------------------------
 class _QrCard extends StatelessWidget {
   final bool isDark;
+  final String qrData;
+  final String orderId;
   final String hours;
   final String minutes;
   final String seconds;
+  final String status;
+  final String? vendorName;
+  final VoidCallback onExpand;
+
   const _QrCard({
     required this.isDark,
+    required this.qrData,
+    required this.orderId,
     required this.hours,
     required this.minutes,
     required this.seconds,
+    required this.status,
+    this.vendorName,
+    required this.onExpand,
   });
 
   @override
   Widget build(BuildContext context) {
+    final isConfirmed = status == 'confirmed' || status == 'completed';
+    final isExpired = status == 'expired' || status == 'cancelled';
+
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -249,25 +449,54 @@ class _QrCard extends StatelessWidget {
       ),
       child: Column(
         children: [
+          if (vendorName != null && vendorName!.isNotEmpty) ...[
+            Text(
+              vendorName!,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: isDark ? Colors.white70 : const Color(0xFF332019),
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
           Container(
             width: double.infinity,
-            constraints: const BoxConstraints(maxWidth: 280),
+            constraints: const BoxConstraints(maxWidth: 260),
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: isConfirmed
+                    ? const Color(0xFF10B981)
+                    : (isExpired ? Colors.red.shade300 : const Color(0xFFEEEEEE)),
+                width: 2,
+              ),
             ),
             child: AspectRatio(
               aspectRatio: 1,
-              child: Opacity(
-                opacity: 0.9,
-                child: Image.network(_qrImageUrl, fit: BoxFit.contain),
+              child: Center(
+                child: QrImageView(
+                  data: qrData,
+                  version: QrVersions.auto,
+                  size: 220.0,
+                  eyeStyle: const QrEyeStyle(
+                    eyeShape: QrEyeShape.square,
+                    color: Color(0xFF1E1714),
+                  ),
+                  dataModuleStyle: const QrDataModuleStyle(
+                    dataModuleShape: QrDataModuleShape.square,
+                    color: Color(0xFF1E1714),
+                  ),
+                ),
               ),
             ),
           ),
           const SizedBox(height: 16),
           Text(
-            'Order #8492-Z',
+            orderId,
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
@@ -275,16 +504,59 @@ class _QrCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 10),
-          // Compact countdown chip, tucked right under the order number.
-          _CompactTimerChip(
-            isDark: isDark,
-            hours: hours,
-            minutes: minutes,
-            seconds: seconds,
-          ),
+          if (isConfirmed)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFF10B981).withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(color: const Color(0xFF10B981)),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.check_circle_rounded, color: Color(0xFF10B981), size: 16),
+                  SizedBox(width: 6),
+                  Text(
+                    'Order Verified & Redeemed',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF10B981),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else if (isExpired)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.red.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(color: Colors.red),
+              ),
+              child: Text(
+                status.toUpperCase(),
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.red,
+                ),
+              ),
+            )
+          else
+            _CompactTimerChip(
+              isDark: isDark,
+              hours: hours,
+              minutes: minutes,
+              seconds: seconds,
+            ),
           const SizedBox(height: 14),
           Text(
-            'Show this QR code to the cashier at the counter to verify and redeem your deal.',
+            isConfirmed
+                ? 'Your order has been verified by the restaurant counter.'
+                : 'Show this QR code to the cashier at the counter to verify and redeem your deal.',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 13,
@@ -294,17 +566,17 @@ class _QrCard extends StatelessWidget {
           const SizedBox(height: 16),
           Container(
             height: 1,
-            color: isDark ? Colors.white.withOpacity(0.1) : Colors.grey[100],
+            color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.grey[100],
           ),
           const SizedBox(height: 16),
           SizedBox(
             width: double.infinity,
             height: 44,
             child: OutlinedButton.icon(
-              onPressed: () {},
+              onPressed: onExpand,
               style: OutlinedButton.styleFrom(
                 backgroundColor: isDark
-                    ? Colors.white.withOpacity(0.05)
+                    ? Colors.white.withValues(alpha: 0.05)
                     : Colors.grey[100],
                 side: BorderSide.none,
                 shape: RoundedRectangleBorder(
@@ -331,7 +603,7 @@ class _QrCard extends StatelessWidget {
 }
 
 /// ---------------------------------------------------------------------
-/// Compact countdown chip — small pill with icon + HH:MM:SS
+/// Compact countdown chip
 /// ---------------------------------------------------------------------
 class _CompactTimerChip extends StatelessWidget {
   final bool isDark;
@@ -352,11 +624,11 @@ class _CompactTimerChip extends StatelessWidget {
       decoration: BoxDecoration(
         color: isDark
             ? RedeemColors.timerBoxDark
-            : RedeemColors.primary.withOpacity(0.1),
+            : RedeemColors.primary.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(999),
         border: isDark
             ? null
-            : Border.all(color: RedeemColors.primary.withOpacity(0.2)),
+            : Border.all(color: RedeemColors.primary.withValues(alpha: 0.2)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -395,10 +667,17 @@ class _CompactTimerChip extends StatelessWidget {
 /// ---------------------------------------------------------------------
 class _OrderSummary extends StatelessWidget {
   final bool isDark;
-  const _OrderSummary({required this.isDark});
+  final List<RedemptionItem> items;
+
+  const _OrderSummary({
+    required this.isDark,
+    required this.items,
+  });
 
   @override
   Widget build(BuildContext context) {
+    if (items.isEmpty) return const SizedBox.shrink();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -431,15 +710,15 @@ class _OrderSummary extends StatelessWidget {
           ),
           child: Column(
             children: [
-              for (int i = 0; i < _orderLines.length; i++) ...[
-                _OrderLineRow(isDark: isDark, line: _orderLines[i]),
-                if (i != _orderLines.length - 1)
+              for (int i = 0; i < items.length; i++) ...[
+                _OrderLineRow(isDark: isDark, item: items[i]),
+                if (i != items.length - 1)
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     child: Container(
                       height: 1,
                       color: isDark
-                          ? Colors.white.withOpacity(0.1)
+                          ? Colors.white.withValues(alpha: 0.1)
                           : Colors.grey[100],
                     ),
                   ),
@@ -454,8 +733,8 @@ class _OrderSummary extends StatelessWidget {
 
 class _OrderLineRow extends StatelessWidget {
   final bool isDark;
-  final OrderLine line;
-  const _OrderLineRow({required this.isDark, required this.line});
+  final RedemptionItem item;
+  const _OrderLineRow({required this.isDark, required this.item});
 
   @override
   Widget build(BuildContext context) {
@@ -464,11 +743,27 @@ class _OrderLineRow extends StatelessWidget {
       children: [
         ClipRRect(
           borderRadius: BorderRadius.circular(8),
-          child: Image.network(
-            line.imageUrl,
+          child: Container(
             width: 64,
             height: 64,
-            fit: BoxFit.cover,
+            color: isDark ? const Color(0xFF482C23) : const Color(0xFFF3F4F6),
+            child: item.imageUrl != null && item.imageUrl!.isNotEmpty
+                ? Image.network(
+                    item.imageUrl!,
+                    width: 64,
+                    height: 64,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => const Icon(
+                      Icons.restaurant_rounded,
+                      color: RedeemColors.primary,
+                      size: 28,
+                    ),
+                  )
+                : const Icon(
+                    Icons.restaurant_rounded,
+                    color: RedeemColors.primary,
+                    size: 28,
+                  ),
           ),
         ),
         const SizedBox(width: 16),
@@ -481,7 +776,7 @@ class _OrderLineRow extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      line.name,
+                      item.name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -492,18 +787,20 @@ class _OrderLineRow extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    '\$${line.price.toStringAsFixed(2)}',
+                    item.isRewardItem
+                        ? 'FREE'
+                        : '\$${item.lineTotal.toStringAsFixed(2)}',
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
-                      color: isDark ? Colors.white : Colors.black,
+                      color: item.isRewardItem ? const Color(0xFF10B981) : (isDark ? Colors.white : Colors.black),
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 2),
               Text(
-                line.note,
+                item.note,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
@@ -513,11 +810,11 @@ class _OrderLineRow extends StatelessWidget {
               ),
               const SizedBox(height: 2),
               Text(
-                'Qty: ${line.qty}',
+                'Qty: ${item.quantity}',
                 style: TextStyle(
                   fontSize: 11,
                   color: isDark
-                      ? Colors.white.withOpacity(0.4)
+                      ? Colors.white.withValues(alpha: 0.4)
                       : Colors.grey[400],
                 ),
               ),
@@ -536,10 +833,13 @@ class _TotalCard extends StatelessWidget {
   final double subtotal;
   final double discount;
   final double total;
+  final String discountLabel;
+
   const _TotalCard({
     required this.subtotal,
     required this.discount,
     required this.total,
+    this.discountLabel = 'Savings Applied',
   });
 
   @override
@@ -551,7 +851,7 @@ class _TotalCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: RedeemColors.primary.withOpacity(0.2),
+            color: RedeemColors.primary.withValues(alpha: 0.2),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -565,14 +865,14 @@ class _TotalCard extends StatelessWidget {
               Text(
                 'Subtotal',
                 style: TextStyle(
-                  color: Colors.white.withOpacity(0.8),
+                  color: Colors.white.withValues(alpha: 0.8),
                   fontSize: 14,
                 ),
               ),
               Text(
                 '\$${subtotal.toStringAsFixed(2)}',
                 style: TextStyle(
-                  color: Colors.white.withOpacity(0.8),
+                  color: Colors.white.withValues(alpha: 0.8),
                   fontSize: 14,
                 ),
               ),
@@ -583,16 +883,16 @@ class _TotalCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Discount (20% OFF)',
+                'Discount ($discountLabel)',
                 style: TextStyle(
-                  color: Colors.white.withOpacity(0.8),
+                  color: Colors.white.withValues(alpha: 0.8),
                   fontSize: 14,
                 ),
               ),
               Text(
                 '-\$${discount.toStringAsFixed(2)}',
                 style: TextStyle(
-                  color: Colors.white.withOpacity(0.8),
+                  color: Colors.white.withValues(alpha: 0.8),
                   fontSize: 14,
                 ),
               ),
@@ -634,7 +934,12 @@ class _TotalCard extends StatelessWidget {
 /// ---------------------------------------------------------------------
 class _BottomActionBar extends StatelessWidget {
   final bool isDark;
-  const _BottomActionBar({required this.isDark});
+  final VoidCallback onDone;
+
+  const _BottomActionBar({
+    required this.isDark,
+    required this.onDone,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -649,7 +954,7 @@ class _BottomActionBar extends StatelessWidget {
         color: isDark ? RedeemColors.surfaceDark : Colors.white,
         border: Border(
           top: BorderSide(
-            color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[100]!,
+            color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey[100]!,
           ),
         ),
       ),
@@ -663,7 +968,7 @@ class _BottomActionBar extends StatelessWidget {
                 style: OutlinedButton.styleFrom(
                   side: BorderSide(
                     color: isDark
-                        ? Colors.white.withOpacity(0.1)
+                        ? Colors.white.withValues(alpha: 0.1)
                         : Colors.grey[200]!,
                   ),
                   shape: RoundedRectangleBorder(
@@ -689,7 +994,7 @@ class _BottomActionBar extends StatelessWidget {
             child: SizedBox(
               height: 48,
               child: ElevatedButton.icon(
-                onPressed: () {},
+                onPressed: onDone,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: isDark ? Colors.white : Colors.black87,
                   foregroundColor: isDark

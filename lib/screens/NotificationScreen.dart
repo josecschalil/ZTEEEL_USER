@@ -75,7 +75,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           id: 'n1',
           type: NotifType.order,
           title: 'Order confirmed',
-          message: 'Your order #8492-Z at The Golden Spoon is being prepared.',
+          message: 'Your order #C571267D at The Golden Spoon is being prepared.',
           time: '2m ago',
         ),
         NotifItem(

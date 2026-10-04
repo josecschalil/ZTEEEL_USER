@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'CheckOutScreen.dart';
+import 'RestuarantMenuScreen.dart';
+import '../config/api_config.dart';
+import '../services/cart_service.dart';
+import '../services/restaurant_service.dart';
 
 class SelectionsColors {
   static const primary = Color(0xFFEE5B2B);
@@ -31,78 +35,18 @@ class SelectionsColors {
   );
 }
 
-/// ---------------------------------------------------------------------
-/// Data models
-/// ---------------------------------------------------------------------
-class SelectionEntry {
-  final String name;
-  final String? imageUrl; // null → placeholder icon tile
-  final bool active;
-  final int itemCount;
-  final double savings;
-  final String itemsSummary;
-
-  const SelectionEntry({
-    required this.name,
-    this.imageUrl,
-    this.active = false,
-    required this.itemCount,
-    required this.savings,
-    required this.itemsSummary,
-  });
-}
-
 class RecentVisit {
+  final String id;
   final String name;
   final String imageUrl;
   final bool highlighted;
   const RecentVisit({
+    required this.id,
     required this.name,
     required this.imageUrl,
     this.highlighted = false,
   });
 }
-
-const _selections = [
-  SelectionEntry(
-    name: 'The Gourmet Grill',
-    imageUrl:
-        'https://lh3.googleusercontent.com/aida-public/AB6AXuDdkzjMAvBHCfwRW6c8Z0PRDiECvHocxOxi_c7mQzkbyM1Hp8Bjalia5vtRppGwuanih6Mc5VELW-QN9xOnl9iZI4lEsCix4MECxUPaxKGCLxtBTavse6JuRJKa2dL0FWuckkntr-4Con3ZglO0mYRyoULvbFYX9AN3pksQS9WQi0YOnB0mh2G5VSG9hAjK1dIw6l7qPd-LrAu7mouA66Egm5dgQ7dyc1rh4WwFdGfb3nbwpL-SxRZ-TQbyfd3IQwV-cSY5SbCWmz16',
-    active: true,
-    itemCount: 3,
-    savings: 12.50,
-    itemsSummary: 'Truffle Pasta, Bruschetta + 1 more',
-  ),
-  SelectionEntry(
-    name: 'Urban Bites & Co.',
-    imageUrl:
-        'https://lh3.googleusercontent.com/aida-public/AB6AXuDBn2CcBKm9v3EMYD765j4K_BUS5odWdUdF-SNaW7KJa4OoU0He3o-A1x90LLNn6hUurctOhgnx1OdWBvbV4rRjQk256pVUGKYSuijyu0-MgnQa1eC6jTpmSqdkHxu6fWoQmUggA6vv6A6klfgiWmUkYXRKX-UH8wyGFGf3jqIz8Z_DvCSvJdl353AOFcBpeyZ7V6gPKxhy36BLB805UKKTFq8igR8IqZfGog0lDqWE6myfkMFUyHKiXw1zHAb__pLHOIS4YA1LAD1z',
-    itemCount: 1,
-    savings: 4.20,
-    itemsSummary: 'Double Beef Smash Burger',
-  ),
-  SelectionEntry(
-    name: 'The Salad Project',
-    imageUrl: null,
-    itemCount: 5,
-    savings: 18.90,
-    itemsSummary: 'Morning Berry Bowl, Fresh Juice + 3 more',
-  ),
-];
-
-const _recentVisits = [
-  RecentVisit(
-    name: 'Grill House',
-    imageUrl:
-        'https://lh3.googleusercontent.com/aida-public/AB6AXuDdkzjMAvBHCfwRW6c8Z0PRDiECvHocxOxi_c7mQzkbyM1Hp8Bjalia5vtRppGwuanih6Mc5VELW-QN9xOnl9iZI4lEsCix4MECxUPaxKGCLxtBTavse6JuRJKa2dL0FWuckkntr-4Con3ZglO0mYRyoULvbFYX9AN3pksQS9WQi0YOnB0mh2G5VSG9hAjK1dIw6l7qPd-LrAu7mouA66Egm5dgQ7dyc1rh4WwFdGfb3nbwpL-SxRZ-TQbyfd3IQwV-cSY5SbCWmz16',
-    highlighted: true,
-  ),
-  RecentVisit(
-    name: 'Burger Hub',
-    imageUrl:
-        'https://lh3.googleusercontent.com/aida-public/AB6AXuDBn2CcBKm9v3EMYD765j4K_BUS5odWdUdF-SNaW7KJa4OoU0He3o-A1x90LLNn6hUurctOhgnx1OdWBvbV4rRjQk256pVUGKYSuijyu0-MgnQa1eC6jTpmSqdkHxu6fWoQmUggA6vv6A6klfgiWmUkYXRKX-UH8wyGFGf3jqIz8Z_DvCSvJdl353AOFcBpeyZ7V6gPKxhy36BLB805UKKTFq8igR8IqZfGog0lDqWE6myfkMFUyHKiXw1zHAb__pLHOIS4YA1LAD1z',
-  ),
-];
 
 /// Main screen wrapper
 class MainCartScreenPage extends StatelessWidget {
@@ -124,7 +68,59 @@ class MySelectionsScreen extends StatefulWidget {
 }
 
 class _MySelectionsScreenState extends State<MySelectionsScreen> {
-  int _navIndex = 3; // "My Cart" active by default
+  int _navIndex = 3;
+  List<RecentVisit> _recentVisits = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    CartService.fetchCart();
+    CartService.basketsNotifier.addListener(_onCartUpdated);
+    CartService.cartNotifier.addListener(_onCartUpdated);
+    _loadRecentVendors();
+  }
+
+  @override
+  void dispose() {
+    CartService.basketsNotifier.removeListener(_onCartUpdated);
+    CartService.cartNotifier.removeListener(_onCartUpdated);
+    super.dispose();
+  }
+
+  void _onCartUpdated() {
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _loadRecentVendors() async {
+    final vendors = await RestaurantService.fetchRestaurants();
+    if (!mounted || vendors.isEmpty) return;
+
+    final visits = <RecentVisit>[];
+    for (int i = 0; i < vendors.length && i < 6; i++) {
+      final v = vendors[i];
+      final id = v['id']?.toString() ?? '';
+      final name = v['business_name']?.toString() ?? 'Restaurant';
+      final rawImage = v['cover_image']?.toString() ?? v['icon_image']?.toString() ?? '';
+      final imgUrl = rawImage.isNotEmpty
+          ? (rawImage.startsWith('http://') || rawImage.startsWith('https://')
+              ? rawImage
+              : '${ApiConfig.baseUrl}${rawImage.startsWith('/') ? '' : '/'}$rawImage')
+          : 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=200';
+
+      visits.add(
+        RecentVisit(
+          id: id,
+          name: name,
+          imageUrl: imgUrl,
+          highlighted: i == 0,
+        ),
+      );
+    }
+
+    if (mounted && visits.isNotEmpty) {
+      setState(() => _recentVisits = visits);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -132,6 +128,9 @@ class _MySelectionsScreenState extends State<MySelectionsScreen> {
     final bgColor = isDark
         ? SelectionsColors.backgroundDark
         : SelectionsColors.backgroundLight;
+
+    final baskets = CartService.allBaskets;
+    final hasItems = baskets.isNotEmpty;
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -141,29 +140,107 @@ class _MySelectionsScreenState extends State<MySelectionsScreen> {
           children: [
             _Header(isDark: isDark),
             Expanded(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-                children: [
-                  _SectionHeader(
-                    title: 'Active Baskets',
-                    count: _selections.length,
-                    isDark: isDark,
-                  ),
-                  const SizedBox(height: 14),
-                  for (final entry in _selections)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 16),
-                      child: _SelectionCard(entry: entry, isDark: isDark),
+              child: RefreshIndicator(
+                color: SelectionsColors.primary,
+                onRefresh: () async {
+                  await Future.wait([
+                    CartService.fetchCart(),
+                    _loadRecentVendors(),
+                  ]);
+                },
+                child: ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+                  children: [
+                    _SectionHeader(
+                      title: 'Active Baskets',
+                      count: baskets.length,
+                      isDark: isDark,
                     ),
-                  const SizedBox(height: 8),
-                  _CartTotalFooter(isDark: isDark),
+                  const SizedBox(height: 14),
+                  if (hasItems) ...[
+                    for (final basket in baskets) ...[
+                      _ShopBasketCard(
+                        basket: basket,
+                        isDark: isDark,
+                        onIncrement: (item) => CartService.updateQuantity(
+                          cartItemId: item.id,
+                          quantity: item.quantity + 1,
+                          vendorId: basket.vendor?.id,
+                        ),
+                        onDecrement: (item) => CartService.updateQuantity(
+                          cartItemId: item.id,
+                          quantity: item.quantity - 1,
+                          vendorId: basket.vendor?.id,
+                        ),
+                        onRemoveItem: (item) => CartService.removeItem(
+                          item.id,
+                          vendorId: basket.vendor?.id,
+                        ),
+                        onClearBasket: () {
+                          if (basket.vendor?.id.isNotEmpty == true) {
+                            CartService.clearBasket(basket.vendor!.id);
+                          }
+                        },
+                        onCheckout: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => CheckoutScreen(
+                                vendorId: basket.vendor?.id,
+                              ),
+                            ),
+                          );
+                        },
+                        onTapShop: () {
+                          if (basket.vendor?.id.isNotEmpty == true) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => RestaurantMenuScreen(
+                                  vendorId: basket.vendor!.id,
+                                  restaurantName: basket.vendor?.businessName,
+                                ),
+                              ),
+                            );
+                          }
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                    const SizedBox(height: 8),
+                    _CartTotalFooter(
+                      isDark: isDark,
+                      basketsCount: baskets.length,
+                      itemCount: CartService.grandTotalItemCount,
+                      subtotal: CartService.grandSubtotal,
+                      savings: CartService.grandSavings,
+                      total: CartService.grandTotal,
+                      onCheckoutAll: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const CheckoutScreen(checkoutAll: true),
+                          ),
+                        );
+                      },
+                    ),
+                  ] else ...[
+                    _EmptyBasketCard(isDark: isDark),
+                  ],
                   const SizedBox(height: 24),
-                  _RecentlyVisitedSection(isDark: isDark),
-                  const SizedBox(height: 24),
+                  if (_recentVisits.isNotEmpty) ...[
+                    _RecentlyVisitedSection(
+                      isDark: isDark,
+                      visits: _recentVisits,
+                    ),
+                    const SizedBox(height: 24),
+                  ],
                 ],
               ),
             ),
-          ],
+          ),
+        ],
         ),
       ),
       bottomNavigationBar: widget.showBottomNav
@@ -246,7 +323,7 @@ class _Header extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    'MY SELECTIONS',
+                    'SHOPPING BASKETS',
                     style: TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.w700,
@@ -256,7 +333,7 @@ class _Header extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    'Your Cart',
+                    'Your Selections',
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w800,
@@ -272,10 +349,10 @@ class _Header extends StatelessWidget {
             children: [
               const SizedBox(width: 8),
               _RoundIconButton(
-                icon: Icons.more_vert_rounded,
+                icon: Icons.refresh_rounded,
                 size: 18,
                 isDark: isDark,
-                onTap: () {},
+                onTap: () => CartService.fetchCart(),
               ),
             ],
           ),
@@ -379,20 +456,91 @@ class _SectionHeader extends StatelessWidget {
 }
 
 /// ---------------------------------------------------------------------
-/// Selection card (restaurant with saved basket)
+/// Empty Basket Card
 /// ---------------------------------------------------------------------
-class _SelectionCard extends StatelessWidget {
-  final SelectionEntry entry;
+class _EmptyBasketCard extends StatelessWidget {
   final bool isDark;
+  const _EmptyBasketCard({required this.isDark});
 
-  const _SelectionCard({required this.entry, required this.isDark});
+  @override
+  Widget build(BuildContext context) {
+    final cardBg = isDark ? SelectionsColors.cardDark : Colors.white;
+    final cardBorder = isDark ? SelectionsColors.borderDark : SelectionsColors.borderLight;
+    final textPrimary = isDark ? Colors.white : const Color(0xFF1D1E20);
+    final textMuted = isDark ? SelectionsColors.textMutedDark : const Color(0xFF8A8A9A);
 
-  void _openCheckout(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const CheckoutScreen()),
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: cardBorder, width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: isDark ? Colors.black.withValues(alpha: 0.2) : Colors.black.withValues(alpha: 0.05),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: SelectionsColors.primary.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.shopping_cart_outlined,
+              color: SelectionsColors.primary,
+              size: 36,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Your Cart is Empty',
+            style: TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.bold,
+              color: textPrimary,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Select delicious dishes from your favorite restaurants. You can maintain multiple baskets simultaneously.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 13, color: textMuted),
+          ),
+        ],
+      ),
     );
   }
+}
+
+/// ---------------------------------------------------------------------
+/// Shop Basket Card (Renders an entire shop's basket with line items & steppers)
+/// ---------------------------------------------------------------------
+class _ShopBasketCard extends StatelessWidget {
+  final CartData basket;
+  final bool isDark;
+  final ValueChanged<CartItemModel> onIncrement;
+  final ValueChanged<CartItemModel> onDecrement;
+  final ValueChanged<CartItemModel> onRemoveItem;
+  final VoidCallback onClearBasket;
+  final VoidCallback onCheckout;
+  final VoidCallback onTapShop;
+
+  const _ShopBasketCard({
+    required this.basket,
+    required this.isDark,
+    required this.onIncrement,
+    required this.onDecrement,
+    required this.onRemoveItem,
+    required this.onClearBasket,
+    required this.onCheckout,
+    required this.onTapShop,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -405,161 +553,441 @@ class _SelectionCard extends StatelessWidget {
         ? SelectionsColors.textMutedDark
         : const Color(0xFF8A8A9A);
 
+    final shopName = basket.vendor?.businessName ?? 'Restaurant';
+    final coverImage = basket.vendor?.coverImage;
+
     return Container(
       decoration: BoxDecoration(
         color: cardBg,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(color: cardBorder, width: 1),
         boxShadow: [
           BoxShadow(
             color: isDark
-                ? Colors.black.withValues(alpha: 0.2)
+                ? Colors.black.withValues(alpha: 0.25)
                 : Colors.black.withValues(alpha: 0.05),
-            blurRadius: 12,
+            blurRadius: 14,
             offset: const Offset(0, 4),
           ),
         ],
       ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(18),
-        onTap: () => _openCheckout(context),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Shop Header ─────────────────────────────────────────
+          InkWell(
+            onTap: onTapShop,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+              child: Row(
                 children: [
-                  Stack(
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(14),
-                        child: SizedBox(
-                          width: 88,
-                          height: 88,
-                          child: entry.imageUrl != null
-                              ? Image.network(
-                                  entry.imageUrl!,
-                                  fit: BoxFit.cover,
-                                )
-                              : Container(
-                                  color: isDark
-                                      ? const Color(0xFF3A2820)
-                                      : const Color(0xFFF3F4F6),
-                                  alignment: Alignment.center,
-                                  child: Icon(
-                                    Icons.restaurant_rounded,
-                                    color: textMuted,
-                                    size: 28,
-                                  ),
-                                ),
-                        ),
-                      ),
-                      if (entry.active)
-                        Positioned(
-                          top: 4,
-                          left: 4,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: SelectionsColors.primary,
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: const Text(
-                              'ACTIVE',
-                              style: TextStyle(
-                                fontSize: 9,
-                                fontWeight: FontWeight.w800,
-                                color: Colors.white,
-                                letterSpacing: 0.4,
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      width: 44,
+                      height: 44,
+                      color: isDark ? const Color(0xFF3A2820) : const Color(0xFFF3F4F6),
+                      child: coverImage != null && coverImage.isNotEmpty
+                          ? Image.network(
+                              coverImage,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => const Icon(
+                                Icons.storefront_rounded,
+                                color: SelectionsColors.primary,
+                                size: 24,
                               ),
+                            )
+                          : const Icon(
+                              Icons.storefront_rounded,
+                              color: SelectionsColors.primary,
+                              size: 24,
                             ),
-                          ),
-                        ),
-                    ],
+                    ),
                   ),
-                  const SizedBox(width: 14),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Expanded(
+                            Flexible(
                               child: Text(
-                                entry.name,
+                                shopName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w700,
                                   color: textPrimary,
-                                  height: 1.2,
                                 ),
                               ),
                             ),
+                            const SizedBox(width: 4),
                             Icon(
                               Icons.chevron_right_rounded,
+                              size: 18,
                               color: textMuted,
-                              size: 20,
                             ),
                           ],
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 2),
                         Text(
-                          entry.itemsSummary,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(fontSize: 12, color: textMuted),
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            const Icon(
-                              Icons.shopping_basket_rounded,
-                              color: SelectionsColors.primary,
-                              size: 14,
-                            ),
-                            const SizedBox(width: 5),
-                            Text(
-                              '${entry.itemCount} ITEM${entry.itemCount == 1 ? '' : 'S'} SELECTED',
-                              style: const TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
-                                color: SelectionsColors.primary,
-                                letterSpacing: 0.3,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 5),
-                        Row(
-                          children: [
-                            const Icon(
-                              Icons.savings_rounded,
-                              color: Color(0xFF10B981),
-                              size: 14,
-                            ),
-                            const SizedBox(width: 5),
-                            Text(
-                              'Save \$${entry.savings.toStringAsFixed(2)}',
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: Color(0xFF10B981),
-                              ),
-                            ),
-                          ],
+                          '${basket.totalItemCount} item${basket.totalItemCount == 1 ? '' : 's'} in basket',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: textMuted,
+                          ),
                         ),
                       ],
                     ),
                   ),
+                  IconButton(
+                    onPressed: () {
+                      showDialog(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          title: const Text('Clear Basket?'),
+                          content: Text('Remove all items from $shopName?'),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(ctx),
+                              child: const Text('Cancel'),
+                            ),
+                            TextButton(
+                              onPressed: () {
+                                Navigator.pop(ctx);
+                                onClearBasket();
+                              },
+                              style: TextButton.styleFrom(
+                                foregroundColor: Colors.red,
+                              ),
+                              child: const Text('Clear'),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                    icon: Icon(
+                      Icons.delete_outline_rounded,
+                      size: 20,
+                      color: textMuted,
+                    ),
+                    tooltip: 'Clear Basket',
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          Divider(height: 1, color: cardBorder),
+
+          // ── Basket Item List ────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Column(
+              children: [
+                for (int i = 0; i < basket.items.length; i++) ...[
+                  _BasketItemRow(
+                    item: basket.items[i],
+                    isDark: isDark,
+                    onIncrement: () => onIncrement(basket.items[i]),
+                    onDecrement: () => onDecrement(basket.items[i]),
+                    onRemove: () => onRemoveItem(basket.items[i]),
+                  ),
+                  if (i < basket.items.length - 1)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      child: Divider(
+                        height: 1,
+                        color: isDark
+                            ? const Color(0xFF35261F)
+                            : const Color(0xFFF3F4F6),
+                      ),
+                    ),
+                ],
+              ],
+            ),
+          ),
+
+          Divider(height: 1, color: cardBorder),
+
+          // ── Shop Subtotal & Action Bar ──────────────────────────
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Shop Subtotal',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: textMuted,
+                      ),
+                    ),
+                    Text(
+                      '\$${basket.subtotal.toStringAsFixed(2)}',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: textPrimary,
+                      ),
+                    ),
+                  ],
+                ),
+                if (basket.totalDiscount > 0) ...[
+                  const SizedBox(height: 6),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Offers & Savings',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: textMuted,
+                        ),
+                      ),
+                      Text(
+                        '-\$${basket.totalDiscount.toStringAsFixed(2)}',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF10B981),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Basket Total',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: textPrimary,
+                      ),
+                    ),
+                    Text(
+                      '\$${basket.finalTotal.toStringAsFixed(2)}',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                        color: SelectionsColors.primary,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                SizedBox(
+                  width: double.infinity,
+                  height: 46,
+                  child: ElevatedButton(
+                    onPressed: onCheckout,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: SelectionsColors.primary,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'Checkout from $shopName',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Icon(
+                          Icons.arrow_forward_rounded,
+                          size: 16,
+                          color: Colors.white,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BasketItemRow extends StatelessWidget {
+  final CartItemModel item;
+  final bool isDark;
+  final VoidCallback onIncrement;
+  final VoidCallback onDecrement;
+  final VoidCallback onRemove;
+
+  const _BasketItemRow({
+    required this.item,
+    required this.isDark,
+    required this.onIncrement,
+    required this.onDecrement,
+    required this.onRemove,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final textPrimary = isDark ? Colors.white : const Color(0xFF1D1E20);
+    final textMuted = isDark
+        ? SelectionsColors.textMutedDark
+        : const Color(0xFF8A8A9A);
+
+    return Row(
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            width: 48,
+            height: 48,
+            color: isDark ? const Color(0xFF332019) : const Color(0xFFF3F4F6),
+            child: item.imageUrl != null && item.imageUrl!.isNotEmpty
+                ? Image.network(
+                    item.imageUrl!,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => const Icon(
+                      Icons.restaurant_rounded,
+                      color: SelectionsColors.primary,
+                      size: 20,
+                    ),
+                  )
+                : const Icon(
+                    Icons.restaurant_rounded,
+                    color: SelectionsColors.primary,
+                    size: 20,
+                  ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                item.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: textPrimary,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Row(
+                children: [
+                  Text(
+                    '\$${item.lineTotal.toStringAsFixed(2)}',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: SelectionsColors.primary,
+                    ),
+                  ),
+                  if (item.lineDiscount > 0) ...[
+                    const SizedBox(width: 6),
+                    Text(
+                      '\$${item.subtotal.toStringAsFixed(2)}',
+                      style: TextStyle(
+                        fontSize: 11,
+                        decoration: TextDecoration.lineThrough,
+                        color: textMuted,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ],
           ),
+        ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF35261F) : const Color(0xFFF3F4F6),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _MiniIconButton(
+                icon: item.quantity <= 1 ? Icons.delete_outline_rounded : Icons.remove_rounded,
+                isDark: isDark,
+                onTap: onDecrement,
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: Text(
+                  '${item.quantity}',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: textPrimary,
+                  ),
+                ),
+              ),
+              _MiniIconButton(
+                icon: Icons.add_rounded,
+                isDark: isDark,
+                onTap: onIncrement,
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _MiniIconButton extends StatelessWidget {
+  final IconData icon;
+  final bool isDark;
+  final VoidCallback onTap;
+
+  const _MiniIconButton({
+    required this.icon,
+    required this.isDark,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        width: 26,
+        height: 26,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF453026) : Colors.white,
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 2,
+            ),
+          ],
+        ),
+        child: Icon(
+          icon,
+          size: 14,
+          color: isDark ? Colors.white : const Color(0xFF1D1E20),
         ),
       ),
     );
@@ -571,8 +999,22 @@ class _SelectionCard extends StatelessWidget {
 /// ---------------------------------------------------------------------
 class _CartTotalFooter extends StatelessWidget {
   final bool isDark;
+  final int basketsCount;
+  final int itemCount;
+  final double subtotal;
+  final double savings;
+  final double total;
+  final VoidCallback onCheckoutAll;
 
-  const _CartTotalFooter({required this.isDark});
+  const _CartTotalFooter({
+    required this.isDark,
+    required this.basketsCount,
+    required this.itemCount,
+    required this.subtotal,
+    required this.savings,
+    required this.total,
+    required this.onCheckoutAll,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -626,7 +1068,7 @@ class _CartTotalFooter extends StatelessWidget {
                     ),
                     const SizedBox(width: 10),
                     Text(
-                      'Cart Summary',
+                      'All Baskets Summary',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
@@ -648,7 +1090,7 @@ class _CartTotalFooter extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    '3 Baskets • 9 Items',
+                    '$basketsCount Basket${basketsCount == 1 ? '' : 's'} • $itemCount Items',
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
@@ -663,11 +1105,11 @@ class _CartTotalFooter extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Subtotal',
+                  'Grand Subtotal',
                   style: TextStyle(fontSize: 13, color: textMuted),
                 ),
                 Text(
-                  '\$110.20',
+                  '\$${subtotal.toStringAsFixed(2)}',
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
@@ -676,24 +1118,26 @@ class _CartTotalFooter extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 6),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Total Savings',
-                  style: TextStyle(fontSize: 13, color: textMuted),
-                ),
-                const Text(
-                  '-\$35.60',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF10B981),
+            if (savings > 0) ...[
+              const SizedBox(height: 6),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Total Savings',
+                    style: TextStyle(fontSize: 13, color: textMuted),
                   ),
-                ),
-              ],
-            ),
+                  Text(
+                    '-\$${savings.toStringAsFixed(2)}',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF10B981),
+                    ),
+                  ),
+                ],
+              ),
+            ],
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 12),
               child: Divider(
@@ -719,9 +1163,9 @@ class _CartTotalFooter extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 2),
-                    const Text(
-                      '\$74.60',
-                      style: TextStyle(
+                    Text(
+                      '\$${total.toStringAsFixed(2)}',
+                      style: const TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.w900,
                         color: SelectionsColors.primary,
@@ -731,12 +1175,7 @@ class _CartTotalFooter extends StatelessWidget {
                   ],
                 ),
                 ElevatedButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const CheckoutScreen()),
-                    );
-                  },
+                  onPressed: onCheckoutAll,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF10B981),
                     elevation: 0,
@@ -748,18 +1187,18 @@ class _CartTotalFooter extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: const Row(
+                  child: Row(
                     children: [
                       Text(
-                        'Checkout All',
-                        style: TextStyle(
+                        basketsCount > 1 ? 'Checkout All Baskets' : 'Proceed to Checkout',
+                        style: const TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w700,
                           color: Colors.white,
                         ),
                       ),
-                      SizedBox(width: 6),
-                      Icon(
+                      const SizedBox(width: 6),
+                      const Icon(
                         Icons.arrow_forward_rounded,
                         color: Colors.white,
                         size: 16,
@@ -781,8 +1220,12 @@ class _CartTotalFooter extends StatelessWidget {
 /// ---------------------------------------------------------------------
 class _RecentlyVisitedSection extends StatelessWidget {
   final bool isDark;
+  final List<RecentVisit> visits;
 
-  const _RecentlyVisitedSection({required this.isDark});
+  const _RecentlyVisitedSection({
+    required this.isDark,
+    required this.visits,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -796,7 +1239,7 @@ class _RecentlyVisitedSection extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.only(left: 4, bottom: 12),
           child: Text(
-            'RECENTLY VISITED',
+            'EXPLORE RESTAURANTS',
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w700,
@@ -809,48 +1252,70 @@ class _RecentlyVisitedSection extends StatelessWidget {
           height: 94,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
-            itemCount: _recentVisits.length,
+            itemCount: visits.length,
             separatorBuilder: (_, __) => const SizedBox(width: 16),
             itemBuilder: (context, i) {
-              final visit = _recentVisits[i];
-              return SizedBox(
-                width: 64,
-                child: Column(
-                  children: [
-                    Container(
-                      width: 58,
-                      height: 58,
-                      padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: visit.highlighted
-                              ? SelectionsColors.primary
-                              : (isDark
+              final visit = visits[i];
+              return InkWell(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => RestaurantMenuScreen(
+                        vendorId: visit.id,
+                        restaurantName: visit.name,
+                      ),
+                    ),
+                  );
+                },
+                borderRadius: BorderRadius.circular(12),
+                child: SizedBox(
+                  width: 64,
+                  child: Column(
+                    children: [
+                      Container(
+                        width: 58,
+                        height: 58,
+                        padding: const EdgeInsets.all(2),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: visit.highlighted
+                                ? SelectionsColors.primary
+                                : (isDark
                                     ? SelectionsColors.borderDark
                                     : const Color(0xFFE5E7EB)),
-                          width: 2,
+                            width: 2,
+                          ),
+                        ),
+                        child: ClipOval(
+                          child: Image.network(
+                            visit.imageUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => const Icon(
+                              Icons.restaurant_rounded,
+                              color: SelectionsColors.primary,
+                              size: 24,
+                            ),
+                          ),
                         ),
                       ),
-                      child: ClipOval(
-                        child: Image.network(visit.imageUrl, fit: BoxFit.cover),
+                      const SizedBox(height: 6),
+                      Text(
+                        visit.name,
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: isDark
+                              ? Colors.white70
+                              : const Color(0xFF4B5563),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      visit.name,
-                      textAlign: TextAlign.center,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                        color: isDark
-                            ? Colors.white70
-                            : const Color(0xFF4B5563),
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               );
             },
@@ -886,7 +1351,7 @@ class _BottomNavBar extends StatelessWidget {
     final items = [
       (Icons.home_rounded, 'Home'),
       (Icons.local_offer_rounded, 'Deals'),
-      (Icons.confirmation_number_rounded, 'My Order'),
+      (Icons.receipt_long_rounded, 'My Orders'),
       (Icons.shopping_cart_rounded, 'My Cart'),
       (Icons.person_rounded, 'Profile'),
     ];

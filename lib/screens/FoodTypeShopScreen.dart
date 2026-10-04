@@ -24,7 +24,7 @@
 // ---------------------------------------------------------------------
 
 import 'package:flutter/material.dart';
-import 'FoodDetailScreen.dart';
+import 'RestuarantMenuScreen.dart';
 
 /// ---------------------------------------------------------------------
 /// Shared palette (kept identical to the rest of the app)
@@ -256,7 +256,13 @@ class _FoodTypeShopsScreenState extends State<FoodTypeShopsScreen> {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (_) => const FoodDetailsScreen(),
+                                builder: (_) => RestaurantMenuScreen(
+                                  vendorId: listing.id,
+                                  restaurantName: listing.shopName,
+                                  heroImageUrl: listing.imageUrl,
+                                  cuisine: widget.foodType,
+                                  isOpen: true,
+                                ),
                               ),
                             );
                           },

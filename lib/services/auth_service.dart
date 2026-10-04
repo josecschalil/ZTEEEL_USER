@@ -82,6 +82,20 @@ class AuthService {
     }
   }
 
+  static Future<String?> getAccessToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString(_accessKey);
+    return (token != null && token.isNotEmpty) ? token : null;
+  }
+
+  static Future<Map<String, String>> getAuthHeaders() async {
+    final token = await getAccessToken();
+    if (token != null && token.isNotEmpty) {
+      return {'Authorization': 'Bearer $token'};
+    }
+    return const {};
+  }
+
   static Future<bool> isLoggedIn() async {
     final prefs = await SharedPreferences.getInstance();
     return (prefs.getBool(_loggedInKey) ?? false) &&

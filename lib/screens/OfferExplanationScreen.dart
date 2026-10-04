@@ -12,29 +12,99 @@ class OfferExplanationColors {
   static const textMutedDark = Color(0xFFC9A092);
 }
 
-class OfferExplanationScreen extends StatelessWidget {
+class OfferApplicableItem {
+  final String id;
+  final String name;
+  final String description;
+  final double price;
+  final double discountedPrice;
+  final String imageUrl;
+  final String? badge;
+  final String? tag; // 'VEG', 'NON-VEG'
+  final String categoryName;
+
+  const OfferApplicableItem({
+    required this.id,
+    required this.name,
+    required this.description,
+    required this.price,
+    required this.discountedPrice,
+    required this.imageUrl,
+    this.badge,
+    this.tag,
+    this.categoryName = '',
+  });
+
+  bool get hasDiscount => discountedPrice < (price - 0.009);
+}
+
+class OfferExplanationScreen extends StatefulWidget {
   final String title;
   final String subtitle;
-  final String code;
+  final String? code;
   final String badge;
   final String expiry;
-  final String minOrder;
-  final String maxDiscount;
+  final String scopeDescription;
   final List<Color>? gradientColors;
   final List<String>? terms;
+  final List<OfferApplicableItem> applicableItems;
+  final String restaurantName;
+  final Map<String, int>? initialCart;
+  final ValueChanged<String>? onAdd;
+  final ValueChanged<String>? onRemove;
 
   const OfferExplanationScreen({
     super.key,
     required this.title,
     required this.subtitle,
-    required this.code,
+    this.code,
     this.badge = 'SPECIAL OFFER',
-    this.expiry = 'Valid till 31st Dec 2026',
-    this.minOrder = '\$25.00',
-    this.maxDiscount = '\$50.00',
+    this.expiry = 'Limited Time',
+    this.scopeDescription = 'Eligible menu items',
     this.gradientColors,
     this.terms,
+    this.applicableItems = const [],
+    this.restaurantName = 'Restaurant',
+    this.initialCart,
+    this.onAdd,
+    this.onRemove,
   });
+
+  @override
+  State<OfferExplanationScreen> createState() => _OfferExplanationScreenState();
+}
+
+class _OfferExplanationScreenState extends State<OfferExplanationScreen> {
+  late Map<String, int> _cart;
+
+  @override
+  void initState() {
+    super.initState();
+    _cart = Map<String, int>.from(widget.initialCart ?? {});
+  }
+
+  void _handleAddItem(String itemId) {
+    setState(() {
+      _cart[itemId] = (_cart[itemId] ?? 0) + 1;
+    });
+    widget.onAdd?.call(itemId);
+  }
+
+  void _handleRemoveItem(String itemId) {
+    if ((_cart[itemId] ?? 0) > 0) {
+      setState(() {
+        final current = _cart[itemId]!;
+        if (current <= 1) {
+          _cart.remove(itemId);
+        } else {
+          _cart[itemId] = current - 1;
+        }
+      });
+      widget.onRemove?.call(itemId);
+    }
+  }
+
+  int get _totalCartItems => _cart.values.fold(0, (sum, count) => sum + count);
 
   @override
   Widget build(BuildContext context) {
@@ -45,15 +115,18 @@ class OfferExplanationScreen extends StatelessWidget {
     final textColor = isDark ? Colors.white : const Color(0xFF1D1E20);
     final subColor = isDark ? OfferExplanationColors.textMutedDark : Colors.grey[600]!;
 
-    final defaultTerms = terms ?? [
-      'Offer valid on all delivery and pickup orders placed via ZTEEL.',
-      'Minimum cart order value of $minOrder required to qualify.',
-      'Maximum discount capped at $maxDiscount per transaction.',
-      'Cannot be combined with any other voucher or promotional code.',
-      'Valid for registered ZTEEL users at participating outlets.',
+    final defaultTerms = widget.terms ?? [
+      'Discount is automatically applied to all eligible food items.',
+      'When multiple offers exist for the same item, the highest discount is automatically selected.',
+      'No manual voucher codes or coupon redemptions required.',
+      'Prices shown on the menu and checkout already reflect the best discount.',
+      'Offer valid during vendor business hours and availability.',
     ];
 
-    final headerGradient = gradientColors ?? [OfferExplanationColors.primary, const Color(0xFFEA580C)];
+    final headerGradient = widget.gradientColors ?? [
+      OfferExplanationColors.primary,
+      const Color(0xFFEA580C),
+    ];
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -110,7 +183,7 @@ class OfferExplanationScreen extends StatelessWidget {
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
-                            badge.toUpperCase(),
+                            widget.badge.toUpperCase(),
                             style: const TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w900,
@@ -124,7 +197,7 @@ class OfferExplanationScreen extends StatelessWidget {
                             const Icon(Icons.timer_outlined, color: Colors.white, size: 15),
                             const SizedBox(width: 4),
                             Text(
-                              expiry,
+                              widget.expiry,
                               style: const TextStyle(
                                 fontSize: 12,
                                 color: Colors.white,
@@ -137,9 +210,9 @@ class OfferExplanationScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 18),
                     Text(
-                      title,
+                      widget.title,
                       style: const TextStyle(
-                        fontSize: 26,
+                        fontSize: 24,
                         fontWeight: FontWeight.w900,
                         color: Colors.white,
                         letterSpacing: -0.5,
@@ -147,79 +220,63 @@ class OfferExplanationScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      subtitle,
+                      widget.subtitle,
                       style: TextStyle(
                         fontSize: 13.5,
                         color: Colors.white.withValues(alpha: 0.9),
                         height: 1.3,
                       ),
                     ),
-                    const SizedBox(height: 20),
-                    // Promo Code Box with Copy Action
+                    const SizedBox(height: 18),
+                    // Auto-Applied Highlight Banner (No code redemption needed)
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                       decoration: BoxDecoration(
                         color: Colors.black.withValues(alpha: 0.25),
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.3),
-                          width: 1.5,
+                          color: Colors.white.withValues(alpha: 0.25),
+                          width: 1.2,
                         ),
                       ),
                       child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'PROMO CODE',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white.withValues(alpha: 0.7),
-                                  letterSpacing: 1.0,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                code,
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w900,
-                                  color: Colors.white,
-                                  letterSpacing: 1.2,
-                                ),
-                              ),
-                            ],
-                          ),
-                          ElevatedButton.icon(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              foregroundColor: OfferExplanationColors.primary,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                              elevation: 0,
+                          Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              shape: BoxShape.circle,
                             ),
-                            onPressed: () {
-                              ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('Promo code "$code" copied to clipboard!'),
-                                  behavior: SnackBarBehavior.floating,
-                                  duration: const Duration(seconds: 2),
+                            child: const Icon(
+                              Icons.auto_awesome_rounded,
+                              color: Colors.white,
+                              size: 18,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'AUTOMATIC DISCOUNT',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w800,
+                                    color: Colors.white,
+                                    letterSpacing: 0.8,
+                                  ),
                                 ),
-                              );
-                            },
-                            icon: const Icon(Icons.copy_rounded, size: 16),
-                            label: const Text(
-                              'COPY',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                              ),
+                                SizedBox(height: 2),
+                                Text(
+                                  'Price is reduced automatically. No coupon code needed.',
+                                  style: TextStyle(
+                                    fontSize: 11.5,
+                                    color: Color(0xFFEDE7E2),
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
@@ -246,15 +303,27 @@ class OfferExplanationScreen extends StatelessWidget {
                         children: [
                           Row(
                             children: [
-                              const Icon(Icons.shopping_bag_outlined, color: OfferExplanationColors.primary, size: 18),
+                              const Icon(
+                                Icons.restaurant_menu_rounded,
+                                color: OfferExplanationColors.primary,
+                                size: 18,
+                              ),
                               const SizedBox(width: 6),
-                              Text('Min Order', style: TextStyle(fontSize: 12, color: subColor)),
+                              Text('Applies To', style: TextStyle(fontSize: 12, color: subColor)),
                             ],
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            minOrder,
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: textColor),
+                            widget.applicableItems.isNotEmpty
+                                ? '${widget.applicableItems.length} Menu Items'
+                                : widget.scopeDescription,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              color: textColor,
+                            ),
                           ),
                         ],
                       ),
@@ -274,15 +343,25 @@ class OfferExplanationScreen extends StatelessWidget {
                         children: [
                           Row(
                             children: [
-                              const Icon(Icons.savings_outlined, color: Color(0xFF22C55E), size: 18),
+                              const Icon(
+                                Icons.savings_outlined,
+                                color: Color(0xFF22C55E),
+                                size: 18,
+                              ),
                               const SizedBox(width: 6),
                               Text('Max Savings', style: TextStyle(fontSize: 12, color: subColor)),
                             ],
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            maxDiscount,
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: textColor),
+                            widget.badge,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              color: textColor,
+                            ),
                           ),
                         ],
                       ),
@@ -290,9 +369,319 @@ class OfferExplanationScreen extends StatelessWidget {
                   ),
                 ],
               ),
+              const SizedBox(height: 24),
+
+              // ── Applicable Food Items Section ──────────────────────────────
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Applicable Dishes',
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w800,
+                      color: textColor,
+                      letterSpacing: -0.3,
+                    ),
+                  ),
+                  if (widget.applicableItems.isNotEmpty)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: OfferExplanationColors.primary.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        '${widget.applicableItems.length} items',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: OfferExplanationColors.primary,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 12),
+
+              if (widget.applicableItems.isEmpty)
+                Container(
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    color: cardBg,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: cardBorder),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: OfferExplanationColors.primary.withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.check_circle_outline_rounded,
+                          color: OfferExplanationColors.primary,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Applies to Restaurant Menu',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: textColor,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'This offer automatically applies to all qualifying dishes from ${widget.restaurantName}.',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: subColor,
+                                height: 1.3,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                Column(
+                  children: widget.applicableItems.map((item) {
+                    final qty = _cart[item.id] ?? 0;
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: cardBg,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: cardBorder),
+                        boxShadow: [
+                          BoxShadow(
+                            color: isDark
+                                ? Colors.black.withValues(alpha: 0.2)
+                                : Colors.black.withValues(alpha: 0.03),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Food Thumbnail
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: SizedBox(
+                              width: 80,
+                              height: 80,
+                              child: item.imageUrl.isNotEmpty
+                                  ? Image.network(
+                                      item.imageUrl,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (_, _, _) => Container(
+                                        color: isDark ? Colors.black26 : Colors.grey[200],
+                                        child: const Icon(
+                                          Icons.fastfood_rounded,
+                                          color: Colors.grey,
+                                          size: 28,
+                                        ),
+                                      ),
+                                    )
+                                  : Container(
+                                      color: isDark ? Colors.black26 : Colors.grey[200],
+                                      child: const Icon(
+                                        Icons.fastfood_rounded,
+                                        color: Colors.grey,
+                                        size: 28,
+                                      ),
+                                    ),
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          // Details
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    if (item.tag != null) ...[
+                                      Container(
+                                        padding: const EdgeInsets.all(3),
+                                        decoration: BoxDecoration(
+                                          border: Border.all(
+                                            color: item.tag == 'VEG'
+                                                ? const Color(0xFF16A34A)
+                                                : const Color(0xFFDC2626),
+                                            width: 1.2,
+                                          ),
+                                          borderRadius: BorderRadius.circular(4),
+                                        ),
+                                        child: Container(
+                                          width: 6,
+                                          height: 6,
+                                          decoration: BoxDecoration(
+                                            color: item.tag == 'VEG'
+                                                ? const Color(0xFF16A34A)
+                                                : const Color(0xFFDC2626),
+                                            shape: BoxShape.circle,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 6),
+                                    ],
+                                    Expanded(
+                                      child: Text(
+                                        item.name,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w700,
+                                          color: textColor,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                if (item.description.isNotEmpty) ...[
+                                  const SizedBox(height: 3),
+                                  Text(
+                                    item.description,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: subColor,
+                                    ),
+                                  ),
+                                ],
+                                const SizedBox(height: 8),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Text(
+                                          '₹${item.discountedPrice.toStringAsFixed(item.discountedPrice.truncateToDouble() == item.discountedPrice ? 0 : 2)}',
+                                          style: const TextStyle(
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.w900,
+                                            color: OfferExplanationColors.primary,
+                                          ),
+                                        ),
+                                        if (item.hasDiscount) ...[
+                                          const SizedBox(width: 6),
+                                          Text(
+                                            '₹${item.price.toStringAsFixed(item.price.truncateToDouble() == item.price ? 0 : 2)}',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              decoration: TextDecoration.lineThrough,
+                                              color: subColor,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                    // Add / Quantity Stepper Button
+                                    qty == 0
+                                        ? InkWell(
+                                            onTap: () => _handleAddItem(item.id),
+                                            borderRadius: BorderRadius.circular(20),
+                                            child: Container(
+                                              padding: const EdgeInsets.symmetric(
+                                                horizontal: 14,
+                                                vertical: 5,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: OfferExplanationColors.primary,
+                                                borderRadius: BorderRadius.circular(20),
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: OfferExplanationColors.primary
+                                                        .withValues(alpha: 0.35),
+                                                    blurRadius: 6,
+                                                    offset: const Offset(0, 2),
+                                                  ),
+                                                ],
+                                              ),
+                                              child: const Text(
+                                                '+ Add',
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w700,
+                                                  color: Colors.white,
+                                                ),
+                                              ),
+                                            ),
+                                          )
+                                        : Container(
+                                            height: 28,
+                                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                                            decoration: BoxDecoration(
+                                              color: OfferExplanationColors.primary,
+                                              borderRadius: BorderRadius.circular(20),
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                InkWell(
+                                                  onTap: () => _handleRemoveItem(item.id),
+                                                  child: const Padding(
+                                                    padding: EdgeInsets.symmetric(horizontal: 6),
+                                                    child: Icon(
+                                                      Icons.remove_rounded,
+                                                      size: 16,
+                                                      color: Colors.white,
+                                                    ),
+                                                  ),
+                                                ),
+                                                Text(
+                                                  '$qty',
+                                                  style: const TextStyle(
+                                                    color: Colors.white,
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 12,
+                                                  ),
+                                                ),
+                                                InkWell(
+                                                  onTap: () => _handleAddItem(item.id),
+                                                  child: const Padding(
+                                                    padding: EdgeInsets.symmetric(horizontal: 6),
+                                                    child: Icon(
+                                                      Icons.add_rounded,
+                                                      size: 16,
+                                                      color: Colors.white,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                ),
               const SizedBox(height: 20),
 
-              // How to Redeem Section
+              // How Discounts Work Section
               Container(
                 padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(
@@ -305,19 +694,44 @@ class OfferExplanationScreen extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        const Icon(Icons.touch_app_rounded, color: OfferExplanationColors.primary, size: 20),
+                        const Icon(
+                          Icons.lightbulb_outline_rounded,
+                          color: OfferExplanationColors.primary,
+                          size: 20,
+                        ),
                         const SizedBox(width: 10),
                         Text(
-                          'How to Redeem',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: textColor),
+                          'How it Works',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: textColor,
+                          ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 14),
-                    _StepItem(step: '1', text: 'Select items worth $minOrder or more from the menu.', isDark: isDark),
-                    _StepItem(step: '2', text: 'Proceed to Checkout and tap "Apply Coupon".', isDark: isDark),
-                    _StepItem(step: '3', text: 'Enter code "$code" or select it from available offers.', isDark: isDark),
-                    _StepItem(step: '4', text: 'Enjoy instant savings applied directly to your total bill!', isDark: isDark, isLast: true),
+                    _StepItem(
+                      step: '1',
+                      text: 'Vendor publishes offers to discount selected menu items or categories.',
+                      isDark: isDark,
+                    ),
+                    _StepItem(
+                      step: '2',
+                      text: 'When multiple offers overlap for the same dish, the maximum discount is automatically applied.',
+                      isDark: isDark,
+                    ),
+                    _StepItem(
+                      step: '3',
+                      text: 'You don’t need to apply or redeem codes manually — the prices reflect the best deal directly.',
+                      isDark: isDark,
+                    ),
+                    _StepItem(
+                      step: '4',
+                      text: 'Add items to your cart and enjoy direct savings on checkout.',
+                      isDark: isDark,
+                      isLast: true,
+                    ),
                   ],
                 ),
               ),
@@ -336,11 +750,19 @@ class OfferExplanationScreen extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        const Icon(Icons.gavel_rounded, color: OfferExplanationColors.primary, size: 20),
+                        const Icon(
+                          Icons.gavel_rounded,
+                          color: OfferExplanationColors.primary,
+                          size: 20,
+                        ),
                         const SizedBox(width: 10),
                         Text(
-                          'Terms & Conditions',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: textColor),
+                          'Offer Terms',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: textColor,
+                          ),
                         ),
                       ],
                     ),
@@ -394,20 +816,12 @@ class OfferExplanationScreen extends StatelessWidget {
                     borderRadius: BorderRadius.circular(14),
                   ),
                 ),
-                onPressed: () {
-                  ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Offer code "$code" applied to your order!'),
-                      behavior: SnackBarBehavior.floating,
-                      duration: const Duration(seconds: 2),
-                    ),
-                  );
-                  Navigator.of(context).pop();
-                },
-                child: const Text(
-                  'APPLY OFFER & ORDER NOW',
-                  style: TextStyle(
+                onPressed: () => Navigator.of(context).pop(),
+                child: Text(
+                  _totalCartItems > 0
+                      ? 'VIEW CART ($_totalCartItems ITEMS)'
+                      : 'EXPLORE FULL MENU',
+                  style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
                     letterSpacing: 0.8,

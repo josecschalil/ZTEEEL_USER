@@ -8,90 +8,61 @@ import '../widgets/bottom_nav_bar.dart';
 import 'DealsScreen.dart';
 import 'MainCartScreen.dart';
 import 'ProfileScreen.dart';
-import 'RestaurantListScreen.dart' hide AppColors;
+import 'RecentOrderScreen.dart';
 import 'home_discovery_view.dart';
 
-const _fallbackRestaurants = [
-  HomeRestaurant(
-    id: 'sample-spice-route',
-    name: 'Spice Route',
-    cuisine: 'North Indian · Biryani',
-    rating: 4.6,
-    reviewCount: 812,
-    distance: '0.8 km',
-    eta: '20–25 min',
-    isOpen: true,
-    offerLabel: '20% OFF up to ₹100',
-  ),
-  HomeRestaurant(
-    id: 'sample-napoli',
-    name: "Napoli's Kitchen",
-    cuisine: 'Italian · Pizza',
-    rating: 4.5,
-    reviewCount: 654,
-    distance: '1.2 km',
-    eta: '25–30 min',
-    isOpen: true,
-  ),
-  HomeRestaurant(
-    id: 'sample-green-bowl',
-    name: 'Green Bowl Co.',
-    cuisine: 'Healthy · Salads',
-    rating: 4.4,
-    reviewCount: 305,
-    distance: '1.5 km',
-    eta: '20–25 min',
-    isOpen: true,
-    offerLabel: 'Free delivery',
-  ),
-];
-
-HomeRestaurant _homeRestaurantFromVendor(
-  Map<String, dynamic> vendor,
-  int index,
-) {
-  final fallback = _fallbackRestaurants[index % _fallbackRestaurants.length];
+HomeRestaurant _homeRestaurantFromVendor(Map<String, dynamic> vendor) {
   final image = vendor['cover_image'] ?? vendor['icon_image'];
   final imageUrl = image is String && image.isNotEmpty
       ? (image.startsWith('http://') || image.startsWith('https://')
             ? image
             : '${ApiConfig.baseUrl}${image.startsWith('/') ? '' : '/'}$image')
       : null;
-  final id = _valueOrFallback(vendor['id'], fallback.id);
-  final name = _valueOrFallback(vendor['business_name'], fallback.name);
-  final description = vendor['shop_description']?.toString().trim() ?? '';
-  final category = vendor['category']?.toString().trim() ?? '';
+
+  final id = vendor['id']?.toString() ?? '';
+  final name = vendor['business_name']?.toString().trim() ?? 'Restaurant';
+
+  String cuisine = 'Multi-Cuisine';
+  if (vendor['cuisines'] is List && (vendor['cuisines'] as List).isNotEmpty) {
+    cuisine = (vendor['cuisines'] as List).join(' · ');
+  } else if (vendor['shop_description']?.toString().trim().isNotEmpty == true) {
+    cuisine = vendor['shop_description']!.toString().trim();
+  } else if (vendor['category']?.toString().trim().isNotEmpty == true) {
+    cuisine = vendor['category']!.toString().trim();
+  }
+
+  String? offerLabel;
+  if (vendor['best_offer'] is Map) {
+    final bestOffer = vendor['best_offer'] as Map;
+    final discount = double.tryParse(bestOffer['discount_percentage']?.toString() ?? '') ?? 0;
+    if (discount > 0) {
+      offerLabel = '${discount.toInt()}% OFF';
+    } else if (bestOffer['title']?.toString().isNotEmpty == true) {
+      offerLabel = bestOffer['title'].toString();
+    }
+  }
+
+  final distanceStr = vendor['distance_km'] != null && vendor['distance_km'].toString().isNotEmpty
+      ? '${vendor['distance_km']} km'
+      : '1.2 km';
+
+  final etaStr = vendor['delivery_time']?.toString() ?? vendor['eta']?.toString() ?? '20–30 min';
+
   return HomeRestaurant(
     id: id,
     name: name,
-    cuisine: description.isNotEmpty
-        ? description
-        : category.isNotEmpty
-        ? category
-        : fallback.cuisine,
+    cuisine: cuisine,
     rating: _numberValue(vendor['rating'] ?? vendor['average_rating']) > 0
         ? _numberValue(vendor['rating'] ?? vendor['average_rating'])
-        : fallback.rating,
-    reviewCount:
-        _integerValue(vendor['review_count'] ?? vendor['rating_count']) > 0
+        : 4.8,
+    reviewCount: _integerValue(vendor['review_count'] ?? vendor['rating_count']) > 0
         ? _integerValue(vendor['review_count'] ?? vendor['rating_count'])
-        : fallback.reviewCount,
-    distance: _textValue(vendor['distance_km'] ?? vendor['distance']).isNotEmpty
-        ? _textValue(vendor['distance_km'] ?? vendor['distance'])
-        : fallback.distance,
-    eta:
-        _textValue(
-          vendor['delivery_time'] ?? vendor['eta_minutes'] ?? vendor['eta'],
-        ).isNotEmpty
-        ? _textValue(
-            vendor['delivery_time'] ?? vendor['eta_minutes'] ?? vendor['eta'],
-          )
-        : fallback.eta,
-    isOpen: vendor['is_open_now'] is bool
-        ? vendor['is_open_now'] as bool
-        : fallback.isOpen,
-    imageUrl: imageUrl ?? fallback.imageUrl,
-    offerLabel: fallback.offerLabel,
+        : 120,
+    distance: distanceStr,
+    eta: etaStr,
+    isOpen: vendor['is_open_now'] is bool ? vendor['is_open_now'] as bool : true,
+    imageUrl: imageUrl,
+    offerLabel: offerLabel,
   );
 }
 
@@ -100,37 +71,6 @@ double _numberValue(Object? value) =>
 
 int _integerValue(Object? value) => int.tryParse(value?.toString() ?? '') ?? 0;
 
-String _textValue(Object? value) => value?.toString().trim() ?? '';
-
-String _valueOrFallback(Object? value, String fallback) {
-  final text = value?.toString().trim() ?? '';
-  return text.isEmpty ? fallback : text;
-}
-
-List<HomeRestaurant> _homeRestaurants(List<HomeRestaurant> live) {
-  return [...live, ..._fallbackRestaurants].take(3).toList();
-}
-
-RestaurantListing _toRestaurantListing(HomeRestaurant restaurant) =>
-    RestaurantListing(
-      id: restaurant.id,
-      name: restaurant.name,
-      imageUrl: restaurant.imageUrl,
-      fallbackIcon: Icons.restaurant_rounded,
-      cuisines: restaurant.cuisine
-          .split('·')
-          .map((value) => value.trim())
-          .where((value) => value.isNotEmpty)
-          .toList(),
-      rating: restaurant.rating,
-      reviewCount: restaurant.reviewCount,
-      distanceKm: double.tryParse(restaurant.distance.split(' ').first) ?? 0,
-      etaMins: int.tryParse(restaurant.eta.split(RegExp(r'[^0-9]')).first) ?? 0,
-      isOpenNow: restaurant.isOpen,
-      isPromoted: restaurant.offerLabel != null,
-      hasFreeDelivery: restaurant.offerLabel == 'Free delivery',
-      priceLevel: '₹₹',
-    );
 
 class HomeDiscoveryScreen extends StatefulWidget {
   const HomeDiscoveryScreen({super.key});
@@ -147,6 +87,11 @@ class _HomeDiscoveryScreenState extends State<HomeDiscoveryScreen> {
   @override
   void initState() {
     super.initState();
+    if (RestaurantService.cachedRestaurants.isNotEmpty) {
+      _liveRestaurants = RestaurantService.cachedRestaurants
+          .map((v) => _homeRestaurantFromVendor(v))
+          .toList();
+    }
     _loadRestaurants();
     _loadDeals();
   }
@@ -156,9 +101,7 @@ class _HomeDiscoveryScreenState extends State<HomeDiscoveryScreen> {
     if (!mounted || vendors.isEmpty) return;
     setState(
       () => _liveRestaurants = vendors
-          .asMap()
-          .entries
-          .map((entry) => _homeRestaurantFromVendor(entry.value, entry.key))
+          .map((v) => _homeRestaurantFromVendor(v))
           .toList(),
     );
   }
@@ -174,16 +117,12 @@ class _HomeDiscoveryScreenState extends State<HomeDiscoveryScreen> {
   Widget build(BuildContext context) {
     final pages = <Widget>[
       HomeDiscoveryView(
-        restaurants: _homeRestaurants(_liveRestaurants),
+        restaurants: _liveRestaurants,
         deals: dashboardDeals(_liveDeals),
         onSeeAllDeals: () => setState(() => _navIndex = 1),
       ),
-      HotDealsRow(previewDeals: dashboardDeals(_liveDeals)),
-      NearbyRestaurantsScreen(
-        restaurants: _liveRestaurants.isEmpty
-            ? null
-            : _liveRestaurants.map(_toRestaurantListing).toList(),
-      ),
+      const DealsScreen(),
+      const OrdersScreen(),
       const MainCartScreenPage(showBottomNav: false),
       ProfileScreen(
         showBottomNav: false,

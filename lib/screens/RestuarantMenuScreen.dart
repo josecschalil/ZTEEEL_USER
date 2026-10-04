@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'OfferExplanationScreen.dart';
 import 'FoodItemPage.dart';
+import 'CheckOutScreen.dart';
 import '../config/api_config.dart';
+import '../services/cart_service.dart';
 import '../services/restaurant_service.dart';
 
 class MenuColors {
@@ -32,177 +34,450 @@ class MenuItem {
   final String name;
   final String description;
   final double price;
+  final double discountedPrice;
   final String imageUrl;
-  final String? badge; // e.g. "BESTSELLER"
-  final String? tag; // e.g. "VEG"
+  final String? badge; // e.g. "30% OFF", "BESTSELLER", "COMBO"
+  final String? tag; // e.g. "VEG", "NON-VEG"
+  final String? offerTitle;
+  final double? discountPercentage;
+  final List<String> foodTags;
+
   const MenuItem({
     required this.id,
     required this.name,
     required this.description,
     required this.price,
+    required this.discountedPrice,
     required this.imageUrl,
     this.badge,
     this.tag,
+    this.offerTitle,
+    this.discountPercentage,
+    this.foodTags = const [],
   });
+
+  bool get hasDiscount => discountedPrice < (price - 0.009);
 }
 
 class MenuCategory {
+  final String id;
   final String title;
   final List<MenuItem> items;
-  const MenuCategory({required this.title, required this.items});
+  const MenuCategory({
+    required this.id,
+    required this.title,
+    required this.items,
+  });
 }
 
 class OfferCard {
+  final String id;
   final String badgeLabel;
   final String timer;
   final String headline;
   final String subline;
   final String fineprint;
+  final String code;
   final List<Color> gradient;
+  final double discountPercentage;
+  final String scopeType;
+  final List<String> itemIds;
+  final List<String> categoryIds;
+  final List<OfferApplicableItem> applicableItems;
+
   const OfferCard({
+    required this.id,
     required this.badgeLabel,
     required this.timer,
     required this.headline,
     required this.subline,
     required this.fineprint,
+    required this.code,
     required this.gradient,
+    required this.discountPercentage,
+    this.scopeType = 'all_menu',
+    this.itemIds = const [],
+    this.categoryIds = const [],
+    this.applicableItems = const [],
   });
 }
 
-const _heroImageUrl =
-    'https://lh3.googleusercontent.com/aida-public/AB6AXuBC4rVbFwoGXjLht7kVnBqIRzwWvs4Zjs9MXRO9KcTo0jtfVSf_7cntQUcOWZMo9w16aPaHimQ761pXteNZ6bWmgD-Z9MhZGuIBDnB1i3QsScDX33zWUZClf1BWVGbLlBU8z2XBgGXGN6lFJ7gaJxCoQ3np7fwv88HuUnvC-khsITpGFIaTnWeiWUwdhVuaMheHbMtARJ5UW2ZFT1zRRFniyyZQhpVu3y8V4_c3tp18JfzXF_Bf5JCHU5HWwrbdb3lkL9ySfGgKfVc5';
+class VendorDetailData {
+  final String id;
+  final String name;
+  final String address;
+  final String phone;
+  final String description;
+  final String imageUrl;
+  final bool isOpen;
+  final String openingHours;
+  final List<String> tags;
+  final double rating;
+  final int reviewCount;
+  final String distance;
 
-const _offers = [
-  OfferCard(
-    badgeLabel: 'PROMO',
-    timer: '02:15:30',
-    headline: '50% OFF',
-    subline: 'On all Pasta dishes',
-    fineprint: 'Min. order \$30',
-    gradient: [MenuColors.primary, Color(0xFFEA580C)],
-  ),
-  OfferCard(
-    badgeLabel: 'COMBO',
-    timer: '05:00:00',
-    headline: 'FREE DRINK',
-    subline: 'With any large pizza',
-    fineprint: 'Valid today only',
-    gradient: [Color(0xFF9333EA), Color(0xFF4F46E5)],
-  ),
+  const VendorDetailData({
+    required this.id,
+    required this.name,
+    required this.address,
+    required this.phone,
+    required this.description,
+    required this.imageUrl,
+    required this.isOpen,
+    required this.openingHours,
+    required this.tags,
+    required this.rating,
+    required this.reviewCount,
+    required this.distance,
+  });
+}
+
+const List<List<Color>> _offerGradients = [
+  [MenuColors.primary, Color(0xFFEA580C)],
+  [Color(0xFF9333EA), Color(0xFF4F46E5)],
+  [Color(0xFF0D9488), Color(0xFF0284C7)],
+  [Color(0xFFE11D48), Color(0xFFC026D3)],
+  [Color(0xFFD97706), Color(0xFFEA580C)],
 ];
 
-const _categories = [
-  MenuCategory(
-    title: 'Starters',
-    items: [
-      MenuItem(
-        id: 'bruschetta',
-        name: 'Classic Bruschetta',
-        description:
-            'Toasted bread topped with fresh tomatoes, basil, garlic, and extra virgin olive oil.',
-        price: 8.50,
-        imageUrl:
-            'https://lh3.googleusercontent.com/aida-public/AB6AXuC0GC79J4Zm8F2EUKSyEXzxTAEI94jwQagtF87LSrYHNS7jvgGOaYmxPQjquEEH_VtxZ59iIN8c3kVmtvWyUk9rgoXJihR2mCIauaELYlJp7lm17q75uq4R2ycoIVSXG5Yy00xTKvmHEHTEHv9ZDo-j48R7KPwC5iQ6TEhzUcmMjJ4Kmf4WnFcMClT2gfowVEJA7l0OLe32RVEkQummZa6Gws-2B7CgQZrN640LwY6hxM1CK5_AW4J3zpffBHBwyxG7ICpgi1pJfaTr',
-        badge: 'BESTSELLER',
-      ),
-      MenuItem(
-        id: 'calamari',
-        name: 'Crispy Calamari',
-        description:
-            'Golden fried squid rings served with tartare sauce and lemon wedge.',
-        price: 12.00,
-        imageUrl:
-            'https://lh3.googleusercontent.com/aida-public/AB6AXuCkI0TATJPsgwsaat2AW6Fap5fIXeLSNAnIX7OZlfqp2hzhoQonPI6Hkfnl8QbHHzA-6nLahdJ6ClTs8dVM691mkZV0RfJRWurapBWxEJoUSKmtuLvyXOcXQ9RuLZw293hRGe1qfO5dWyPPEpIHqFdtRfdXRTWKTE7VgyKsiAvKtxjxG7WvA9EkKTCpxvVkjkx1hCPFSruChrYmBq0cDYCH0DuavItlBGuUslw7atPUZHVPct__WQ8rD-oJ2MCl2Yrk9JE8ZuGIe4sU',
-      ),
-    ],
-  ),
-  MenuCategory(
-    title: 'Main Course',
-    items: [
-      MenuItem(
-        id: 'margherita',
-        name: 'Margherita Pizza',
-        description:
-            'San Marzano tomato sauce, fresh mozzarella di bufala, basil.',
-        price: 14.50,
-        imageUrl:
-            'https://lh3.googleusercontent.com/aida-public/AB6AXuC_YRGus2PCgcyztPZQvwGeLwPHYRvyM-dUBc5hfxSoZbmcuU9r22mwMR4U8k856S-2g6uVw_Bs_p9HtDzWMu_eCVwv-9Jz7yZcSEPbQYsiA69iplJtKR9m8NNT4NNbkwHDQ4BlrnI4E19_Ua0IMfjPF9dz0CxQ840GZpAOzo83btj-Q0Xn95qYmzcNMAMKGWn-FbJETu1K4mulbRPdBUrbgD3MM2EVAuhxxl0yX-FR_mB7t_u_2a_lWagWPKMq8iuPoZV1drMe-9xT',
-      ),
-      MenuItem(
-        id: 'truffle_pasta',
-        name: 'Truffle Pasta',
-        description:
-            'Tagliatelle with creamy black truffle sauce and parmesan.',
-        price: 18.00,
-        imageUrl:
-            'https://lh3.googleusercontent.com/aida-public/AB6AXuDE52O8N8mMKZbpP7xYKADq_Q7TB5iJZUJQEb80XS6VuNpTnmbweZFBt_-Js_qnBNx62GBZJraK2M2YYb0Uygrv1FJ43D5ei7V-HMyuWfXXa-Li61rNfSR20a4f_HYJD4W8rxMWnb89eeUqXl1v1ZUY6XrYE97ZD4nZXOSWAtLWB3-_uSryOq8T0smAyASpMPhI-loxjh8f0zSf1gd91h5NWeXBRJeuKH2ORm4-4htCJ5BcKPZHzkIsDb_e39cUR2PgHx5uQimvzL25',
-        tag: 'VEG',
-      ),
-    ],
-  ),
-];
-
-const _categoryPills = [
-  'All Items',
-  'Starters',
-  'Main Course',
-  'Beverages',
-  'Desserts',
-];
-
-List<MenuCategory> _mapCategories(List<Map<String, dynamic>> data) {
-  final fallbackItems = _categories
-      .expand((category) => category.items)
-      .toList();
-  var fallbackIndex = 0;
-
+List<MenuCategory> _mapCategories(
+  List<Map<String, dynamic>> categoryData,
+  List<Map<String, dynamic>> offersData,
+) {
   final categories = <MenuCategory>[];
-  for (final category in data) {
+
+  // Pre-index offers for O(1) matching
+  double maxAllMenuDiscount = 0.0;
+  String? allMenuOfferTitle;
+  final Map<String, (double discount, String title)> itemOfferIndex = {};
+  final Map<String, (double discount, String title)> categoryOfferIndex = {};
+
+  for (final offer in offersData) {
+    final discount = double.tryParse(offer['discount_percentage']?.toString() ?? '') ?? 0.0;
+    if (discount <= 0) continue;
+    final title = offer['title']?.toString() ?? '';
+    final scopeType = offer['scope_type']?.toString() ?? 'all_menu';
+
+    if (scopeType == 'all_menu') {
+      if (discount > maxAllMenuDiscount) {
+        maxAllMenuDiscount = discount;
+        allMenuOfferTitle = title;
+      }
+    }
+
+    if (offer['item_ids'] is List) {
+      for (final id in offer['item_ids'] as List) {
+        final idStr = id?.toString();
+        if (idStr != null) {
+          final existing = itemOfferIndex[idStr];
+          if (existing == null || discount > existing.$1) {
+            itemOfferIndex[idStr] = (discount, title);
+          }
+        }
+      }
+    }
+
+    if (offer['category_ids'] is List) {
+      for (final id in offer['category_ids'] as List) {
+        final idStr = id?.toString();
+        if (idStr != null) {
+          final existing = categoryOfferIndex[idStr];
+          if (existing == null || discount > existing.$1) {
+            categoryOfferIndex[idStr] = (discount, title);
+          }
+        }
+      }
+    }
+  }
+
+  for (final category in categoryData) {
     final itemData = category['menu_items'];
     if (itemData is! List || itemData.isEmpty) continue;
 
-    final fallbackCategory =
-        _categories[categories.length % _categories.length];
+    final categoryId = category['id']?.toString() ?? '';
+    final categoryName = category['name']?.toString().trim() ?? 'Menu';
     final items = <MenuItem>[];
+
     for (final item in itemData.whereType<Map>()) {
-      final fallback = fallbackItems[fallbackIndex % fallbackItems.length];
-      fallbackIndex++;
-      final image = item['image']?.toString() ?? '';
+      final id = item['id']?.toString() ?? '';
+      final name = item['name']?.toString().trim() ?? 'Dish';
+      final description = item['description']?.toString().trim() ?? '';
+      final rawPrice = double.tryParse(item['price']?.toString() ?? '') ?? 0.0;
+      final image = _resolveImageUrl(item['image']?.toString() ?? '');
+
+      // Extract food tags
+      final foodTagList = <String>[];
+      if (item['food_tags'] is List) {
+        for (final tagObj in (item['food_tags'] as List).whereType<Map>()) {
+          final tagName = tagObj['name']?.toString() ?? '';
+          if (tagName.isNotEmpty) foodTagList.add(tagName);
+        }
+      }
+
+      // Check Best Offer
+      Map<String, dynamic>? bestOfferMap;
+      if (item['best_offer'] is Map<String, dynamic>) {
+        bestOfferMap = Map<String, dynamic>.from(item['best_offer']);
+      } else if (item['best_offer'] is Map) {
+        bestOfferMap = Map<String, dynamic>.from(item['best_offer'] as Map);
+      }
+
+      double? discountPct;
+      String? offerTitle;
+      if (bestOfferMap != null) {
+        discountPct = double.tryParse(bestOfferMap['discount_percentage']?.toString() ?? '');
+        offerTitle = bestOfferMap['title']?.toString();
+      }
+
+      // Calculate or read discounted price (best offer with highest discount)
+      double discountedPrice = rawPrice;
+      if (item['discounted_price'] != null) {
+        final parsed = double.tryParse(item['discounted_price'].toString());
+        if (parsed != null) {
+          discountedPrice = parsed;
+        }
+      } else if (discountPct != null && discountPct > 0) {
+        discountedPrice = rawPrice * (1.0 - (discountPct / 100.0));
+      }
+
+      // Check pre-indexed offers if best_offer was null
+      if (bestOfferMap == null && offersData.isNotEmpty) {
+        double bestDis = maxAllMenuDiscount;
+        String? bestTitle = allMenuOfferTitle;
+
+        final catOffer = categoryOfferIndex[categoryId];
+        if (catOffer != null && catOffer.$1 > bestDis) {
+          bestDis = catOffer.$1;
+          bestTitle = catOffer.$2;
+        }
+
+        final itemOffer = itemOfferIndex[id];
+        if (itemOffer != null && itemOffer.$1 > bestDis) {
+          bestDis = itemOffer.$1;
+          bestTitle = itemOffer.$2;
+        }
+
+        if (bestDis > 0) {
+          discountPct = bestDis;
+          offerTitle = bestTitle;
+          discountedPrice = rawPrice * (1.0 - (bestDis / 100.0));
+        }
+      }
+
+      // Tag determination (VEG / NON-VEG)
+      String? itemTag;
+      final lowerName = name.toLowerCase();
+      final lowerDesc = description.toLowerCase();
+      final lowerTags = foodTagList.map((t) => t.toLowerCase()).toList();
+
+      final isExplicitNonVeg = lowerTags.any((t) => t.contains('non-veg') || t.contains('meat') || t.contains('chicken') || t.contains('mutton') || t.contains('fish') || t.contains('beef') || t.contains('pork') || t.contains('egg')) ||
+          lowerName.contains('chicken') || lowerName.contains('mutton') || lowerName.contains('fish') || lowerName.contains('beef') || lowerName.contains('pork') || lowerName.contains('egg') || lowerName.contains('calamari') || lowerName.contains('prawn') ||
+          lowerDesc.contains('chicken') || lowerDesc.contains('meat') || lowerDesc.contains('mutton') || lowerDesc.contains('beef') || lowerDesc.contains('fish') || lowerDesc.contains('pork');
+
+      final isExplicitVeg = lowerTags.any((t) => (t.contains('veg') && !t.contains('non-veg')) || t.contains('vegan') || t.contains('paneer') || t.contains('salad') || t.contains('pizza')) ||
+          lowerName.contains('veg') || lowerName.contains('paneer') || lowerName.contains('mushroom') || lowerName.contains('salad') || lowerName.contains('bruschetta') ||
+          lowerDesc.contains('vegetarian') || lowerDesc.contains('fresh vegetable') || lowerDesc.contains('paneer');
+
+      if (isExplicitNonVeg) {
+        itemTag = 'NON-VEG';
+      } else if (isExplicitVeg) {
+        itemTag = 'VEG';
+      } else {
+        itemTag = 'VEG';
+      }
+
+      // Badge determination
+      String? badge;
+      if (discountPct != null && discountPct > 0) {
+        badge = '${discountPct.toInt()}% OFF';
+      } else if (item['item_type'] == 'combo') {
+        badge = 'COMBO';
+      }
+
       items.add(
         MenuItem(
-          id: item['id']?.toString() ?? fallback.id,
-          name: _menuText(item['name'], fallback.name),
-          description: _menuText(item['description'], fallback.description),
-          price:
-              double.tryParse(item['price']?.toString() ?? '') ??
-              fallback.price,
-          imageUrl: _menuImageUrl(image, fallback.imageUrl),
-          badge: fallback.badge,
-          tag: fallback.tag,
+          id: id,
+          name: name,
+          description: description,
+          price: rawPrice,
+          discountedPrice: discountedPrice,
+          imageUrl: image,
+          badge: badge,
+          tag: itemTag,
+          offerTitle: offerTitle,
+          discountPercentage: discountPct,
+          foodTags: foodTagList,
         ),
       );
     }
+
     if (items.isNotEmpty) {
       categories.add(
         MenuCategory(
-          title: _menuText(category['name'], fallbackCategory.title),
+          id: categoryId,
+          title: categoryName,
           items: items,
         ),
       );
     }
   }
-  return categories.isEmpty ? _categories : categories;
+
+  return categories;
 }
 
-String _menuText(Object? value, String fallback) {
-  final text = value?.toString().trim() ?? '';
-  return text.isEmpty ? fallback : text;
+List<OfferCard> _mapOffers(
+  List<Map<String, dynamic>> offersData,
+  List<MenuCategory> categories,
+) {
+  final cards = <OfferCard>[];
+  var gradientIndex = 0;
+
+  for (final offer in offersData) {
+    final id = offer['id']?.toString() ?? '';
+    final title = offer['title']?.toString().trim() ?? 'Special Offer';
+    final desc = offer['description']?.toString().trim() ?? '';
+    final discount = double.tryParse(offer['discount_percentage']?.toString() ?? '') ?? 0.0;
+    final endsAt = offer['ends_at']?.toString();
+    final gradient = _offerGradients[gradientIndex % _offerGradients.length];
+    gradientIndex++;
+
+    final scopeType = offer['scope_type']?.toString() ?? 'all_menu';
+
+    final itemIds = <String>{};
+    final categoryIds = <String>{};
+
+    if (offer['targets'] is Map) {
+      final targets = offer['targets'] as Map;
+      if (targets['item_ids'] is List) {
+        for (final x in targets['item_ids'] as List) {
+          if (x != null) itemIds.add(x.toString());
+        }
+      }
+      if (targets['category_ids'] is List) {
+        for (final x in targets['category_ids'] as List) {
+          if (x != null) categoryIds.add(x.toString());
+        }
+      }
+    }
+    if (offer['item_ids'] is List) {
+      for (final x in offer['item_ids'] as List) {
+        if (x != null) itemIds.add(x.toString());
+      }
+    }
+    if (offer['category_ids'] is List) {
+      for (final x in offer['category_ids'] as List) {
+        if (x != null) categoryIds.add(x.toString());
+      }
+    }
+
+    final applicableItems = <OfferApplicableItem>[];
+    for (final category in categories) {
+      final isCategoryTarget = scopeType == 'category_set' && categoryIds.contains(category.id);
+
+      for (final item in category.items) {
+        bool matches = false;
+        if (scopeType == 'all_menu') {
+          matches = true;
+        } else if (isCategoryTarget) {
+          matches = true;
+        } else if (scopeType == 'item_set' && itemIds.contains(item.id)) {
+          matches = true;
+        } else if (item.offerTitle == title || (discount > 0 && item.discountPercentage == discount)) {
+          matches = true;
+        }
+
+        if (matches) {
+          final calculatedDiscountedPrice = (item.price * (1.0 - (discount / 100.0))).clamp(0.0, item.price);
+          final bestPrice = item.hasDiscount
+              ? item.discountedPrice
+              : (discount > 0 ? calculatedDiscountedPrice : item.price);
+
+          applicableItems.add(
+            OfferApplicableItem(
+              id: item.id,
+              name: item.name,
+              description: item.description,
+              price: item.price,
+              discountedPrice: bestPrice,
+              imageUrl: item.imageUrl,
+              badge: discount > 0 ? '${discount.toInt()}% OFF' : item.badge,
+              tag: item.tag,
+              categoryName: category.title,
+            ),
+          );
+        }
+      }
+    }
+
+    String timer = 'Limited Time';
+    if (endsAt != null && endsAt.isNotEmpty) {
+      try {
+        final date = DateTime.parse(endsAt);
+        final diff = date.difference(DateTime.now());
+        if (!diff.isNegative) {
+          final hours = diff.inHours.toString().padLeft(2, '0');
+          final mins = (diff.inMinutes % 60).toString().padLeft(2, '0');
+          timer = '$hours:$mins left';
+        } else {
+          timer = 'Ongoing';
+        }
+      } catch (_) {
+        timer = 'Limited Offer';
+      }
+    }
+
+    final headline = discount > 0 ? '${discount.toInt()}% OFF' : title;
+    final subline = desc.isNotEmpty
+        ? desc
+        : (discount > 0 ? 'Auto-applied on $title' : 'Auto-applied on menu items');
+    final code = 'SAVE${discount.toInt() > 0 ? discount.toInt() : ''}';
+
+    cards.add(
+      OfferCard(
+        id: id,
+        badgeLabel: discount > 0 ? '${discount.toInt()}% OFF' : 'DEAL',
+        timer: timer,
+        headline: headline,
+        subline: subline,
+        fineprint: 'Discount automatically applied to menu items',
+        code: code,
+        gradient: gradient,
+        discountPercentage: discount,
+        scopeType: scopeType,
+        itemIds: itemIds.toList(),
+        categoryIds: categoryIds.toList(),
+        applicableItems: applicableItems,
+      ),
+    );
+  }
+
+  return cards;
 }
 
-String _menuImageUrl(String image, String fallback) {
-  if (image.isEmpty) return fallback;
+String _resolveImageUrl(String image) {
+  if (image.isEmpty) return '';
   if (image.startsWith('http://') || image.startsWith('https://')) return image;
   return '${ApiConfig.baseUrl}${image.startsWith('/') ? '' : '/'}$image';
+}
+
+String _formatBusinessHours(List<dynamic>? businessHours, bool isOpen) {
+  if (businessHours == null || businessHours.isEmpty) {
+    return isOpen ? 'Open Now • 10:00 AM – 11:00 PM' : 'Closed';
+  }
+
+  try {
+    for (final day in businessHours) {
+      if (day is Map && day['is_closed'] == false && day['slots'] is List && (day['slots'] as List).isNotEmpty) {
+        final slot = (day['slots'] as List).first as Map;
+        final opens = slot['opens_at']?.toString().substring(0, 5) ?? '10:00';
+        final closes = slot['closes_at']?.toString().substring(0, 5) ?? '22:00';
+        final status = isOpen ? 'Open Now' : 'Closed';
+        return '$status • $opens – $closes (Mon - Sun)';
+      }
+    }
+  } catch (_) {}
+
+  return isOpen ? 'Open Now' : 'Closed';
 }
 
 /// ---------------------------------------------------------------------
@@ -214,6 +489,7 @@ class RestaurantMenuScreen extends StatefulWidget {
   final String? heroImageUrl;
   final String? cuisine;
   final bool? isOpen;
+
   const RestaurantMenuScreen({
     super.key,
     this.vendorId,
@@ -228,59 +504,357 @@ class RestaurantMenuScreen extends StatefulWidget {
 }
 
 class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
-  final Map<String, int> _cart = {}; // itemId -> quantity
+  Map<String, int> _cart = {}; // itemId -> quantity
   int _tabIndex = 0; // Menu / Offers / Reviews / Info
   String _selectedPill = 'All Items';
   late final PageController _pageController;
-  List<MenuCategory> _menuCategories = _categories;
+
+  bool _isLoading = true;
+  List<MenuCategory> _menuCategories = [];
+  List<OfferCard> _vendorOffers = [];
+  VendorDetailData? _vendorDetail;
 
   @override
   void initState() {
     super.initState();
     _pageController = PageController(initialPage: _tabIndex);
-    _loadMenu();
+    _initializeVendorInfo();
+    _loadInitialCachedData();
+    _loadData();
+    _syncFromGlobalCart();
+    CartService.cartNotifier.addListener(_syncFromGlobalCart);
+    CartService.basketsNotifier.addListener(_syncFromGlobalCart);
   }
 
-  Future<void> _loadMenu() async {
+  void _loadInitialCachedData() {
     final vendorId = widget.vendorId;
     if (vendorId == null || vendorId.isEmpty) return;
-    final categories = await RestaurantService.fetchVendorMenu(vendorId);
-    if (!mounted || categories.isEmpty) return;
-    setState(() => _menuCategories = _mapCategories(categories));
+
+    final cachedMenu = RestaurantService.getCachedMenu(vendorId);
+    final cachedOffers = RestaurantService.getCachedOffers(vendorId);
+    final cachedVendor = RestaurantService.getCachedVendor(vendorId);
+
+    if (cachedMenu != null && cachedMenu.isNotEmpty) {
+      final offersList = cachedOffers ?? const [];
+      final parsedCategories = _mapCategories(cachedMenu, offersList);
+      final parsedOffers = _mapOffers(offersList, parsedCategories);
+
+      _menuCategories = parsedCategories;
+      _vendorOffers = parsedOffers;
+      _isLoading = false;
+
+      if (cachedVendor != null) {
+        _applyVendorDetail(cachedVendor, parsedCategories);
+      }
+    }
+  }
+
+  void _applyVendorDetail(Map<String, dynamic> vendorData, List<MenuCategory> categories) {
+    final businessName = vendorData['business_name']?.toString() ?? widget.restaurantName ?? 'Restaurant';
+    final address = vendorData['address']?.toString() ?? '';
+    final phone = vendorData['phone_number']?.toString() ?? '';
+    final desc = vendorData['shop_description']?.toString() ?? '';
+    final coverImg = _resolveImageUrl(vendorData['cover_image']?.toString() ?? vendorData['icon_image']?.toString() ?? '');
+    final isOpen = vendorData['is_open_now'] as bool? ?? widget.isOpen ?? true;
+    final hoursStr = _formatBusinessHours(vendorData['business_hours'] as List<dynamic>?, isOpen);
+
+    final featureList = <String>[];
+    if (widget.cuisine?.isNotEmpty == true) featureList.add(widget.cuisine!);
+    for (final cat in categories) {
+      if (!featureList.contains(cat.title)) featureList.add(cat.title);
+    }
+    if (featureList.isEmpty) featureList.addAll(['Fresh Food', 'Fast Prep', 'Hygiene Verified']);
+
+    _vendorDetail = VendorDetailData(
+      id: widget.vendorId ?? '',
+      name: businessName,
+      address: address.isNotEmpty ? address : 'Address details on order',
+      phone: phone,
+      description: desc.isNotEmpty ? desc : 'Serving freshly made premium dishes with authentic recipes.',
+      imageUrl: coverImg.isNotEmpty ? coverImg : (widget.heroImageUrl ?? ''),
+      isOpen: isOpen,
+      openingHours: hoursStr,
+      tags: featureList,
+      rating: 4.8,
+      reviewCount: 156,
+      distance: '1.8 km',
+    );
+  }
+
+  void _syncFromGlobalCart() {
+    if (!mounted) return;
+    final currentVendorId = widget.vendorId ?? _vendorDetail?.id;
+    if (currentVendorId == null || currentVendorId.isEmpty) return;
+
+    final basket = CartService.getBasket(currentVendorId);
+    if (basket != null && basket.isNotEmpty) {
+      final updatedCart = <String, int>{};
+      for (final item in basket.items) {
+        final key = item.menuItemId.isNotEmpty ? item.menuItemId : item.id;
+        updatedCart[key] = item.quantity;
+      }
+      setState(() {
+        _cart = updatedCart;
+      });
+      return;
+    }
+
+    final current = CartService.currentCart;
+    if (current != null && (current.vendor == null || current.vendor?.id == currentVendorId) && current.isNotEmpty) {
+      final updatedCart = <String, int>{};
+      for (final item in current.items) {
+        final key = item.menuItemId.isNotEmpty ? item.menuItemId : item.id;
+        updatedCart[key] = item.quantity;
+      }
+      setState(() {
+        _cart = updatedCart;
+      });
+    } else if (current != null && current.vendor != null && current.vendor?.id != currentVendorId) {
+      if (_cart.isNotEmpty) {
+        setState(() {
+          _cart = {};
+        });
+      }
+    }
+  }
+
+  void _initializeVendorInfo() {
+    _vendorDetail = VendorDetailData(
+      id: widget.vendorId ?? '',
+      name: widget.restaurantName ?? 'Restaurant',
+      address: 'Restaurant Address',
+      phone: '',
+      description: 'Authentic flavors and fresh dishes prepared daily.',
+      imageUrl: widget.heroImageUrl ?? '',
+      isOpen: widget.isOpen ?? true,
+      openingHours: (widget.isOpen ?? true) ? 'Open Now • 10:00 AM – 11:00 PM' : 'Closed',
+      tags: widget.cuisine?.isNotEmpty == true ? [widget.cuisine!] : ['Multi-Cuisine'],
+      rating: 4.8,
+      reviewCount: 142,
+      distance: '1.5 km',
+    );
+  }
+
+  Future<void> _loadData() async {
+    final vendorId = widget.vendorId;
+    if (vendorId == null || vendorId.isEmpty) {
+      if (mounted) setState(() => _isLoading = false);
+      return;
+    }
+
+    if (_menuCategories.isEmpty) {
+      setState(() => _isLoading = true);
+    }
+
+    try {
+      final results = await Future.wait([
+        RestaurantService.fetchVendorMenu(vendorId, forceRefresh: true),
+        RestaurantService.fetchVendorOffers(vendorId, forceRefresh: true),
+        RestaurantService.fetchVendor(vendorId, forceRefresh: true),
+      ]);
+
+      if (!mounted) return;
+
+      final menuData = results[0] as List<Map<String, dynamic>>;
+      final offersData = results[1] as List<Map<String, dynamic>>;
+      final vendorData = results[2] as Map<String, dynamic>?;
+
+      final parsedCategories = _mapCategories(menuData, offersData);
+      final parsedOffers = _mapOffers(offersData, parsedCategories);
+
+      if (vendorData != null) {
+        _applyVendorDetail(vendorData, parsedCategories);
+      }
+
+      setState(() {
+        _menuCategories = parsedCategories;
+        _vendorOffers = parsedOffers;
+        _isLoading = false;
+      });
+      _syncFromGlobalCart();
+    } catch (_) {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  MenuItem? _findMenuItem(String id) {
+    for (final cat in _menuCategories) {
+      for (final itm in cat.items) {
+        if (itm.id == id) return itm;
+      }
+    }
+    return null;
   }
 
   @override
   void dispose() {
+    CartService.cartNotifier.removeListener(_syncFromGlobalCart);
+    CartService.basketsNotifier.removeListener(_syncFromGlobalCart);
     _pageController.dispose();
     super.dispose();
   }
 
   double get _cartTotal {
+    final currentVendorId = widget.vendorId ?? _vendorDetail?.id;
+    final basket = CartService.getBasket(currentVendorId);
+    if (basket != null && basket.isNotEmpty) {
+      return basket.finalTotal > 0 ? basket.finalTotal : basket.subtotal;
+    }
+    final current = CartService.currentCart;
+    if (current != null && (current.vendor == null || current.vendor?.id == currentVendorId) && current.isNotEmpty) {
+      return current.finalTotal > 0 ? current.finalTotal : current.subtotal;
+    }
     double total = 0;
     for (final category in _menuCategories) {
       for (final item in category.items) {
         final qty = _cart[item.id] ?? 0;
-        total += qty * item.price;
+        total += qty * item.discountedPrice;
       }
     }
     return total;
   }
 
-  int get _cartCount => _cart.values.fold(0, (sum, q) => sum + q);
-
-  void _addItem(String id) {
-    setState(() => _cart[id] = (_cart[id] ?? 0) + 1);
+  int get _cartCount {
+    final currentVendorId = widget.vendorId ?? _vendorDetail?.id;
+    final basket = CartService.getBasket(currentVendorId);
+    if (basket != null && basket.isNotEmpty) {
+      return basket.totalItemCount;
+    }
+    final current = CartService.currentCart;
+    if (current != null && (current.vendor == null || current.vendor?.id == currentVendorId) && current.isNotEmpty) {
+      return current.totalItemCount;
+    }
+    return _cart.values.fold(0, (sum, q) => sum + q);
   }
 
-  void _removeItem(String id) {
+  Future<void> _addItem(String id) async {
+    final currentQty = _cart[id] ?? 0;
+    final newQty = currentQty + 1;
+    setState(() => _cart[id] = newQty);
+
+    final item = _findMenuItem(id);
+    final vendorId = widget.vendorId ?? _vendorDetail?.id;
+
+    final res = await CartService.addItem(
+      menuItemId: id,
+      quantity: 1,
+      vendorId: vendorId,
+      vendorName: _vendorDetail?.name,
+      vendorCoverImage: _vendorDetail?.imageUrl,
+      itemName: item?.name,
+      unitPrice: item?.price,
+      discountedPrice: item?.discountedPrice,
+      itemImage: item?.imageUrl,
+      itemDescription: item?.description,
+    );
+    if (!mounted) return;
+
+    if (res['conflict'] == true) {
+      final shouldClear = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Start New Basket?'),
+          content: const Text(
+            'Your cart currently contains items from another restaurant. Would you like to clear your cart and start fresh with this order?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: MenuColors.primary),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Start New', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      );
+
+      if (shouldClear == true) {
+        await CartService.clearCart();
+        final retryRes = await CartService.addItem(
+          menuItemId: id,
+          quantity: 1,
+          vendorId: vendorId,
+          vendorName: _vendorDetail?.name,
+          vendorCoverImage: _vendorDetail?.imageUrl,
+          itemName: item?.name,
+          unitPrice: item?.price,
+          discountedPrice: item?.discountedPrice,
+          itemImage: item?.imageUrl,
+          itemDescription: item?.description,
+        );
+        if (mounted && retryRes['success'] == true) {
+          setState(() {
+            _cart = {id: 1};
+          });
+        }
+      } else {
+        setState(() {
+          if (currentQty <= 0) {
+            _cart.remove(id);
+          } else {
+            _cart[id] = currentQty;
+          }
+        });
+      }
+    }
+  }
+
+  Future<void> _setItemQuantity(String id, int targetQty) async {
+    if (targetQty <= 0) {
+      await _removeItem(id);
+      return;
+    }
+
+    setState(() => _cart[id] = targetQty);
+    final vendorId = widget.vendorId ?? _vendorDetail?.id;
+    final item = _findMenuItem(id);
+
+    await CartService.setItemQuantity(
+      vendorId: vendorId ?? '',
+      menuItemId: id,
+      targetQuantity: targetQty,
+      itemName: item?.name,
+      unitPrice: item?.price,
+      discountedPrice: item?.discountedPrice,
+      itemImage: item?.imageUrl,
+    );
+  }
+
+  Future<void> _removeItem(String id) async {
+    final current = _cart[id] ?? 0;
+    if (current <= 0) return;
+
+    final newQty = current - 1;
     setState(() {
-      final current = _cart[id] ?? 0;
-      if (current <= 1) {
+      if (newQty <= 0) {
         _cart.remove(id);
       } else {
-        _cart[id] = current - 1;
+        _cart[id] = newQty;
       }
     });
+
+    final vendorId = widget.vendorId ?? _vendorDetail?.id;
+    if (newQty <= 0) {
+      await CartService.removeItem(id, vendorId: vendorId);
+    } else {
+      await CartService.updateQuantity(
+        cartItemId: id,
+        quantity: newQty,
+        vendorId: vendorId,
+      );
+    }
+  }
+
+  void _proceedToCheckout() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => CheckoutScreen(vendorId: widget.vendorId),
+      ),
+    );
   }
 
   @override
@@ -288,58 +862,87 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bgColor = isDark ? MenuColors.bgDark : MenuColors.bgLight;
 
+    final vendor = _vendorDetail!;
+
     return Scaffold(
       backgroundColor: bgColor,
       body: Stack(
         children: [
-          NestedScrollView(
-            headerSliverBuilder: (context, innerBoxIsScrolled) {
-              return [
-                SliverToBoxAdapter(
-                  child: _HeroSection(
-                    isDark: isDark,
-                    restaurantName: widget.restaurantName,
-                    imageUrl: widget.heroImageUrl,
-                    cuisine: widget.cuisine,
-                    isOpen: widget.isOpen,
+          RefreshIndicator(
+            color: MenuColors.primary,
+            onRefresh: _loadData,
+            child: NestedScrollView(
+              headerSliverBuilder: (context, innerBoxIsScrolled) {
+                return [
+                  SliverToBoxAdapter(
+                    child: _HeroSection(
+                      isDark: isDark,
+                      restaurantName: vendor.name,
+                      imageUrl: vendor.imageUrl,
+                      cuisine: vendor.tags.join(', '),
+                      isOpen: vendor.isOpen,
+                      rating: vendor.rating,
+                      reviewCount: vendor.reviewCount,
+                      distance: vendor.distance,
+                    ),
                   ),
-                ),
-                SliverPersistentHeader(
-                  pinned: true,
-                  delegate: _TabsHeaderDelegate(
-                    selectedIndex: _tabIndex,
-                    isDark: isDark,
-                    onSelect: (i) {
-                      setState(() => _tabIndex = i);
-                      _pageController.animateToPage(
-                        i,
-                        duration: const Duration(milliseconds: 300),
-                        curve: Curves.easeInOut,
-                      );
-                    },
+                  SliverPersistentHeader(
+                    pinned: true,
+                    delegate: _TabsHeaderDelegate(
+                      selectedIndex: _tabIndex,
+                      offersCount: _vendorOffers.length,
+                      isDark: isDark,
+                      onSelect: (i) {
+                        setState(() => _tabIndex = i);
+                        _pageController.animateToPage(
+                          i,
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeInOut,
+                        );
+                      },
+                    ),
                   ),
-                ),
-              ];
-            },
-            body: PageView(
-              controller: _pageController,
-              onPageChanged: (i) {
-                setState(() => _tabIndex = i);
+                ];
               },
-              children: [
-                _MenuView(
-                  selectedPill: _selectedPill,
-                  onSelectPill: (p) => setState(() => _selectedPill = p),
-                  categories: _menuCategories,
-                  cart: _cart,
-                  isDark: isDark,
-                  onAdd: _addItem,
-                  onRemove: _removeItem,
-                ),
-                _OffersView(isDark: isDark),
-                _ReviewsView(isDark: isDark),
-                _InfoView(isDark: isDark),
-              ],
+              body: PageView(
+                controller: _pageController,
+                onPageChanged: (i) {
+                  setState(() => _tabIndex = i);
+                },
+                children: [
+                  _MenuView(
+                    selectedPill: _selectedPill,
+                    onSelectPill: (p) => setState(() => _selectedPill = p),
+                    categories: _menuCategories,
+                    offers: _vendorOffers,
+                    cart: _cart,
+                    isLoading: _isLoading,
+                    isDark: isDark,
+                    onAdd: _addItem,
+                    onRemove: _removeItem,
+                    onSetQuantity: _setItemQuantity,
+                    restaurantName: vendor.name,
+                  ),
+                  _OffersView(
+                    offers: _vendorOffers,
+                    isDark: isDark,
+                    restaurantName: vendor.name,
+                    cart: _cart,
+                    onAdd: _addItem,
+                    onRemove: _removeItem,
+                  ),
+                  _ReviewsView(
+                    vendorName: vendor.name,
+                    rating: vendor.rating,
+                    reviewCount: vendor.reviewCount,
+                    isDark: isDark,
+                  ),
+                  _InfoView(
+                    vendor: vendor,
+                    isDark: isDark,
+                  ),
+                ],
+              ),
             ),
           ),
           // Fixed top action buttons over the hero image
@@ -355,7 +958,11 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
               bottom: 24,
               left: 20,
               right: 20,
-              child: _ViewCartButton(count: _cartCount, total: _cartTotal),
+              child: _ViewCartButton(
+                count: _cartCount,
+                total: _cartTotal,
+                onTap: _proceedToCheckout,
+              ),
             ),
         ],
       ),
@@ -459,16 +1066,23 @@ class _RoundIconButton extends StatelessWidget {
 /// ---------------------------------------------------------------------
 class _HeroSection extends StatelessWidget {
   final bool isDark;
-  final String? restaurantName;
-  final String? imageUrl;
-  final String? cuisine;
-  final bool? isOpen;
+  final String restaurantName;
+  final String imageUrl;
+  final String cuisine;
+  final bool isOpen;
+  final double rating;
+  final int reviewCount;
+  final String distance;
+
   const _HeroSection({
     required this.isDark,
-    this.restaurantName,
-    this.imageUrl,
-    this.cuisine,
-    this.isOpen,
+    required this.restaurantName,
+    required this.imageUrl,
+    required this.cuisine,
+    required this.isOpen,
+    required this.rating,
+    required this.reviewCount,
+    required this.distance,
   });
 
   @override
@@ -480,10 +1094,19 @@ class _HeroSection extends StatelessWidget {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          Image.network(
-            imageUrl?.isNotEmpty == true ? imageUrl! : _heroImageUrl,
-            fit: BoxFit.cover,
-          ),
+          imageUrl.isNotEmpty
+              ? Image.network(
+                  imageUrl,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    color: isDark ? MenuColors.cardDark : Colors.grey[300],
+                    child: const Icon(Icons.restaurant_rounded, size: 60, color: Colors.grey),
+                  ),
+                )
+              : Container(
+                  color: isDark ? MenuColors.cardDark : Colors.grey[300],
+                  child: const Icon(Icons.restaurant_rounded, size: 60, color: Colors.grey),
+                ),
           DecoratedBox(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -512,9 +1135,7 @@ class _HeroSection extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          restaurantName?.isNotEmpty == true
-                              ? restaurantName!
-                              : 'The Golden Spoon',
+                          restaurantName,
                           style: TextStyle(
                             fontSize: 26,
                             fontWeight: FontWeight.w800,
@@ -532,22 +1153,18 @@ class _HeroSection extends StatelessWidget {
                           vertical: 5,
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(
-                            0xFF22C55E,
-                          ).withValues(alpha: 0.15),
+                          color: (isOpen ? const Color(0xFF22C55E) : const Color(0xFFEF4444)).withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(999),
                           border: Border.all(
-                            color: const Color(
-                              0xFF22C55E,
-                            ).withValues(alpha: 0.3),
+                            color: (isOpen ? const Color(0xFF22C55E) : const Color(0xFFEF4444)).withValues(alpha: 0.3),
                           ),
                         ),
                         child: Text(
-                          isOpen == false ? 'CLOSED' : 'OPEN NOW',
-                          style: const TextStyle(
+                          isOpen ? 'OPEN NOW' : 'CLOSED',
+                          style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
-                            color: Color(0xFF22C55E),
+                            color: isOpen ? const Color(0xFF22C55E) : const Color(0xFFEF4444),
                             letterSpacing: 0.5,
                           ),
                         ),
@@ -564,7 +1181,7 @@ class _HeroSection extends StatelessWidget {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        '4.5',
+                        rating.toStringAsFixed(1),
                         style: TextStyle(
                           color: isDark
                               ? Colors.white
@@ -574,7 +1191,7 @@ class _HeroSection extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        ' (128)',
+                        ' ($reviewCount)',
                         style: TextStyle(
                           color: isDark
                               ? MenuColors.textMutedDark
@@ -585,9 +1202,7 @@ class _HeroSection extends StatelessWidget {
                       _Dot(isDark: isDark),
                       Flexible(
                         child: Text(
-                          cuisine?.isNotEmpty == true
-                              ? cuisine!
-                              : 'Italian, Pizza',
+                          cuisine.isNotEmpty ? cuisine : 'Food & Beverages',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
@@ -601,7 +1216,7 @@ class _HeroSection extends StatelessWidget {
                       ),
                       _Dot(isDark: isDark),
                       Text(
-                        '2.4 km',
+                        distance,
                         style: const TextStyle(
                           color: MenuColors.primary,
                           fontSize: 13,
@@ -643,12 +1258,14 @@ class _Dot extends StatelessWidget {
 /// ---------------------------------------------------------------------
 class _TabsHeaderDelegate extends SliverPersistentHeaderDelegate {
   final int selectedIndex;
+  final int offersCount;
   final bool isDark;
   final ValueChanged<int> onSelect;
   static const _tabs = ['Menu', 'Offers', 'Reviews', 'Info'];
 
   _TabsHeaderDelegate({
     required this.selectedIndex,
+    required this.offersCount,
     required this.isDark,
     required this.onSelect,
   });
@@ -710,7 +1327,7 @@ class _TabsHeaderDelegate extends SliverPersistentHeaderDelegate {
                                   : Colors.grey[500]),
                       ),
                     ),
-                    if (_tabs[i] == 'Offers') ...[
+                    if (_tabs[i] == 'Offers' && offersCount > 0) ...[
                       const SizedBox(width: 4),
                       Container(
                         padding: const EdgeInsets.symmetric(
@@ -721,9 +1338,9 @@ class _TabsHeaderDelegate extends SliverPersistentHeaderDelegate {
                           color: MenuColors.primary,
                           borderRadius: BorderRadius.circular(4),
                         ),
-                        child: const Text(
-                          '2',
-                          style: TextStyle(
+                        child: Text(
+                          '$offersCount',
+                          style: const TextStyle(
                             fontSize: 10,
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
@@ -744,6 +1361,7 @@ class _TabsHeaderDelegate extends SliverPersistentHeaderDelegate {
   @override
   bool shouldRebuild(covariant _TabsHeaderDelegate oldDelegate) {
     return oldDelegate.selectedIndex != selectedIndex ||
+        oldDelegate.offersCount != offersCount ||
         oldDelegate.isDark != isDark;
   }
 }
@@ -771,7 +1389,7 @@ class _CategoryPills extends StatelessWidget {
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
         itemCount: labels.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 10),
+        separatorBuilder: (context, index) => const SizedBox(width: 10),
         itemBuilder: (context, i) {
           final label = labels[i];
           final isSelected = label == selected;
@@ -833,11 +1451,26 @@ class _CategoryPills extends StatelessWidget {
 /// "Today's Offers" horizontal scroll
 /// ---------------------------------------------------------------------
 class _TodaysOffers extends StatelessWidget {
+  final List<OfferCard> offers;
   final bool isDark;
-  const _TodaysOffers({required this.isDark});
+  final String restaurantName;
+  final Map<String, int> cart;
+  final ValueChanged<String>? onAdd;
+  final ValueChanged<String>? onRemove;
+
+  const _TodaysOffers({
+    required this.offers,
+    required this.isDark,
+    this.restaurantName = 'Restaurant',
+    this.cart = const {},
+    this.onAdd,
+    this.onRemove,
+  });
 
   @override
   Widget build(BuildContext context) {
+    if (offers.isEmpty) return const SizedBox.shrink();
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
       child: Column(
@@ -855,9 +1488,9 @@ class _TodaysOffers extends StatelessWidget {
                   letterSpacing: -0.3,
                 ),
               ),
-              const Text(
-                'View All',
-                style: TextStyle(
+              Text(
+                '${offers.length} Active',
+                style: const TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                   color: MenuColors.primary,
@@ -870,9 +1503,15 @@ class _TodaysOffers extends StatelessWidget {
             height: 136,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
-              itemCount: _offers.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 14),
-              itemBuilder: (context, i) => _OfferCardWidget(offer: _offers[i]),
+              itemCount: offers.length,
+              separatorBuilder: (context, index) => const SizedBox(width: 14),
+              itemBuilder: (context, i) => _OfferCardWidget(
+                offer: offers[i],
+                restaurantName: restaurantName,
+                cart: cart,
+                onAdd: onAdd,
+                onRemove: onRemove,
+              ),
             ),
           ),
         ],
@@ -883,7 +1522,18 @@ class _TodaysOffers extends StatelessWidget {
 
 class _OfferCardWidget extends StatelessWidget {
   final OfferCard offer;
-  const _OfferCardWidget({required this.offer});
+  final String restaurantName;
+  final Map<String, int> cart;
+  final ValueChanged<String>? onAdd;
+  final ValueChanged<String>? onRemove;
+
+  const _OfferCardWidget({
+    required this.offer,
+    this.restaurantName = 'Restaurant',
+    this.cart = const {},
+    this.onAdd,
+    this.onRemove,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -895,10 +1545,21 @@ class _OfferCardWidget extends StatelessWidget {
             builder: (_) => OfferExplanationScreen(
               title: offer.headline,
               subtitle: offer.subline,
-              code: offer.badgeLabel == 'PROMO' ? 'ZTEEEL50' : 'BOGOCOMBO',
+              code: offer.code,
               badge: offer.badgeLabel,
               expiry: offer.timer,
               gradientColors: offer.gradient,
+              applicableItems: offer.applicableItems,
+              restaurantName: restaurantName,
+              initialCart: cart,
+              onAdd: onAdd,
+              onRemove: onRemove,
+              terms: const [
+                'Discount applies automatically to eligible items on the menu.',
+                'The maximum discount is always selected if multiple offers apply.',
+                'No separate promo code redemption is needed in cart or checkout.',
+                'Valid at participating store hours and availability.',
+              ],
             ),
           ),
         );
@@ -998,6 +1659,8 @@ class _OfferCardWidget extends StatelessWidget {
                     children: [
                       Text(
                         offer.headline,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w900,
@@ -1007,6 +1670,8 @@ class _OfferCardWidget extends StatelessWidget {
                       ),
                       Text(
                         offer.subline,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           color: Colors.white.withValues(alpha: 0.9),
                           fontSize: 12,
@@ -1034,6 +1699,7 @@ class _CategorySection extends StatelessWidget {
   final bool isDark;
   final ValueChanged<String> onAdd;
   final ValueChanged<String> onRemove;
+  final void Function(String id, int quantity)? onSetQuantity;
 
   const _CategorySection({
     required this.category,
@@ -1041,6 +1707,7 @@ class _CategorySection extends StatelessWidget {
     required this.isDark,
     required this.onAdd,
     required this.onRemove,
+    this.onSetQuantity,
   });
 
   @override
@@ -1087,10 +1754,14 @@ class _CategorySection extends StatelessWidget {
                     padding: const EdgeInsets.only(bottom: 26),
                     child: _MenuItemCard(
                       item: item,
+                      categoryName: category.title,
                       quantity: cart[item.id] ?? 0,
                       isDark: isDark,
                       onAdd: () => onAdd(item.id),
                       onRemove: () => onRemove(item.id),
+                      onSetQuantity: onSetQuantity != null
+                          ? (qty) => onSetQuantity!(item.id, qty)
+                          : null,
                     ),
                   ),
                 )
@@ -1104,17 +1775,21 @@ class _CategorySection extends StatelessWidget {
 
 class _MenuItemCard extends StatelessWidget {
   final MenuItem item;
+  final String categoryName;
   final int quantity;
   final bool isDark;
   final VoidCallback onAdd;
   final VoidCallback onRemove;
+  final ValueChanged<int>? onSetQuantity;
 
   const _MenuItemCard({
     required this.item,
+    required this.categoryName,
     required this.quantity,
     required this.isDark,
     required this.onAdd,
     required this.onRemove,
+    this.onSetQuantity,
   });
 
   @override
@@ -1130,23 +1805,20 @@ class _MenuItemCard extends StatelessWidget {
             builder: (_) => FoodItemPage(
               id: item.id,
               name: item.name,
-              category: item.tag == 'VEG' ? 'Vegetarian' : 'Non-Veg',
-              price: item.price,
+              category: categoryName,
+              price: item.discountedPrice,
+              originalPrice: item.hasDiscount ? item.price : null,
               description: item.description,
               isVeg: item.tag == 'VEG',
-              isBestseller: item.badge == 'BESTSELLER',
+              isBestseller: item.badge != null || item.hasDiscount,
               rating: '4.8',
-              photos: [
-                item.imageUrl,
-                'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=600',
-                'https://images.unsplash.com/photo-1565958011703-44f9829ba187?w=600',
-              ],
-              initialQuantity: quantity,
-              onQuantityChanged: (q) {
-                if (q > quantity) {
-                  onAdd();
-                } else if (q < quantity) {
-                  onRemove();
+              photos: item.imageUrl.isNotEmpty ? [item.imageUrl] : const [],
+              initialQuantity: quantity > 0 ? quantity : 1,
+              onAddToCart: (targetQty) async {
+                if (onSetQuantity != null) {
+                  onSetQuantity!(targetQty);
+                } else {
+                  await CartService.addItem(menuItemId: item.id, quantity: targetQty);
                 }
               },
             ),
@@ -1177,7 +1849,7 @@ class _MenuItemCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // VEG / NON-VEG dot indicator
+                  // VEG / NON-VEG dot indicator + Badge Row
                   Row(
                     children: [
                       Container(
@@ -1245,28 +1917,47 @@ class _MenuItemCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 5),
                   // Description
-                  Text(
-                    item.description,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 12,
-                      height: 1.45,
-                      color: isDark
-                          ? MenuColors.textMutedDark
-                          : const Color(0xFF8A8A9A),
+                  if (item.description.isNotEmpty)
+                    Text(
+                      item.description,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12,
+                        height: 1.45,
+                        color: isDark
+                            ? MenuColors.textMutedDark
+                            : const Color(0xFF8A8A9A),
+                      ),
                     ),
-                  ),
                   const SizedBox(height: 12),
-                  // Price
-                  Text(
-                    '\$${item.price.toStringAsFixed(2)}',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                      color: MenuColors.primary,
-                      letterSpacing: -0.3,
-                    ),
+                  // Price Section (showing original price & best discounted price)
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.baseline,
+                    textBaseline: TextBaseline.alphabetic,
+                    children: [
+                      Text(
+                        '\$${item.discountedPrice.toStringAsFixed(2)}',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          color: MenuColors.primary,
+                          letterSpacing: -0.3,
+                        ),
+                      ),
+                      if (item.hasDiscount) ...[
+                        const SizedBox(width: 8),
+                        Text(
+                          '\$${item.price.toStringAsFixed(2)}',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                            color: isDark ? MenuColors.textMutedDark : Colors.grey[500],
+                            decoration: TextDecoration.lineThrough,
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ],
               ),
@@ -1281,12 +1972,25 @@ class _MenuItemCard extends StatelessWidget {
                   // Food image
                   ClipRRect(
                     borderRadius: BorderRadius.circular(12),
-                    child: Image.network(
-                      item.imageUrl,
-                      width: 96,
-                      height: 96,
-                      fit: BoxFit.cover,
-                    ),
+                    child: item.imageUrl.isNotEmpty
+                        ? Image.network(
+                            item.imageUrl,
+                            width: 96,
+                            height: 96,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => Container(
+                              width: 96,
+                              height: 96,
+                              color: isDark ? Colors.black26 : Colors.grey[200],
+                              child: const Icon(Icons.fastfood_rounded, color: Colors.grey, size: 36),
+                            ),
+                          )
+                        : Container(
+                            width: 96,
+                            height: 96,
+                            color: isDark ? Colors.black26 : Colors.grey[200],
+                            child: const Icon(Icons.fastfood_rounded, color: Colors.grey, size: 36),
+                          ),
                   ),
                   // Add / Stepper button — overlaps bottom centre of image
                   Positioned(
@@ -1417,84 +2121,93 @@ class _StepperButton extends StatelessWidget {
 class _ViewCartButton extends StatelessWidget {
   final int count;
   final double total;
-  const _ViewCartButton({required this.count, required this.total});
+  final VoidCallback onTap;
+
+  const _ViewCartButton({
+    required this.count,
+    required this.total,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-      decoration: BoxDecoration(
-        color: MenuColors.primary,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: MenuColors.primary.withValues(alpha: 0.4),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.25),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  '$count',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+        decoration: BoxDecoration(
+          color: MenuColors.primary,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: MenuColors.primary.withValues(alpha: 0.4),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.25),
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text(
-                    'VIEW CART',
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.white70,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                  Text(
-                    '\$${total.toStringAsFixed(2)}',
+                  child: Text(
+                    '$count',
                     style: const TextStyle(
-                      fontSize: 16,
+                      fontSize: 13,
                       fontWeight: FontWeight.w800,
                       color: Colors.white,
                     ),
                   ),
-                ],
-              ),
-            ],
-          ),
-          const Row(
-            children: [
-              Text(
-                'Checkout',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
                 ),
-              ),
-              SizedBox(width: 4),
-              Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 18),
-            ],
-          ),
-        ],
+                const SizedBox(width: 12),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'VIEW CART',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white70,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    Text(
+                      '\$${total.toStringAsFixed(2)}',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const Row(
+              children: [
+                Text(
+                  'Checkout',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
+                SizedBox(width: 4),
+                Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 18),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1507,23 +2220,72 @@ class _MenuView extends StatelessWidget {
   final String selectedPill;
   final ValueChanged<String> onSelectPill;
   final List<MenuCategory> categories;
+  final List<OfferCard> offers;
   final Map<String, int> cart;
+  final bool isLoading;
   final bool isDark;
   final ValueChanged<String> onAdd;
   final ValueChanged<String> onRemove;
+  final void Function(String id, int quantity)? onSetQuantity;
+  final String restaurantName;
 
   const _MenuView({
     required this.selectedPill,
     required this.onSelectPill,
     required this.categories,
+    required this.offers,
     required this.cart,
+    required this.isLoading,
     required this.isDark,
     required this.onAdd,
     required this.onRemove,
+    this.onSetQuantity,
+    this.restaurantName = 'Restaurant',
   });
 
   @override
   Widget build(BuildContext context) {
+    if (isLoading) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(40),
+          child: CircularProgressIndicator(color: MenuColors.primary),
+        ),
+      );
+    }
+
+    if (categories.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 60),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.restaurant_menu_rounded, size: 48, color: isDark ? MenuColors.textMutedDark : Colors.grey[400]),
+              const SizedBox(height: 12),
+              Text(
+                'No menu items found',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: isDark ? Colors.white : const Color(0xFF1D1E20),
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Check back soon for freshly updated offerings!',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: isDark ? MenuColors.textMutedDark : Colors.grey[600],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     final filteredCategories = selectedPill == 'All Items'
         ? categories
         : categories.where((c) => c.title == selectedPill).toList();
@@ -1540,7 +2302,14 @@ class _MenuView extends StatelessWidget {
           ],
           onSelect: onSelectPill,
         ),
-        _TodaysOffers(isDark: isDark),
+        _TodaysOffers(
+          offers: offers,
+          isDark: isDark,
+          restaurantName: restaurantName,
+          cart: cart,
+          onAdd: onAdd,
+          onRemove: onRemove,
+        ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Column(
@@ -1552,6 +2321,7 @@ class _MenuView extends StatelessWidget {
                   isDark: isDark,
                   onAdd: onAdd,
                   onRemove: onRemove,
+                  onSetQuantity: onSetQuantity,
                 ),
             ],
           ),
@@ -1563,8 +2333,21 @@ class _MenuView extends StatelessWidget {
 }
 
 class _OffersView extends StatelessWidget {
+  final List<OfferCard> offers;
   final bool isDark;
-  const _OffersView({required this.isDark});
+  final String restaurantName;
+  final Map<String, int> cart;
+  final ValueChanged<String>? onAdd;
+  final ValueChanged<String>? onRemove;
+
+  const _OffersView({
+    required this.offers,
+    required this.isDark,
+    this.restaurantName = 'Restaurant',
+    this.cart = const {},
+    this.onAdd,
+    this.onRemove,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1573,47 +2356,41 @@ class _OffersView extends StatelessWidget {
     final textColor = isDark ? Colors.white : const Color(0xFF1D1E20);
     final subColor = isDark ? MenuColors.textMutedDark : Colors.grey[600]!;
 
-    final offers = [
-      {
-        'title': 'FLAT 50% OFF',
-        'subtitle': 'Use code ZTEEEL50 on orders above \$25',
-        'code': 'ZTEEEL50',
-        'badge': 'BESTSELLER',
-        'expiry': 'Valid till 31st Dec',
-        'color': MenuColors.primary,
-      },
-      {
-        'title': 'FREE DELIVERY',
-        'subtitle': 'Enjoy zero delivery fees on orders above \$15',
-        'code': 'FREEDEL',
-        'badge': 'POPULAR',
-        'expiry': 'Valid on all items',
-        'color': const Color(0xFF22C55E),
-      },
-      {
-        'title': '15% STEELPAY CASHBACK',
-        'subtitle': 'Get up to \$10 cashback when paying with SteelPay',
-        'code': 'STEELPAY15',
-        'badge': 'PAYMENT OFFER',
-        'expiry': 'Valid once per user',
-        'color': const Color(0xFF3B82F6),
-      },
-      {
-        'title': 'BUY 1 GET 1 FREE',
-        'subtitle': 'Buy any Artisan Pizza and get a Classic Pizza free',
-        'code': 'BOGOPIZZA',
-        'badge': 'WEEKDAY SPECIAL',
-        'expiry': 'Valid Tue & Thu',
-        'color': const Color(0xFFA855F7),
-      },
-    ];
+    if (offers.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(40),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.local_offer_outlined, size: 48, color: isDark ? MenuColors.textMutedDark : Colors.grey[400]),
+              const SizedBox(height: 12),
+              Text(
+                'No Active Offers',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: textColor,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Check back soon for new discounts and exclusive promos!',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 13, color: subColor),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 120),
       itemCount: offers.length,
       itemBuilder: (context, index) {
         final offer = offers[index];
-        final accentColor = offer['color'] as Color;
+        final accentColor = offer.gradient.first;
 
         return GestureDetector(
           onTap: () {
@@ -1621,14 +2398,21 @@ class _OffersView extends StatelessWidget {
               context,
               MaterialPageRoute(
                 builder: (_) => OfferExplanationScreen(
-                  title: offer['title'] as String,
-                  subtitle: offer['subtitle'] as String,
-                  code: offer['code'] as String,
-                  badge: offer['badge'] as String,
-                  expiry: offer['expiry'] as String,
-                  gradientColors: [
-                    accentColor,
-                    accentColor.withValues(alpha: 0.8),
+                  title: offer.headline,
+                  subtitle: offer.subline,
+                  code: offer.code,
+                  badge: offer.badgeLabel,
+                  expiry: offer.timer,
+                  gradientColors: offer.gradient,
+                  applicableItems: offer.applicableItems,
+                  restaurantName: restaurantName,
+                  initialCart: cart,
+                  onAdd: onAdd,
+                  onRemove: onRemove,
+                  terms: const [
+                    'Discount is automatically calculated on all eligible dishes.',
+                    'Maximum discount is automatically selected across overlapping offers.',
+                    'Zero coupon codes required; save seamlessly at checkout.',
                   ],
                 ),
               ),
@@ -1688,7 +2472,7 @@ class _OffersView extends StatelessWidget {
                                     borderRadius: BorderRadius.circular(6),
                                   ),
                                   child: Text(
-                                    offer['badge'] as String,
+                                    offer.badgeLabel,
                                     style: TextStyle(
                                       fontSize: 10,
                                       fontWeight: FontWeight.bold,
@@ -1701,7 +2485,7 @@ class _OffersView extends StatelessWidget {
                             ),
                             const SizedBox(height: 6),
                             Text(
-                              offer['title'] as String,
+                              offer.headline,
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
@@ -1710,7 +2494,7 @@ class _OffersView extends StatelessWidget {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              offer['subtitle'] as String,
+                              offer.subline,
                               style: TextStyle(fontSize: 12, color: subColor),
                             ),
                           ],
@@ -1747,40 +2531,26 @@ class _OffersView extends StatelessWidget {
                           ),
                           const SizedBox(width: 6),
                           Text(
-                            offer['expiry'] as String,
+                            offer.timer,
                             style: TextStyle(fontSize: 11, color: subColor),
                           ),
                         ],
                       ),
-                      InkWell(
-                        onTap: () {
-                          ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                'Coupon "${offer['code']}" copied to clipboard!',
-                              ),
-                              behavior: SnackBarBehavior.floating,
-                              duration: const Duration(seconds: 2),
-                            ),
-                          );
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: MenuColors.primary,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            'COPY ${offer['code']}',
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: MenuColors.primary,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Text(
+                          'AUTO-APPLIED',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
                           ),
                         ),
                       ),
@@ -1797,8 +2567,17 @@ class _OffersView extends StatelessWidget {
 }
 
 class _ReviewsView extends StatelessWidget {
+  final String vendorName;
+  final double rating;
+  final int reviewCount;
   final bool isDark;
-  const _ReviewsView({required this.isDark});
+
+  const _ReviewsView({
+    required this.vendorName,
+    required this.rating,
+    required this.reviewCount,
+    required this.isDark,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1806,39 +2585,6 @@ class _ReviewsView extends StatelessWidget {
     final cardBorder = isDark ? MenuColors.borderDark : const Color(0xFFF0F0F3);
     final textColor = isDark ? Colors.white : const Color(0xFF1D1E20);
     final subColor = isDark ? MenuColors.textMutedDark : Colors.grey[600]!;
-
-    final reviews = [
-      {
-        'name': 'Sarah Jenkins',
-        'rating': 5.0,
-        'date': '2 days ago',
-        'comment':
-            'The Truffle Mushroom Pizza is absolutely out of this world! Super fresh ingredients, hot delivery, and crispy crust.',
-        'likes': 18,
-        'avatar':
-            'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100',
-      },
-      {
-        'name': 'Michael Chen',
-        'rating': 4.5,
-        'date': '1 week ago',
-        'comment':
-            'Great food quality and fast delivery. The Artisan Pepperoni was delicious. Will definitely order again.',
-        'likes': 12,
-        'avatar':
-            'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100',
-      },
-      {
-        'name': 'Emily Rodriguez',
-        'rating': 5.0,
-        'date': '2 weeks ago',
-        'comment':
-            'Love the packaging and hygiene standards! Food arrived piping hot within 25 minutes.',
-        'likes': 24,
-        'avatar':
-            'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100',
-      },
-    ];
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 120),
@@ -1855,7 +2601,7 @@ class _ReviewsView extends StatelessWidget {
               Column(
                 children: [
                   Text(
-                    '4.8',
+                    rating.toStringAsFixed(1),
                     style: TextStyle(
                       fontSize: 36,
                       fontWeight: FontWeight.bold,
@@ -1877,7 +2623,7 @@ class _ReviewsView extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '2,450 ratings',
+                    '$reviewCount verified ratings',
                     style: TextStyle(fontSize: 12, color: subColor),
                   ),
                 ],
@@ -1886,11 +2632,11 @@ class _ReviewsView extends StatelessWidget {
               Expanded(
                 child: Column(
                   children: [
-                    _RatingBar(stars: '5 ★', percent: 0.85, isDark: isDark),
-                    _RatingBar(stars: '4 ★', percent: 0.10, isDark: isDark),
-                    _RatingBar(stars: '3 ★', percent: 0.03, isDark: isDark),
-                    _RatingBar(stars: '2 ★', percent: 0.01, isDark: isDark),
-                    _RatingBar(stars: '1 ★', percent: 0.01, isDark: isDark),
+                    _RatingBar(stars: '5 ★', percent: 0.88, isDark: isDark),
+                    _RatingBar(stars: '4 ★', percent: 0.09, isDark: isDark),
+                    _RatingBar(stars: '3 ★', percent: 0.02, isDark: isDark),
+                    _RatingBar(stars: '2 ★', percent: 0.005, isDark: isDark),
+                    _RatingBar(stars: '1 ★', percent: 0.005, isDark: isDark),
                   ],
                 ),
               ),
@@ -1902,7 +2648,7 @@ class _ReviewsView extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              'Customer Reviews',
+              'Customer Feedback',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
@@ -1910,104 +2656,61 @@ class _ReviewsView extends StatelessWidget {
               ),
             ),
             Text(
-              'Verified Orders Only',
+              'Verified Orders',
               style: TextStyle(fontSize: 12, color: subColor),
             ),
           ],
         ),
         const SizedBox(height: 12),
-        for (final r in reviews) ...[
-          Container(
-            padding: const EdgeInsets.all(16),
-            margin: const EdgeInsets.only(bottom: 14),
-            decoration: BoxDecoration(
-              color: cardBg,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: cardBorder),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 18,
-                      backgroundImage: NetworkImage(r['avatar'] as String),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            r['name'] as String,
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: textColor,
-                            ),
-                          ),
-                          Text(
-                            r['date'] as String,
-                            style: TextStyle(fontSize: 11, color: subColor),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.amber.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.star_rounded,
-                            color: Colors.amber,
-                            size: 14,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${r['rating']}',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.amber,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  r['comment'] as String,
-                  style: TextStyle(fontSize: 13, color: textColor, height: 1.4),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.thumb_up_alt_outlined,
-                      size: 14,
-                      color: subColor,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Helpful (${r['likes']})',
-                      style: TextStyle(fontSize: 12, color: subColor),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: cardBg,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: cardBorder),
           ),
-        ],
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: MenuColors.primary.withValues(alpha: 0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.recommend_rounded,
+                      color: MenuColors.primary,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Highly Rated by Diners',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: textColor,
+                          ),
+                        ),
+                        Text(
+                          '94% of customers rated $vendorName 4 stars or higher for taste and quick preparation.',
+                          style: TextStyle(fontSize: 12, color: subColor, height: 1.4),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
       ],
     );
   }
@@ -2058,8 +2761,12 @@ class _RatingBar extends StatelessWidget {
 }
 
 class _InfoView extends StatelessWidget {
+  final VendorDetailData vendor;
   final bool isDark;
-  const _InfoView({required this.isDark});
+  const _InfoView({
+    required this.vendor,
+    required this.isDark,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -2110,7 +2817,7 @@ class _InfoView extends StatelessWidget {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          '221B Baker Street, Gourmet Quarter, City Center (1.2 km away)',
+                          vendor.address,
                           style: TextStyle(fontSize: 12, color: subColor),
                         ),
                       ],
@@ -2133,9 +2840,9 @@ class _InfoView extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.access_time_filled_rounded,
-                    color: Color(0xFF22C55E),
+                    color: vendor.isOpen ? const Color(0xFF22C55E) : const Color(0xFFEF4444),
                     size: 20,
                   ),
                   const SizedBox(width: 12),
@@ -2152,7 +2859,7 @@ class _InfoView extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          'Open Now • 10:00 AM – 11:30 PM (Mon - Sun)',
+                          vendor.openingHours,
                           style: TextStyle(fontSize: 12, color: subColor),
                         ),
                       ],
@@ -2160,36 +2867,38 @@ class _InfoView extends StatelessWidget {
                   ),
                 ],
               ),
-              const Divider(height: 24),
-              Row(
-                children: [
-                  const Icon(
-                    Icons.phone_in_talk_rounded,
-                    color: Color(0xFF3B82F6),
-                    size: 20,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Phone & Contact',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: textColor,
+              if (vendor.phone.isNotEmpty) ...[
+                const Divider(height: 24),
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.phone_in_talk_rounded,
+                      color: Color(0xFF3B82F6),
+                      size: 20,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Phone & Contact',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: textColor,
+                            ),
                           ),
-                        ),
-                        Text(
-                          '+1 (555) 382-9102',
-                          style: TextStyle(fontSize: 12, color: subColor),
-                        ),
-                      ],
+                          Text(
+                            vendor.phone,
+                            style: TextStyle(fontSize: 12, color: subColor),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
-              ),
+                  ],
+                ),
+              ],
             ],
           ),
         ),
@@ -2224,36 +2933,25 @@ class _InfoView extends StatelessWidget {
               ),
               const SizedBox(height: 10),
               Text(
-                '100% sanitized kitchen, daily staff temperature checks, and contactless delivery packaging.',
+                vendor.description,
                 style: TextStyle(fontSize: 12, color: subColor, height: 1.4),
               ),
-              const SizedBox(height: 14),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  _FeatureChip(
-                    label: 'AC Dining',
-                    icon: Icons.ac_unit,
-                    isDark: isDark,
-                  ),
-                  _FeatureChip(
-                    label: 'Takeaway Available',
-                    icon: Icons.takeout_dining,
-                    isDark: isDark,
-                  ),
-                  _FeatureChip(
-                    label: 'Outdoor Seating',
-                    icon: Icons.deck,
-                    isDark: isDark,
-                  ),
-                  _FeatureChip(
-                    label: 'Pure Veg Options',
-                    icon: Icons.eco,
-                    isDark: isDark,
-                  ),
-                ],
-              ),
+              if (vendor.tags.isNotEmpty) ...[
+                const SizedBox(height: 14),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: vendor.tags
+                      .map(
+                        (tag) => _FeatureChip(
+                          label: tag,
+                          icon: Icons.check_circle_outline_rounded,
+                          isDark: isDark,
+                        ),
+                      )
+                      .toList(),
+                ),
+              ],
             ],
           ),
         ),

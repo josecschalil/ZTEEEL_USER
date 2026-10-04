@@ -37,6 +37,26 @@ class HomeRestaurant {
     this.imageUrl,
     this.offerLabel,
   });
+
+  RestaurantListing toRestaurantListing() => RestaurantListing(
+        id: id,
+        name: name,
+        imageUrl: imageUrl,
+        fallbackIcon: Icons.restaurant_rounded,
+        cuisines: cuisine
+            .split('·')
+            .map((value) => value.trim())
+            .where((value) => value.isNotEmpty)
+            .toList(),
+        rating: rating,
+        reviewCount: reviewCount,
+        distanceKm: double.tryParse(distance.split(' ').first) ?? 1.2,
+        etaMins: int.tryParse(eta.split(RegExp(r'[^0-9]')).first) ?? 25,
+        isOpenNow: isOpen,
+        isPromoted: offerLabel != null,
+        hasFreeDelivery: offerLabel?.toLowerCase().contains('free delivery') == true,
+        priceLevel: '₹₹',
+      );
 }
 
 class HomeCategory {
@@ -101,7 +121,13 @@ class HomeDiscoveryView extends StatelessWidget {
               title: 'Popular near you',
               actionLabel: 'See all',
               onAction: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => NearbyRestaurantsScreen()),
+                MaterialPageRoute(
+                  builder: (_) => NearbyRestaurantsScreen(
+                    restaurants: restaurants.isNotEmpty
+                        ? restaurants.map((r) => r.toRestaurantListing()).toList()
+                        : null,
+                  ),
+                ),
               ),
             ),
           ),
