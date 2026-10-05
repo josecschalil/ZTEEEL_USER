@@ -1,3 +1,4 @@
+import '../app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -36,7 +37,7 @@ final List<DishItem> _allItems = [
     name: 'Truffle Wagyu Double Smash',
     rating: 4.9,
     tag: 'Bestseller',
-    tagColor: const Color(0xFF64748B),
+    tagColor: AppColors.toneFF64748B,
     price: 16.50,
     category: 'burgers',
     imageUrl:
@@ -49,7 +50,7 @@ final List<DishItem> _allItems = [
     name: 'Spicy Salmon & Avocado Bowl',
     rating: 4.8,
     tag: 'Gluten-free',
-    tagColor: const Color(0xFF059669),
+    tagColor: AppColors.toneFF059669,
     price: 14.20,
     category: 'japanese',
     imageUrl:
@@ -62,7 +63,7 @@ final List<DishItem> _allItems = [
     name: 'Wood-Fired Margherita',
     rating: 4.9,
     tag: 'Wood Oven',
-    tagColor: const Color(0xFF64748B),
+    tagColor: AppColors.toneFF64748B,
     price: 18.00,
     category: 'pizza',
     imageUrl:
@@ -75,7 +76,7 @@ final List<DishItem> _allItems = [
     name: 'Tonkotsu Black Garlic Ramen',
     rating: 4.7,
     tag: 'Extra Ajitama',
-    tagColor: const Color(0xFF64748B),
+    tagColor: AppColors.toneFF64748B,
     price: 15.80,
     category: 'japanese',
     imageUrl:
@@ -88,7 +89,7 @@ final List<DishItem> _allItems = [
     name: 'Matcha Basque Cheesecake',
     rating: 5.0,
     tag: 'Artisanal',
-    tagColor: const Color(0xFF64748B),
+    tagColor: AppColors.toneFF64748B,
     price: 7.50,
     category: 'desserts',
     imageUrl:
@@ -155,7 +156,7 @@ class _WishlistscreenState extends State<Wishlistscreen> {
   Widget build(BuildContext context) {
     final filtered = _filtered;
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFB),
+      backgroundColor: AppColors.toneFFFAFAFB,
       extendBody: true,
       body: Stack(
         children: [
@@ -216,14 +217,14 @@ class _WishlistscreenState extends State<Wishlistscreen> {
                       const Icon(
                         Icons.favorite_rounded,
                         size: 14,
-                        color: Color(0xFF94A3B8),
+                        color: AppColors.toneFF94A3B8,
                       ),
                       const SizedBox(width: 6),
                       Text(
                         'Tap heart to remove from saved',
                         style: TextStyle(
                           fontSize: 12,
-                          color: Colors.grey.shade400,
+                          color: AppColors.materialGrey.shade400,
                         ),
                       ),
                     ],
@@ -269,7 +270,7 @@ class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: const Color(0xD9FAFAFB),
+      color: AppColors.toneD9FAFAFB,
       child: SafeArea(
         bottom: false,
         child: SizedBox(
@@ -283,7 +284,7 @@ class _Header extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.w800,
-                    color: Color(0xFF0F172A),
+                    color: AppColors.toneFF0F172A,
                     letterSpacing: -0.5,
                   ),
                 ),
@@ -294,7 +295,7 @@ class _Header extends StatelessWidget {
                     vertical: 2,
                   ),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFFF7ED),
+                    color: AppColors.toneFFFFF7ED,
                     borderRadius: BorderRadius.circular(99),
                   ),
                   child: Text(
@@ -302,7 +303,7 @@ class _Header extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
-                      color: Color(0xFFEA580C),
+                      color: AppColors.primary,
                     ),
                   ),
                 ),
@@ -315,10 +316,10 @@ class _Header extends StatelessWidget {
                   width: 36,
                   height: 36,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF1F5F9),
+                    color: AppColors.toneFFF1F5F9,
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: const Color(0xFFE2E8F0),
+                      color: AppColors.toneFFE2E8F0,
                       width: 1,
                     ),
                   ),
@@ -328,7 +329,7 @@ class _Header extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
-                      color: Color(0xFF475569),
+                      color: AppColors.toneFF475569,
                     ),
                   ),
                 ),
@@ -354,18 +355,18 @@ class _IconBtn extends StatelessWidget {
         width: 36,
         height: 36,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.white,
           shape: BoxShape.circle,
-          border: Border.all(color: const Color(0xFFF1F5F9), width: 1),
+          border: Border.all(color: AppColors.toneFFF1F5F9, width: 1),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
+              color: AppColors.black.withOpacity(0.04),
               blurRadius: 6,
               offset: const Offset(0, 2),
             ),
           ],
         ),
-        child: Icon(icon, size: 18, color: const Color(0xFF475569)),
+        child: Icon(icon, size: 18, color: AppColors.toneFF475569),
       ),
     );
   }
@@ -389,12 +390,12 @@ class _SearchBar extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.white,
           borderRadius: BorderRadius.circular(99),
-          border: Border.all(color: const Color(0xFFE2E8F0).withOpacity(0.7)),
+          border: Border.all(color: AppColors.toneFFE2E8F0.withOpacity(0.7)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.025),
+              color: AppColors.black.withOpacity(0.025),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -406,19 +407,19 @@ class _SearchBar extends StatelessWidget {
           style: const TextStyle(
             fontSize: 13.5,
             fontWeight: FontWeight.w500,
-            color: Color(0xFF1E293B),
+            color: AppColors.toneFF1E293B,
           ),
           decoration: InputDecoration(
             hintText: 'Search saved dishes & spots...',
             hintStyle: TextStyle(
-              color: Colors.grey.shade400,
+              color: AppColors.materialGrey.shade400,
               fontWeight: FontWeight.w400,
               fontSize: 13.5,
             ),
             prefixIcon: const Icon(
               Icons.search_rounded,
               size: 20,
-              color: Color(0xFF94A3B8),
+              color: AppColors.toneFF94A3B8,
             ),
             suffixIcon: controller.text.isNotEmpty
                 ? GestureDetector(
@@ -426,7 +427,7 @@ class _SearchBar extends StatelessWidget {
                     child: const Icon(
                       Icons.close_rounded,
                       size: 18,
-                      color: Color(0xFF94A3B8),
+                      color: AppColors.toneFF94A3B8,
                     ),
                   )
                 : null,
@@ -469,18 +470,18 @@ class _CategoryPills extends StatelessWidget {
               duration: const Duration(milliseconds: 180),
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
               decoration: BoxDecoration(
-                color: isActive ? const Color(0xFF0F172A) : Colors.white,
+                color: isActive ? AppColors.toneFF0F172A : AppColors.white,
                 borderRadius: BorderRadius.circular(99),
                 border: Border.all(
                   color: isActive
-                      ? Colors.transparent
-                      : const Color(0xFFE2E8F0),
+                      ? AppColors.transparent
+                      : AppColors.toneFFE2E8F0,
                   width: 1,
                 ),
                 boxShadow: isActive
                     ? [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.08),
+                          color: AppColors.black.withOpacity(0.08),
                           blurRadius: 8,
                           offset: const Offset(0, 2),
                         ),
@@ -492,7 +493,7 @@ class _CategoryPills extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
-                  color: isActive ? Colors.white : const Color(0xFF475569),
+                  color: isActive ? AppColors.white : AppColors.toneFF475569,
                 ),
               ),
             ),
@@ -559,12 +560,12 @@ class _DishCardState extends State<_DishCard>
         scale: _scaleAnim,
         child: Container(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColors.white,
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: const Color(0xFFF1F5F9), width: 1),
+            border: Border.all(color: AppColors.toneFFF1F5F9, width: 1),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.04),
+                color: AppColors.black.withOpacity(0.04),
                 blurRadius: 12,
                 offset: const Offset(0, 2),
               ),
@@ -593,7 +594,7 @@ class _DishCardState extends State<_DishCard>
                               style: const TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w500,
-                                color: Color(0xFF64748B),
+                                color: AppColors.toneFF64748B,
                               ),
                             ),
                           ),
@@ -603,7 +604,7 @@ class _DishCardState extends State<_DishCard>
                               '•',
                               style: TextStyle(
                                 fontSize: 11,
-                                color: Color(0xFF94A3B8),
+                                color: AppColors.toneFF94A3B8,
                               ),
                             ),
                           ),
@@ -611,7 +612,7 @@ class _DishCardState extends State<_DishCard>
                             '${item.distance} mi',
                             style: const TextStyle(
                               fontSize: 11,
-                              color: Color(0xFF94A3B8),
+                              color: AppColors.toneFF94A3B8,
                             ),
                           ),
                         ],
@@ -625,7 +626,7 @@ class _DishCardState extends State<_DishCard>
                         style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w700,
-                          color: Color(0xFF0F172A),
+                          color: AppColors.toneFF0F172A,
                           height: 1.3,
                         ),
                       ),
@@ -639,7 +640,7 @@ class _DishCardState extends State<_DishCard>
                               vertical: 3,
                             ),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFFFFBEB),
+                              color: AppColors.toneFFFFFBEB,
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Row(
@@ -648,7 +649,7 @@ class _DishCardState extends State<_DishCard>
                                 const Icon(
                                   Icons.star_rounded,
                                   size: 12,
-                                  color: Color(0xFFD97706),
+                                  color: AppColors.toneFFD97706,
                                 ),
                                 const SizedBox(width: 2),
                                 Text(
@@ -656,7 +657,7 @@ class _DishCardState extends State<_DishCard>
                                   style: const TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.w600,
-                                    color: Color(0xFFD97706),
+                                    color: AppColors.toneFFD97706,
                                   ),
                                 ),
                               ],
@@ -683,7 +684,7 @@ class _DishCardState extends State<_DishCard>
                             style: const TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w800,
-                              color: Color(0xFF0F172A),
+                              color: AppColors.toneFF0F172A,
                             ),
                           ),
                           _AddButton(
@@ -727,7 +728,7 @@ class _Thumbnail extends StatelessWidget {
               errorBuilder: (_, __, ___) => Container(
                 width: 96,
                 height: 96,
-                color: const Color(0xFFF1F5F9),
+                color: AppColors.toneFFF1F5F9,
               ),
             ),
           ),
@@ -740,11 +741,11 @@ class _Thumbnail extends StatelessWidget {
                 width: 28,
                 height: 28,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.9),
+                  color: AppColors.white.withOpacity(0.9),
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.06),
+                      color: AppColors.black.withOpacity(0.06),
                       blurRadius: 6,
                     ),
                   ],
@@ -752,7 +753,7 @@ class _Thumbnail extends StatelessWidget {
                 child: const Icon(
                   Icons.favorite_rounded,
                   size: 15,
-                  color: Color(0xFFF43F5E),
+                  color: AppColors.toneFFF43F5E,
                 ),
               ),
             ),
@@ -777,12 +778,12 @@ class _AddButton extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
         decoration: BoxDecoration(
-          color: isAdded ? const Color(0xFF059669) : const Color(0xFFEA580C),
+          color: isAdded ? AppColors.toneFF059669 : AppColors.primary,
           borderRadius: BorderRadius.circular(99),
           boxShadow: [
             BoxShadow(
               color:
-                  (isAdded ? const Color(0xFF059669) : const Color(0xFFEA580C))
+                  (isAdded ? AppColors.toneFF059669 : AppColors.primary)
                       .withOpacity(0.25),
               blurRadius: 8,
               offset: const Offset(0, 2),
@@ -795,7 +796,7 @@ class _AddButton extends StatelessWidget {
             Icon(
               isAdded ? Icons.done_rounded : Icons.add_rounded,
               size: 14,
-              color: Colors.white,
+              color: AppColors.white,
             ),
             const SizedBox(width: 3),
             Text(
@@ -803,7 +804,7 @@ class _AddButton extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: Colors.white,
+                color: AppColors.white,
               ),
             ),
           ],
@@ -822,12 +823,12 @@ class _CartDock extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.96),
+        color: AppColors.white.withOpacity(0.96),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE2E8F0).withOpacity(0.8)),
+        border: Border.all(color: AppColors.toneFFE2E8F0.withOpacity(0.8)),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0F172A).withOpacity(0.10),
+            color: AppColors.toneFF0F172A.withOpacity(0.10),
             blurRadius: 24,
             offset: const Offset(0, 8),
           ),
@@ -840,13 +841,13 @@ class _CartDock extends StatelessWidget {
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: const Color(0xFFFFF7ED),
+              color: AppColors.toneFFFFF7ED,
               borderRadius: BorderRadius.circular(10),
             ),
             child: const Icon(
               Icons.storefront_rounded,
               size: 20,
-              color: Color(0xFFEA580C),
+              color: AppColors.primary,
             ),
           ),
           const SizedBox(width: 10),
@@ -861,7 +862,7 @@ class _CartDock extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 12.5,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF0F172A),
+                    color: AppColors.toneFF0F172A,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -869,7 +870,7 @@ class _CartDock extends StatelessWidget {
                 SizedBox(height: 1),
                 Text(
                   '3 items saved from this menu',
-                  style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                  style: TextStyle(fontSize: 11, color: AppColors.toneFF64748B),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -883,11 +884,11 @@ class _CartDock extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               decoration: BoxDecoration(
-                color: const Color(0xFF0F172A),
+                color: AppColors.toneFF0F172A,
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.08),
+                    color: AppColors.black.withOpacity(0.08),
                     blurRadius: 6,
                     offset: const Offset(0, 2),
                   ),
@@ -901,14 +902,14 @@ class _CartDock extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: Colors.white,
+                      color: AppColors.white,
                     ),
                   ),
                   SizedBox(width: 4),
                   Icon(
                     Icons.arrow_forward_rounded,
                     size: 13,
-                    color: Colors.white,
+                    color: AppColors.white,
                   ),
                 ],
               ),
@@ -937,8 +938,8 @@ class _BottomNav extends StatelessWidget {
 
     return Container(
       decoration: const BoxDecoration(
-        color: Color(0xF7FFFFFF),
-        border: Border(top: BorderSide(color: Color(0xFFF1F5F9), width: 1)),
+        color: AppColors.toneF7FFFFFF,
+        border: Border(top: BorderSide(color: AppColors.toneFFF1F5F9, width: 1)),
       ),
       child: SafeArea(
         top: false,
@@ -959,8 +960,8 @@ class _BottomNav extends StatelessWidget {
                         isActive ? activeIco : idleIco,
                         size: 22,
                         color: isActive
-                            ? const Color(0xFFEA580C)
-                            : const Color(0xFF94A3B8),
+                            ? AppColors.primary
+                            : AppColors.toneFF94A3B8,
                       ),
                       const SizedBox(height: 3),
                       Text(
@@ -971,8 +972,8 @@ class _BottomNav extends StatelessWidget {
                               ? FontWeight.w600
                               : FontWeight.w500,
                           color: isActive
-                              ? const Color(0xFFEA580C)
-                              : const Color(0xFF94A3B8),
+                              ? AppColors.primary
+                              : AppColors.toneFF94A3B8,
                         ),
                       ),
                     ],

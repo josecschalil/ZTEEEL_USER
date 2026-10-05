@@ -1,19 +1,7 @@
+import '../app_colors.dart';
 import 'package:flutter/material.dart';
 import '../services/cart_service.dart';
 
-class FoodItemColors {
-  static const primary = Color(0xFFEE5B2B);
-  static const primaryDeep = Color(0xFFC2410C);
-  static const bgLight = Color(0xFFFAFAFC);
-  static const bgDark = Color(0xFF1E1714);
-  static const cardLight = Colors.white;
-  static const cardDark = Color(0xFF281E19);
-  static const borderLight = Color(0xFFF0F0F3);
-  static const borderDark = Color(0xFF3D2B23);
-  static const textMutedDark = Color(0xFFC9A092);
-  static const vegGreen = Color(0xFF22C55E);
-  static const nonVegRed = Color(0xFFEF4444);
-}
 
 class FoodItemPage extends StatefulWidget {
   final String id;
@@ -127,9 +115,9 @@ class _FoodItemPageState extends State<FoodItemPage> {
                   child: const Text('Cancel'),
                 ),
                 ElevatedButton(
-                  style: ElevatedButton.styleFrom(backgroundColor: FoodItemColors.primary),
+                  style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
                   onPressed: () => Navigator.pop(ctx, true),
-                  child: const Text('Start New', style: TextStyle(color: Colors.white)),
+                  child: const Text('Start New', style: TextStyle(color: AppColors.white)),
                 ),
               ],
             ),
@@ -160,7 +148,7 @@ class _FoodItemPageState extends State<FoodItemPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Added $_quantity x "${widget.name}" to cart!'),
-          backgroundColor: FoodItemColors.primary,
+          backgroundColor: AppColors.primary,
           behavior: SnackBarBehavior.floating,
           duration: const Duration(seconds: 2),
         ),
@@ -171,7 +159,7 @@ class _FoodItemPageState extends State<FoodItemPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Failed to add to cart: $e'),
-          backgroundColor: Colors.red,
+          backgroundColor: AppColors.materialRed,
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -183,11 +171,11 @@ class _FoodItemPageState extends State<FoodItemPage> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColor = isDark ? FoodItemColors.bgDark : FoodItemColors.bgLight;
-    final cardBg = isDark ? FoodItemColors.cardDark : FoodItemColors.cardLight;
-    final cardBorder = isDark ? FoodItemColors.borderDark : FoodItemColors.borderLight;
-    final textColor = isDark ? Colors.white : const Color(0xFF1D1E20);
-    final subColor = isDark ? FoodItemColors.textMutedDark : Colors.grey[600]!;
+    final bgColor = isDark ? AppColors.bgDark : AppColors.bgLight;
+    final cardBg = isDark ? AppColors.cardDark : AppColors.cardLight;
+    final cardBorder = isDark ? AppColors.borderDark : AppColors.borderLight;
+    final textColor = isDark ? AppColors.white : AppColors.textPrimary;
+    final subColor = isDark ? AppColors.textMutedDark : AppColors.materialGrey[600]!;
 
     // Ensure 1-3 photos available
     final displayPhotos = widget.photos.isNotEmpty ? widget.photos.take(3).toList() : [
@@ -221,8 +209,8 @@ class _FoodItemPageState extends State<FoodItemPage> {
                             fit: BoxFit.cover,
                             width: double.infinity,
                             errorBuilder: (ctx, _, __) => Container(
-                              color: isDark ? FoodItemColors.cardDark : Colors.grey[300],
-                              child: const Icon(Icons.fastfood_rounded, size: 60, color: Colors.grey),
+                              color: isDark ? AppColors.cardDark : AppColors.materialGrey[300],
+                              child: const Icon(Icons.fastfood_rounded, size: 60, color: AppColors.materialGrey),
                             ),
                           );
                         },
@@ -239,7 +227,7 @@ class _FoodItemPageState extends State<FoodItemPage> {
                           gradient: LinearGradient(
                             begin: Alignment.topCenter,
                             end: Alignment.bottomCenter,
-                            colors: [Colors.black.withValues(alpha: 0.6), Colors.transparent],
+                            colors: [AppColors.black.withValues(alpha: 0.6), AppColors.transparent],
                           ),
                         ),
                       ),
@@ -280,13 +268,13 @@ class _FoodItemPageState extends State<FoodItemPage> {
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.65),
+                            color: AppColors.black.withValues(alpha: 0.65),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
                             '${_activePhotoIndex + 1} / ${displayPhotos.length}',
                             style: const TextStyle(
-                              color: Colors.white,
+                              color: AppColors.white,
                               fontSize: 11,
                               fontWeight: FontWeight.bold,
                             ),
@@ -310,11 +298,11 @@ class _FoodItemPageState extends State<FoodItemPage> {
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
                               color: widget.isVeg
-                                  ? FoodItemColors.vegGreen.withValues(alpha: 0.12)
-                                  : FoodItemColors.nonVegRed.withValues(alpha: 0.12),
+                                  ? AppColors.vegGreen.withValues(alpha: 0.12)
+                                  : AppColors.nonVegRed.withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(6),
                               border: Border.all(
-                                color: widget.isVeg ? FoodItemColors.vegGreen : FoodItemColors.nonVegRed,
+                                color: widget.isVeg ? AppColors.vegGreen : AppColors.nonVegRed,
                                 width: 1.2,
                               ),
                             ),
@@ -325,7 +313,7 @@ class _FoodItemPageState extends State<FoodItemPage> {
                                   width: 8,
                                   height: 8,
                                   decoration: BoxDecoration(
-                                    color: widget.isVeg ? FoodItemColors.vegGreen : FoodItemColors.nonVegRed,
+                                    color: widget.isVeg ? AppColors.vegGreen : AppColors.nonVegRed,
                                     shape: BoxShape.circle,
                                   ),
                                 ),
@@ -335,7 +323,7 @@ class _FoodItemPageState extends State<FoodItemPage> {
                                   style: TextStyle(
                                     fontSize: 10,
                                     fontWeight: FontWeight.w900,
-                                    color: widget.isVeg ? FoodItemColors.vegGreen : FoodItemColors.nonVegRed,
+                                    color: widget.isVeg ? AppColors.vegGreen : AppColors.nonVegRed,
                                     letterSpacing: 0.5,
                                   ),
                                 ),
@@ -347,7 +335,7 @@ class _FoodItemPageState extends State<FoodItemPage> {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(
-                              color: isDark ? Colors.white10 : const Color(0xFFF0F0F3),
+                              color: isDark ? AppColors.white10 : AppColors.border,
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
@@ -365,7 +353,7 @@ class _FoodItemPageState extends State<FoodItemPage> {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
-                                color: FoodItemColors.primary.withValues(alpha: 0.15),
+                                color: AppColors.primary.withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: const Text(
@@ -373,7 +361,7 @@ class _FoodItemPageState extends State<FoodItemPage> {
                                 style: TextStyle(
                                   fontSize: 10,
                                   fontWeight: FontWeight.bold,
-                                  color: FoodItemColors.primary,
+                                  color: AppColors.primary,
                                 ),
                               ),
                             ),
@@ -397,7 +385,7 @@ class _FoodItemPageState extends State<FoodItemPage> {
                       // Rating & Delivery Time Row
                       Row(
                         children: [
-                          const Icon(Icons.star_rounded, color: Colors.amber, size: 18),
+                          const Icon(Icons.star_rounded, color: AppColors.materialAmber, size: 18),
                           const SizedBox(width: 4),
                           Text(
                             widget.rating,
@@ -430,7 +418,7 @@ class _FoodItemPageState extends State<FoodItemPage> {
                             style: const TextStyle(
                               fontSize: 26,
                               fontWeight: FontWeight.w900,
-                              color: FoodItemColors.primary,
+                              color: AppColors.primary,
                             ),
                           ),
                           if (widget.originalPrice != null && widget.originalPrice! > widget.price) ...[
@@ -501,7 +489,7 @@ class _FoodItemPageState extends State<FoodItemPage> {
                 border: Border(top: BorderSide(color: cardBorder, width: 1)),
                 boxShadow: [
                   BoxShadow(
-                    color: isDark ? Colors.black.withValues(alpha: 0.4) : Colors.black.withValues(alpha: 0.08),
+                    color: isDark ? AppColors.black.withValues(alpha: 0.4) : AppColors.black.withValues(alpha: 0.08),
                     blurRadius: 16,
                     offset: const Offset(0, -4),
                   ),
@@ -512,7 +500,7 @@ class _FoodItemPageState extends State<FoodItemPage> {
                   // Quantity Stepper (- 1 +)
                   Container(
                     decoration: BoxDecoration(
-                      color: isDark ? Colors.white10 : const Color(0xFFF0F0F3),
+                      color: isDark ? AppColors.white10 : AppColors.border,
                       borderRadius: BorderRadius.circular(14),
                     ),
                     child: Row(
@@ -532,7 +520,7 @@ class _FoodItemPageState extends State<FoodItemPage> {
                         ),
                         IconButton(
                           icon: const Icon(Icons.add, size: 18),
-                          color: FoodItemColors.primary,
+                          color: AppColors.primary,
                           onPressed: _increment,
                         ),
                       ],
@@ -546,8 +534,8 @@ class _FoodItemPageState extends State<FoodItemPage> {
                       height: 50,
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: FoodItemColors.primary,
-                          foregroundColor: Colors.white,
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: AppColors.white,
                           elevation: 4,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14),
@@ -559,7 +547,7 @@ class _FoodItemPageState extends State<FoodItemPage> {
                                 width: 22,
                                 height: 22,
                                 child: CircularProgressIndicator(
-                                  color: Colors.white,
+                                  color: AppColors.white,
                                   strokeWidth: 2.5,
                                 ),
                               )
@@ -593,11 +581,11 @@ class _CircularButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.4),
+        color: AppColors.black.withValues(alpha: 0.4),
         shape: BoxShape.circle,
       ),
       child: IconButton(
-        icon: Icon(icon, color: Colors.white, size: 24),
+        icon: Icon(icon, color: AppColors.white, size: 24),
         onPressed: onTap,
       ),
     );

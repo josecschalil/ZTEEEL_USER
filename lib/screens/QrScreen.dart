@@ -1,3 +1,4 @@
+import '../app_colors.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -5,32 +6,6 @@ import 'package:qr_flutter/qr_flutter.dart';
 import '../services/redemption_service.dart';
 import 'RecentOrderScreen.dart';
 
-class RedeemColors {
-  static const primary = Color(0xFFEE5B2B);
-  static const backgroundLight = Color(0xFFF8F6F6);
-  static const backgroundDark = Color(0xFF221510);
-  static const surfaceDark = Color(0xFF332019);
-  static const timerBoxDark = Color(0xFF482C23);
-  static const mutedTextDark = Color(0xFFC9A092);
-
-  static ThemeData get lightTheme => ThemeData(
-    useMaterial3: true,
-    scaffoldBackgroundColor: backgroundLight,
-    colorScheme: ColorScheme.fromSeed(
-      seedColor: primary,
-      brightness: Brightness.light,
-    ),
-  );
-
-  static ThemeData get darkTheme => ThemeData(
-    useMaterial3: true,
-    scaffoldBackgroundColor: backgroundDark,
-    colorScheme: ColorScheme.fromSeed(
-      seedColor: primary,
-      brightness: Brightness.dark,
-    ),
-  );
-}
 
 typedef QrScreen = RedeemQrScreen;
 
@@ -125,7 +100,7 @@ class _RedeemQrScreenState extends State<RedeemQrScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Order verified & marked as completed!'),
-        backgroundColor: RedeemColors.primary,
+        backgroundColor: AppColors.primary,
         behavior: SnackBarBehavior.floating,
         duration: Duration(seconds: 2),
       ),
@@ -205,7 +180,7 @@ class _RedeemQrScreenState extends State<RedeemQrScreen> {
     showDialog(
       context: context,
       builder: (ctx) => Dialog(
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -217,7 +192,7 @@ class _RedeemQrScreenState extends State<RedeemQrScreen> {
                 style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: Colors.black,
+                  color: AppColors.black,
                 ),
               ),
               const SizedBox(height: 16),
@@ -230,11 +205,11 @@ class _RedeemQrScreenState extends State<RedeemQrScreen> {
                   size: 260.0,
                   eyeStyle: const QrEyeStyle(
                     eyeShape: QrEyeShape.square,
-                    color: Color(0xFF1E1714),
+                    color: AppColors.bgDark,
                   ),
                   dataModuleStyle: const QrDataModuleStyle(
                     dataModuleShape: QrDataModuleShape.square,
-                    color: Color(0xFF1E1714),
+                    color: AppColors.bgDark,
                   ),
                 ),
               ),
@@ -244,17 +219,17 @@ class _RedeemQrScreenState extends State<RedeemQrScreen> {
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF5C5751),
+                  color: AppColors.textSecondary,
                 ),
               ),
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: () => Navigator.of(ctx).pop(),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: RedeemColors.primary,
+                  backgroundColor: AppColors.primary,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
-                child: const Text('Close', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                child: const Text('Close', style: TextStyle(color: AppColors.white, fontWeight: FontWeight.bold)),
               ),
             ],
           ),
@@ -272,9 +247,9 @@ class _RedeemQrScreenState extends State<RedeemQrScreen> {
 
     if (_isLoading) {
       return Scaffold(
-        backgroundColor: isDark ? RedeemColors.backgroundDark : RedeemColors.backgroundLight,
+        backgroundColor: isDark ? AppColors.checkoutBgDark : AppColors.backgroundLight,
         body: const Center(
-          child: CircularProgressIndicator(color: RedeemColors.primary),
+          child: CircularProgressIndicator(color: AppColors.primary),
         ),
       );
     }
@@ -285,14 +260,14 @@ class _RedeemQrScreenState extends State<RedeemQrScreen> {
     final shortOrderId = cleanQr.length >= 8 ? cleanQr.substring(0, 8) : cleanQr;
 
     return Scaffold(
-      backgroundColor: isDark ? RedeemColors.backgroundDark : RedeemColors.backgroundLight,
+      backgroundColor: isDark ? AppColors.checkoutBgDark : AppColors.backgroundLight,
       body: SafeArea(
         child: Column(
           children: [
             _Header(isDark: isDark),
             Expanded(
               child: RefreshIndicator(
-                color: RedeemColors.primary,
+                color: AppColors.primary,
                 onRefresh: _loadSession,
                 child: ListView(
                   physics: const AlwaysScrollableScrollPhysics(),
@@ -353,7 +328,7 @@ class _Header extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-      color: (isDark ? RedeemColors.backgroundDark : RedeemColors.backgroundLight)
+      color: (isDark ? AppColors.checkoutBgDark : AppColors.backgroundLight)
           .withValues(alpha: 0.95),
       child: Row(
         children: [
@@ -365,7 +340,7 @@ class _Header extends StatelessWidget {
               onPressed: () => Navigator.of(context).maybePop(),
               icon: Icon(
                 Icons.arrow_back,
-                color: isDark ? Colors.white : Colors.black87,
+                color: isDark ? AppColors.white : AppColors.black87,
               ),
             ),
           ),
@@ -377,7 +352,7 @@ class _Header extends StatelessWidget {
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
                 letterSpacing: -0.2,
-                color: isDark ? Colors.white : Colors.black,
+                color: isDark ? AppColors.white : AppColors.black,
               ),
             ),
           ),
@@ -388,7 +363,7 @@ class _Header extends StatelessWidget {
               child: const Text(
                 'Help',
                 style: TextStyle(
-                  color: RedeemColors.primary,
+                  color: AppColors.primary,
                   fontWeight: FontWeight.bold,
                   fontSize: 15,
                 ),
@@ -435,13 +410,13 @@ class _QrCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: isDark ? RedeemColors.surfaceDark : Colors.white,
+        color: isDark ? AppColors.redeemSurfaceDark : AppColors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: isDark
             ? null
             : const [
                 BoxShadow(
-                  color: Colors.black12,
+                  color: AppColors.black12,
                   blurRadius: 6,
                   offset: Offset(0, 2),
                 ),
@@ -456,7 +431,7 @@ class _QrCard extends StatelessWidget {
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
-                color: isDark ? Colors.white70 : const Color(0xFF332019),
+                color: isDark ? AppColors.white70 : AppColors.redeemSurfaceDark,
               ),
             ),
             const SizedBox(height: 12),
@@ -466,12 +441,12 @@ class _QrCard extends StatelessWidget {
             constraints: const BoxConstraints(maxWidth: 260),
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppColors.white,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
                 color: isConfirmed
-                    ? const Color(0xFF10B981)
-                    : (isExpired ? Colors.red.shade300 : const Color(0xFFEEEEEE)),
+                    ? AppColors.green
+                    : (isExpired ? AppColors.materialRed.shade300 : AppColors.toneFFEEEEEE),
                 width: 2,
               ),
             ),
@@ -484,11 +459,11 @@ class _QrCard extends StatelessWidget {
                   size: 220.0,
                   eyeStyle: const QrEyeStyle(
                     eyeShape: QrEyeShape.square,
-                    color: Color(0xFF1E1714),
+                    color: AppColors.bgDark,
                   ),
                   dataModuleStyle: const QrDataModuleStyle(
                     dataModuleShape: QrDataModuleShape.square,
-                    color: Color(0xFF1E1714),
+                    color: AppColors.bgDark,
                   ),
                 ),
               ),
@@ -500,7 +475,7 @@ class _QrCard extends StatelessWidget {
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: isDark ? Colors.white : Colors.black,
+              color: isDark ? AppColors.white : AppColors.black,
             ),
           ),
           const SizedBox(height: 10),
@@ -508,21 +483,21 @@ class _QrCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
               decoration: BoxDecoration(
-                color: const Color(0xFF10B981).withValues(alpha: 0.15),
+                color: AppColors.green.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(999),
-                border: Border.all(color: const Color(0xFF10B981)),
+                border: Border.all(color: AppColors.green),
               ),
               child: const Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.check_circle_rounded, color: Color(0xFF10B981), size: 16),
+                  Icon(Icons.check_circle_rounded, color: AppColors.green, size: 16),
                   SizedBox(width: 6),
                   Text(
                     'Order Verified & Redeemed',
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF10B981),
+                      color: AppColors.green,
                     ),
                   ),
                 ],
@@ -532,16 +507,16 @@ class _QrCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
               decoration: BoxDecoration(
-                color: Colors.red.withValues(alpha: 0.15),
+                color: AppColors.materialRed.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(999),
-                border: Border.all(color: Colors.red),
+                border: Border.all(color: AppColors.materialRed),
               ),
               child: Text(
                 status.toUpperCase(),
                 style: const TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
-                  color: Colors.red,
+                  color: AppColors.materialRed,
                 ),
               ),
             )
@@ -560,13 +535,13 @@ class _QrCard extends StatelessWidget {
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 13,
-              color: isDark ? RedeemColors.mutedTextDark : Colors.grey[500],
+              color: isDark ? AppColors.mutedTextDark : AppColors.materialGrey[500],
             ),
           ),
           const SizedBox(height: 16),
           Container(
             height: 1,
-            color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.grey[100],
+            color: isDark ? AppColors.white.withValues(alpha: 0.1) : AppColors.materialGrey[100],
           ),
           const SizedBox(height: 16),
           SizedBox(
@@ -576,8 +551,8 @@ class _QrCard extends StatelessWidget {
               onPressed: onExpand,
               style: OutlinedButton.styleFrom(
                 backgroundColor: isDark
-                    ? Colors.white.withValues(alpha: 0.05)
-                    : Colors.grey[100],
+                    ? AppColors.white.withValues(alpha: 0.05)
+                    : AppColors.materialGrey[100],
                 side: BorderSide.none,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -585,13 +560,13 @@ class _QrCard extends StatelessWidget {
               ),
               icon: Icon(
                 Icons.fullscreen,
-                color: isDark ? Colors.white : Colors.black87,
+                color: isDark ? AppColors.white : AppColors.black87,
               ),
               label: Text(
                 'Expand Code',
                 style: TextStyle(
                   fontWeight: FontWeight.w600,
-                  color: isDark ? Colors.white : Colors.black87,
+                  color: isDark ? AppColors.white : AppColors.black87,
                 ),
               ),
             ),
@@ -623,12 +598,12 @@ class _CompactTimerChip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         color: isDark
-            ? RedeemColors.timerBoxDark
-            : RedeemColors.primary.withValues(alpha: 0.1),
+            ? AppColors.redeemTimerDark
+            : AppColors.primary.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(999),
         border: isDark
             ? null
-            : Border.all(color: RedeemColors.primary.withValues(alpha: 0.2)),
+            : Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -636,7 +611,7 @@ class _CompactTimerChip extends StatelessWidget {
           Icon(
             Icons.timer,
             size: 13,
-            color: isDark ? Colors.white : RedeemColors.primary,
+            color: isDark ? AppColors.white : AppColors.primary,
           ),
           const SizedBox(width: 6),
           Text(
@@ -644,7 +619,7 @@ class _CompactTimerChip extends StatelessWidget {
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w500,
-              color: isDark ? RedeemColors.mutedTextDark : Colors.grey[600],
+              color: isDark ? AppColors.mutedTextDark : AppColors.materialGrey[600],
             ),
           ),
           Text(
@@ -653,7 +628,7 @@ class _CompactTimerChip extends StatelessWidget {
               fontSize: 12,
               fontWeight: FontWeight.bold,
               fontFamily: 'monospace',
-              color: isDark ? Colors.white : RedeemColors.primary,
+              color: isDark ? AppColors.white : AppColors.primary,
             ),
           ),
         ],
@@ -688,7 +663,7 @@ class _OrderSummary extends StatelessWidget {
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: isDark ? Colors.white : Colors.black,
+              color: isDark ? AppColors.white : AppColors.black,
             ),
           ),
         ),
@@ -696,13 +671,13 @@ class _OrderSummary extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: isDark ? RedeemColors.surfaceDark : Colors.white,
+            color: isDark ? AppColors.redeemSurfaceDark : AppColors.white,
             borderRadius: BorderRadius.circular(12),
             boxShadow: isDark
                 ? null
                 : const [
                     BoxShadow(
-                      color: Colors.black12,
+                      color: AppColors.black12,
                       blurRadius: 4,
                       offset: Offset(0, 1),
                     ),
@@ -718,8 +693,8 @@ class _OrderSummary extends StatelessWidget {
                     child: Container(
                       height: 1,
                       color: isDark
-                          ? Colors.white.withValues(alpha: 0.1)
-                          : Colors.grey[100],
+                          ? AppColors.white.withValues(alpha: 0.1)
+                          : AppColors.materialGrey[100],
                     ),
                   ),
               ],
@@ -746,7 +721,7 @@ class _OrderLineRow extends StatelessWidget {
           child: Container(
             width: 64,
             height: 64,
-            color: isDark ? const Color(0xFF482C23) : const Color(0xFFF3F4F6),
+            color: isDark ? AppColors.redeemTimerDark : AppColors.surfaceRaised,
             child: item.imageUrl != null && item.imageUrl!.isNotEmpty
                 ? Image.network(
                     item.imageUrl!,
@@ -755,13 +730,13 @@ class _OrderLineRow extends StatelessWidget {
                     fit: BoxFit.cover,
                     errorBuilder: (_, __, ___) => const Icon(
                       Icons.restaurant_rounded,
-                      color: RedeemColors.primary,
+                      color: AppColors.primary,
                       size: 28,
                     ),
                   )
                 : const Icon(
                     Icons.restaurant_rounded,
-                    color: RedeemColors.primary,
+                    color: AppColors.primary,
                     size: 28,
                   ),
           ),
@@ -782,7 +757,7 @@ class _OrderLineRow extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
-                        color: isDark ? Colors.white : Colors.black,
+                        color: isDark ? AppColors.white : AppColors.black,
                       ),
                     ),
                   ),
@@ -793,7 +768,7 @@ class _OrderLineRow extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
-                      color: item.isRewardItem ? const Color(0xFF10B981) : (isDark ? Colors.white : Colors.black),
+                      color: item.isRewardItem ? AppColors.green : (isDark ? AppColors.white : AppColors.black),
                     ),
                   ),
                 ],
@@ -805,7 +780,7 @@ class _OrderLineRow extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 13,
-                  color: isDark ? RedeemColors.mutedTextDark : Colors.grey[500],
+                  color: isDark ? AppColors.mutedTextDark : AppColors.materialGrey[500],
                 ),
               ),
               const SizedBox(height: 2),
@@ -814,8 +789,8 @@ class _OrderLineRow extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 11,
                   color: isDark
-                      ? Colors.white.withValues(alpha: 0.4)
-                      : Colors.grey[400],
+                      ? AppColors.white.withValues(alpha: 0.4)
+                      : AppColors.materialGrey[400],
                 ),
               ),
             ],
@@ -847,11 +822,11 @@ class _TotalCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: RedeemColors.primary,
+        color: AppColors.primary,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: RedeemColors.primary.withValues(alpha: 0.2),
+            color: AppColors.primary.withValues(alpha: 0.2),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -865,14 +840,14 @@ class _TotalCard extends StatelessWidget {
               Text(
                 'Subtotal',
                 style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.8),
+                  color: AppColors.white.withValues(alpha: 0.8),
                   fontSize: 14,
                 ),
               ),
               Text(
                 '\$${subtotal.toStringAsFixed(2)}',
                 style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.8),
+                  color: AppColors.white.withValues(alpha: 0.8),
                   fontSize: 14,
                 ),
               ),
@@ -885,14 +860,14 @@ class _TotalCard extends StatelessWidget {
               Text(
                 'Discount ($discountLabel)',
                 style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.8),
+                  color: AppColors.white.withValues(alpha: 0.8),
                   fontSize: 14,
                 ),
               ),
               Text(
                 '-\$${discount.toStringAsFixed(2)}',
                 style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.8),
+                  color: AppColors.white.withValues(alpha: 0.8),
                   fontSize: 14,
                 ),
               ),
@@ -900,7 +875,7 @@ class _TotalCard extends StatelessWidget {
           ),
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 12),
-            child: Divider(height: 1, color: Colors.white24),
+            child: Divider(height: 1, color: AppColors.white24),
           ),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -908,7 +883,7 @@ class _TotalCard extends StatelessWidget {
               const Text(
                 'Total to Pay',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: AppColors.white,
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                 ),
@@ -916,7 +891,7 @@ class _TotalCard extends StatelessWidget {
               Text(
                 '\$${total.toStringAsFixed(2)}',
                 style: const TextStyle(
-                  color: Colors.white,
+                  color: AppColors.white,
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                 ),
@@ -951,10 +926,10 @@ class _BottomActionBar extends StatelessWidget {
         16 + MediaQuery.of(context).padding.bottom,
       ),
       decoration: BoxDecoration(
-        color: isDark ? RedeemColors.surfaceDark : Colors.white,
+        color: isDark ? AppColors.redeemSurfaceDark : AppColors.white,
         border: Border(
           top: BorderSide(
-            color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey[100]!,
+            color: isDark ? AppColors.white.withValues(alpha: 0.05) : AppColors.materialGrey[100]!,
           ),
         ),
       ),
@@ -968,8 +943,8 @@ class _BottomActionBar extends StatelessWidget {
                 style: OutlinedButton.styleFrom(
                   side: BorderSide(
                     color: isDark
-                        ? Colors.white.withValues(alpha: 0.1)
-                        : Colors.grey[200]!,
+                        ? AppColors.white.withValues(alpha: 0.1)
+                        : AppColors.materialGrey[200]!,
                   ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -977,13 +952,13 @@ class _BottomActionBar extends StatelessWidget {
                 ),
                 icon: Icon(
                   Icons.share,
-                  color: isDark ? Colors.white : Colors.black,
+                  color: isDark ? AppColors.white : AppColors.black,
                 ),
                 label: Text(
                   'Share Deal',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: isDark ? Colors.white : Colors.black,
+                    color: isDark ? AppColors.white : AppColors.black,
                   ),
                 ),
               ),
@@ -996,10 +971,10 @@ class _BottomActionBar extends StatelessWidget {
               child: ElevatedButton.icon(
                 onPressed: onDone,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: isDark ? Colors.white : Colors.black87,
+                  backgroundColor: isDark ? AppColors.white : AppColors.black87,
                   foregroundColor: isDark
-                      ? RedeemColors.backgroundDark
-                      : Colors.white,
+                      ? AppColors.checkoutBgDark
+                      : AppColors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),

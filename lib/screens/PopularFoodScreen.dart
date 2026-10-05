@@ -1,3 +1,4 @@
+import '../app_colors.dart';
 // ---------------------------------------------------------------------
 // POPULAR FOOD ITEMS SCREEN
 // ---------------------------------------------------------------------
@@ -25,19 +26,8 @@ import 'package:flutter/material.dart';
 import 'FoodTypeShopScreen.dart';
 
 /// ---------------------------------------------------------------------
-/// Shared palette (identical to the rest of the app)
+/// Colors are supplied by the shared app palette.
 /// ---------------------------------------------------------------------
-class AppColors {
-  static const primary = Color(0xFFEE5B2B);
-  static const primarySoft = Color(0xFFFDECE4);
-  static const backgroundLight = Color(0xFFF8F6F6);
-  static const cardLight = Colors.white;
-  static const borderLight = Color(0xFFE2E8F0);
-  static const textPrimary = Color(0xFF0F172A);
-  static const textSecondary = Color(0xFF64748B);
-  static const textMuted = Color(0xFF94A3B8);
-  static const success = Color(0xFF16A34A);
-}
 
 /// ---------------------------------------------------------------------
 /// Model
@@ -282,7 +272,7 @@ class _FilterRow extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 12.5,
                     fontWeight: FontWeight.w600,
-                    color: isActive ? Colors.white : AppColors.textSecondary,
+                    color: isActive ? AppColors.white : AppColors.textSecondary,
                   ),
                 ),
               ),
@@ -330,9 +320,9 @@ class _FeaturedTile extends StatelessWidget {
                     vertical: 6,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.35),
+                    color: AppColors.black.withOpacity(0.35),
                     borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: Colors.white.withOpacity(0.25)),
+                    border: Border.all(color: AppColors.white.withOpacity(0.25)),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -348,7 +338,7 @@ class _FeaturedTile extends StatelessWidget {
                         style: const TextStyle(
                           fontSize: 11.5,
                           fontWeight: FontWeight.w700,
-                          color: Colors.white,
+                          color: AppColors.white,
                         ),
                       ),
                     ],
@@ -364,7 +354,7 @@ class _FeaturedTile extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 26,
                     fontWeight: FontWeight.w800,
-                    color: Colors.white,
+                    color: AppColors.white,
                     height: 1.05,
                   ),
                 ),
@@ -379,7 +369,7 @@ class _FeaturedTile extends StatelessWidget {
                     const SizedBox(width: 8),
                     _StatPill(
                       icon: Icons.trending_up_rounded,
-                      iconColor: Colors.white,
+                      iconColor: AppColors.white,
                       label: '${item.orderCountLabel} orders this week',
                     ),
                   ],
@@ -408,7 +398,7 @@ class _StatPill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.3),
+        color: AppColors.black.withOpacity(0.3),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Row(
@@ -421,7 +411,7 @@ class _StatPill extends StatelessWidget {
             style: const TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w600,
-              color: Colors.white,
+              color: AppColors.white,
             ),
           ),
         ],
@@ -511,7 +501,7 @@ class _GridTile extends StatelessWidget {
           ? Container(
               padding: const EdgeInsets.all(5),
               decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.35),
+                color: AppColors.black.withOpacity(0.35),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
@@ -534,7 +524,7 @@ class _GridTile extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w800,
-                color: Colors.white,
+                color: AppColors.white,
               ),
             ),
             const SizedBox(height: 4),
@@ -547,7 +537,7 @@ class _GridTile extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
-                    color: Colors.white,
+                    color: AppColors.white,
                   ),
                 ),
                 const SizedBox(width: 6),
@@ -555,7 +545,7 @@ class _GridTile extends StatelessWidget {
                   '· ${item.orderCountLabel} orders',
                   style: TextStyle(
                     fontSize: 10.5,
-                    color: Colors.white.withOpacity(0.85),
+                    color: AppColors.white.withOpacity(0.85),
                   ),
                 ),
               ],
@@ -579,14 +569,14 @@ class _RankBadge extends StatelessWidget {
       height: 26,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.white,
         shape: BoxShape.circle,
         border: Border.all(
           color: isTopThree ? AppColors.primary : AppColors.borderLight,
           width: 1.4,
         ),
         boxShadow: const [
-          BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 1)),
+          BoxShadow(color: AppColors.black26, blurRadius: 4, offset: Offset(0, 1)),
         ],
       ),
       child: Text(
@@ -629,7 +619,7 @@ class _ImageFrame extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.transparent,
+      color: AppColors.transparent,
       borderRadius: BorderRadius.circular(borderRadius),
       child: InkWell(
         onTap: onTap,
@@ -640,7 +630,7 @@ class _ImageFrame extends StatelessWidget {
             borderRadius: BorderRadius.circular(borderRadius),
             boxShadow: const [
               BoxShadow(
-                color: Colors.black12,
+                color: AppColors.black12,
                 blurRadius: 16,
                 offset: Offset(0, 8),
               ),
@@ -669,9 +659,9 @@ class _ImageFrame extends StatelessWidget {
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: [
-                        Colors.black.withOpacity(0.0),
-                        Colors.black.withOpacity(0.05),
-                        Colors.black.withOpacity(0.78),
+                        AppColors.black.withOpacity(0.0),
+                        AppColors.black.withOpacity(0.05),
+                        AppColors.black.withOpacity(0.78),
                       ],
                       stops: const [0.0, 0.45, 1.0],
                     ),
@@ -709,7 +699,7 @@ class _FallbackBackground extends StatelessWidget {
         ),
       ),
       alignment: Alignment.center,
-      child: Icon(icon, size: 42, color: Colors.white.withOpacity(0.35)),
+      child: Icon(icon, size: 42, color: AppColors.white.withOpacity(0.35)),
     );
   }
 }

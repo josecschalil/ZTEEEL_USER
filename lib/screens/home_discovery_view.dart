@@ -1,16 +1,18 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../app_colors.dart';
+import '../services/food_tag_service.dart';
 import '../services/location_service.dart';
+import '../widgets/category_row.dart';
+import '../widgets/discovery_search_bar.dart';
 import 'DealsScreen.dart';
-import 'FoodTypeShopScreen.dart' hide AppColors;
+import 'FoodTypeShopScreen.dart';
 import 'LocationPageScreen.dart';
 import 'NotificationScreen.dart';
-import 'PopularFoodScreen.dart' hide AppColors;
+import 'OfferExplanationScreen.dart';
 import 'RestuarantMenuScreen.dart';
-import 'RestaurantListScreen.dart' hide AppColors;
+import 'RestaurantListScreen.dart';
 import 'SearchScreen.dart';
 
 class HomeRestaurant {
@@ -39,138 +41,88 @@ class HomeRestaurant {
   });
 
   RestaurantListing toRestaurantListing() => RestaurantListing(
-        id: id,
-        name: name,
-        imageUrl: imageUrl,
-        fallbackIcon: Icons.restaurant_rounded,
-        cuisines: cuisine
-            .split('·')
-            .map((value) => value.trim())
-            .where((value) => value.isNotEmpty)
-            .toList(),
-        rating: rating,
-        reviewCount: reviewCount,
-        distanceKm: double.tryParse(distance.split(' ').first) ?? 1.2,
-        etaMins: int.tryParse(eta.split(RegExp(r'[^0-9]')).first) ?? 25,
-        isOpenNow: isOpen,
-        isPromoted: offerLabel != null,
-        hasFreeDelivery: offerLabel?.toLowerCase().contains('free delivery') == true,
-        priceLevel: '₹₹',
-      );
+    id: id,
+    name: name,
+    imageUrl: imageUrl,
+    fallbackIcon: Icons.restaurant_rounded,
+    cuisines: cuisine
+        .split('·')
+        .map((v) => v.trim())
+        .where((v) => v.isNotEmpty)
+        .toList(),
+    rating: rating,
+    reviewCount: reviewCount,
+    distanceKm: double.tryParse(distance.split(' ').first) ?? 1.2,
+    etaMins: int.tryParse(eta.split(RegExp(r'[^0-9]')).first) ?? 25,
+    isOpenNow: isOpen,
+    isPromoted: offerLabel != null,
+    hasFreeDelivery:
+        offerLabel?.toLowerCase().contains('free delivery') == true,
+    priceLevel: '₹₹',
+  );
 }
 
-class HomeCategory {
-  final String label;
-  final IconData icon;
-
-  const HomeCategory(this.label, this.icon);
-}
-
-const homeCategories = [
-  HomeCategory('Biryani', Icons.rice_bowl_rounded),
-  HomeCategory('Pizza', Icons.local_pizza_rounded),
-  HomeCategory('Burger', Icons.lunch_dining_rounded),
-  HomeCategory('Chinese', Icons.ramen_dining_rounded),
-  HomeCategory('Drinks', Icons.local_drink_rounded),
-];
-
-class HomeDiscoveryView extends StatelessWidget {
+class HomeDiscoveryView extends StatefulWidget {
   final List<HomeRestaurant> restaurants;
   final List<Deal> deals;
   final VoidCallback onSeeAllDeals;
+  final VoidCallback onOpenCart;
+  final int cartItemCount;
+  final bool isLoadingRestaurants;
+  final bool isLoadingDeals;
+  final List<FoodTag> foodTags;
+  final bool isLoadingFoodTags;
+  final String firstName;
 
   const HomeDiscoveryView({
     super.key,
     required this.restaurants,
     required this.deals,
     required this.onSeeAllDeals,
+    required this.onOpenCart,
+    this.cartItemCount = 0,
+    this.isLoadingRestaurants = false,
+    this.isLoadingDeals = false,
+    this.foodTags = const [],
+    this.isLoadingFoodTags = false,
+    this.firstName = '',
   });
 
   @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: CustomScrollView(
-        key: const ValueKey('home-discovery-feed'),
-        physics: const BouncingScrollPhysics(),
-        slivers: [
-          SliverToBoxAdapter(child: _HomeHeader()),
-          SliverToBoxAdapter(child: _HomeSearchBar()),
-          SliverToBoxAdapter(
-            child: _QuickActions(onSeeAllDeals: onSeeAllDeals),
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(18, 12, 18, 0),
-              child: _OfferCarousel(deals: deals, onSeeAllDeals: onSeeAllDeals),
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: _HomeSectionHeader(
-              title: 'What are you craving?',
-              actionLabel: 'See all',
-              onAction: () => Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const PopularFoodItemsScreen(),
-                ),
-              ),
-            ),
-          ),
-          SliverToBoxAdapter(child: _CategoryRow()),
-          SliverToBoxAdapter(
-            child: _HomeSectionHeader(
-              title: 'Popular near you',
-              actionLabel: 'See all',
-              onAction: () => Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => NearbyRestaurantsScreen(
-                    restaurants: restaurants.isNotEmpty
-                        ? restaurants.map((r) => r.toRestaurantListing()).toList()
-                        : null,
-                  ),
-                ),
-              ),
-            ),
-          ),
-          if (restaurants.isEmpty)
-            const SliverToBoxAdapter(child: _RestaurantsEmptyState())
-          else
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(18, 0, 18, 112),
-              sliver: SliverList.separated(
-                itemCount: restaurants.length,
-                itemBuilder: (context, index) =>
-                    _RestaurantRow(restaurant: restaurants[index]),
-                separatorBuilder: (_, _) =>
-                    const Divider(height: 28, color: AppColors.border),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
+  State<HomeDiscoveryView> createState() => _HomeDiscoveryViewState();
 }
 
-class _HomeHeader extends StatefulWidget {
-  @override
-  State<_HomeHeader> createState() => _HomeHeaderState();
-}
-
-class _HomeHeaderState extends State<_HomeHeader> {
-  String _label = 'Delivering to';
+class _HomeDiscoveryViewState extends State<HomeDiscoveryView> {
   String _address = 'Choose your location';
 
   @override
   void initState() {
     super.initState();
+    LocationService.addressNotifier.addListener(_onAddressChanged);
     _restoreLocation();
+  }
+
+  @override
+  void dispose() {
+    LocationService.addressNotifier.removeListener(_onAddressChanged);
+    super.dispose();
+  }
+
+  void _onAddressChanged() {
+    if (!mounted) return;
+    final live = LocationService.addressNotifier.value;
+    if (_address != live) {
+      setState(() => _address = live);
+    }
   }
 
   Future<void> _restoreLocation() async {
     final saved = await LocationService.load();
     if (!mounted || saved == null) return;
+    final newAddress = saved.address.isEmpty ? 'Selected location' : saved.address;
+    LocationService.addressNotifier.value = newAddress;
     setState(() {
-      _label = saved.label.isEmpty ? 'Delivering to' : saved.label;
-      _address = saved.address.isEmpty ? 'Selected location' : saved.address;
+      _address = newAddress;
     });
   }
 
@@ -179,78 +131,303 @@ class _HomeHeaderState extends State<_HomeHeader> {
       MaterialPageRoute(builder: (_) => const LocationPickerScreen()),
     );
     if (!mounted || result == null) return;
+    final newAddress = result.address.isEmpty ? 'Selected location' : result.address;
+    LocationService.addressNotifier.value = newAddress;
     setState(() {
-      _label = result.label.isEmpty ? 'Delivering to' : result.label;
-      _address = result.address.isEmpty ? 'Selected location' : result.address;
+      _address = newAddress;
     });
+  }
+
+  void _openRestaurants({RestaurantBrowsePreset? preset}) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => NearbyRestaurantsScreen(
+          restaurants: widget.restaurants.isEmpty
+              ? null
+              : widget.restaurants.map((r) => r.toRestaurantListing()).toList(),
+          preset: preset,
+        ),
+      ),
+    );
+  }
+
+  void _openSearchDiscovery(FoodTag? tag) {
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        transitionDuration: const Duration(milliseconds: 350),
+        reverseTransitionDuration: const Duration(milliseconds: 300),
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            FoodTypeShopsScreen(
+              foodType: tag?.name ?? 'All',
+              foodTagId: tag?.id,
+              foodTags: widget.foodTags,
+              autoFocusSearch: tag == null,
+            ),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(
+            opacity: CurvedAnimation(
+              parent: animation,
+              curve: Curves.easeInOut,
+            ),
+            child: child,
+          );
+        },
+      ),
+    );
+  }
+
+  void _openDeal(Deal deal) {
+    final subtitle = deal.description.isNotEmpty
+        ? deal.description
+        : [
+            deal.restaurant,
+            deal.distance,
+          ].where((value) => value.isNotEmpty).join(' · ');
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => OfferExplanationScreen(
+          title: deal.title,
+          subtitle: subtitle.isEmpty ? 'Special offer' : subtitle,
+          badge: deal.discount,
+          expiry: deal.timeLeft.isEmpty ? 'Limited time' : deal.timeLeft,
+          gradientColors: _restaurantOfferGradientFor(deal),
+          restaurantName: deal.restaurant,
+        ),
+      ),
+    );
+  }
+
+  String get _headline {
+    if (widget.isLoadingDeals || widget.deals.isEmpty) {
+      return 'Discover your next favorite meal.';
+    }
+    if (widget.deals.length == 1) return 'There is 1 food offer near you.';
+    return 'There are ${widget.deals.length} food offers near you.';
   }
 
   @override
   Widget build(BuildContext context) {
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.dark.copyWith(
+        statusBarColor: AppColors.transparent,
+        systemStatusBarContrastEnforced: false,
+      ),
+      child: Material(
+        color: AppColors.white,
+        child: CustomScrollView(
+          key: const PageStorageKey('home-discovery-feed'),
+          physics: const BouncingScrollPhysics(),
+          slivers: [
+            SliverToBoxAdapter(
+              child: Container(
+                color: AppColors.white,
+                child: SafeArea(
+                  bottom: false,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _HomeHeader(
+                        address: _address,
+                        cartItemCount: widget.cartItemCount,
+                        onLocation: _openLocationPicker,
+                        onOpenCart: widget.onOpenCart,
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(18, 8, 18, 12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              widget.firstName.isEmpty
+                                  ? 'Hello!'
+                                  : 'Hello, ${widget.firstName}!',
+                              style: Theme.of(context).textTheme.titleLarge
+                                  ?.copyWith(
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                            ),
+                            const SizedBox(height: 4),
+                            ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 320),
+                              child: Text(
+                                _headline,
+                                key: const ValueKey('home-offer-count'),
+                                style: Theme.of(
+                                  context,
+                                ).textTheme.headlineMedium,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      _HomeSearchBar(
+                        onMap: _openLocationPicker,
+                        onOpenNow: () => _openRestaurants(
+                          preset: RestaurantBrowsePreset.openNow,
+                        ),
+                        onSearchTap: () => _openSearchDiscovery(null),
+                      ),
+                      const SizedBox(height: 14),
+                      _CategoryRow(
+                        foodTags: widget.foodTags,
+                        isLoading: widget.isLoadingFoodTags,
+                        onTagTap: _openSearchDiscovery,
+                      ),
+                      const SizedBox(height: 18),
+                      widget.isLoadingDeals && widget.deals.isEmpty
+                          ? const _OfferRail(isLoading: true)
+                          : widget.deals.isEmpty
+                          ? const _HomeEmptyState(
+                              message:
+                                  'No offers available right now. Check back soon.',
+                            )
+                          : _OfferRail(
+                              itemCount: widget.deals.length,
+                              onSeeAll: widget.onSeeAllDeals,
+                              itemBuilder: (context, index) {
+                                final deal = widget.deals[index];
+                                return _OfferCard(
+                                  deal: deal,
+                                  onTap: () => _openDeal(deal),
+                                );
+                              },
+                            ),
+                      const SizedBox(height: 18),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: _HomeSectionHeader(
+                title: 'Restaurants near you',
+                actionKey: 'home-see-all-restaurants',
+                onAction: _openRestaurants,
+              ),
+            ),
+            if (widget.isLoadingRestaurants && widget.restaurants.isEmpty)
+              const SliverPadding(
+                padding: EdgeInsets.fromLTRB(18, 4, 18, 20),
+                sliver: SliverToBoxAdapter(child: _RestaurantFeedSkeleton()),
+              )
+            else if (widget.restaurants.isEmpty)
+              const SliverToBoxAdapter(
+                child: _HomeEmptyState(
+                  message:
+                      'Restaurants will appear here when they are available for your location.',
+                ),
+              )
+            else
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(18, 0, 18, 20),
+                sliver: SliverList.separated(
+                  itemCount: widget.restaurants.length,
+                  itemBuilder: (context, index) => RestaurantCard(
+                    key: ValueKey(
+                      'home-restaurant-${widget.restaurants[index].id}',
+                    ),
+                    restaurant: widget.restaurants[index].toRestaurantListing(),
+                    onTap: () {
+                      final restaurant = widget.restaurants[index];
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => RestaurantMenuScreen(
+                            vendorId: restaurant.id,
+                            restaurantName: restaurant.name,
+                            heroImageUrl: restaurant.imageUrl,
+                            cuisine: restaurant.cuisine,
+                            isOpen: restaurant.isOpen,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  separatorBuilder: (_, _) => const SizedBox(height: 12),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HomeHeader extends StatelessWidget {
+  final String address;
+  final int cartItemCount;
+  final VoidCallback onLocation;
+  final VoidCallback onOpenCart;
+
+  const _HomeHeader({
+    required this.address,
+    required this.cartItemCount,
+    required this.onLocation,
+    required this.onOpenCart,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 12, 18, 8),
+      padding: const EdgeInsets.fromLTRB(18, 8, 10, 0),
       child: Row(
         children: [
           Expanded(
             child: InkWell(
               key: const ValueKey('home-location'),
-              onTap: _openLocationPicker,
+              onTap: onLocation,
               borderRadius: BorderRadius.circular(12),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              child: SizedBox(
+                height: 44,
+                child: Row(
                   children: [
-                    Text(
-                      _label == 'Delivering to' ? _label : 'Delivering to',
-                      style: const TextStyle(
-                        color: AppColors.textMuted,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
+                    const Icon(
+                      Icons.location_on_rounded,
+                      color: AppColors.orange,
+                      size: 16,
+                    ),
+                    const SizedBox(width: 5),
+                    Flexible(
+                      child: Text(
+                        address,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppColors.textPrimary,
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 2),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            _address,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: AppColors.textPrimary,
-                              fontSize: 17,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: -0.35,
-                            ),
-                          ),
-                        ),
-                        const Icon(
-                          Icons.keyboard_arrow_down_rounded,
-                          color: AppColors.textSecondary,
-                          size: 20,
-                        ),
-                      ],
-                    ),
+                    const SizedBox(width: 3),
+                    const Icon(Icons.keyboard_arrow_down_rounded, size: 16),
                   ],
                 ),
               ),
             ),
           ),
-          const SizedBox(width: 4),
           IconButton(
             key: const ValueKey('home-notifications'),
             tooltip: 'Notifications',
-            visualDensity: VisualDensity.compact,
-            padding: const EdgeInsets.all(8),
-            constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
-            icon: const Icon(
-              Icons.notifications_none_rounded,
-              color: AppColors.textPrimary,
-              size: 22,
-            ),
+            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+            icon: const Icon(Icons.notifications_none_rounded, size: 22),
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+            ),
+          ),
+          Semantics(
+            label: 'Cart, $cartItemCount items',
+            child: IconButton(
+              key: const ValueKey('home-cart'),
+              tooltip: 'Cart',
+              constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+              onPressed: onOpenCart,
+              icon: Badge(
+                key: const ValueKey('home-cart-badge'),
+                isLabelVisible: cartItemCount > 0,
+                backgroundColor: AppColors.orange,
+                textColor: AppColors.textOnAccent,
+                label: Text(cartItemCount > 99 ? '99+' : '$cartItemCount'),
+                child: const Icon(Icons.shopping_cart_outlined, size: 22),
+              ),
             ),
           ),
         ],
@@ -260,115 +437,51 @@ class _HomeHeaderState extends State<_HomeHeader> {
 }
 
 class _HomeSearchBar extends StatelessWidget {
+  final VoidCallback onMap;
+  final VoidCallback onOpenNow;
+  final VoidCallback? onSearchTap;
+
+  const _HomeSearchBar({
+    required this.onMap,
+    required this.onOpenNow,
+    this.onSearchTap,
+  });
+
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 8, 18, 0),
-      child: Container(
-        height: 54,
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.border),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: InkWell(
-                key: const ValueKey('home-search'),
-                onTap: () => Navigator.of(
-                  context,
-                ).push(MaterialPageRoute(builder: (_) => const SearchScreen())),
-                borderRadius: const BorderRadius.horizontal(
-                  left: Radius.circular(16),
-                ),
-                child: const Row(
-                  children: [
-                    SizedBox(width: 16),
-                    Icon(Icons.search_rounded, color: AppColors.textMuted),
-                    SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        'Search dishes or restaurants',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: AppColors.textMuted,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            _RoundIconButton(
-              key: const ValueKey('home-filter'),
-              compact: true,
-              icon: Icons.tune_rounded,
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => NearbyRestaurantsScreen()),
-              ),
-            ),
-            const SizedBox(width: 6),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _QuickActions extends StatelessWidget {
-  final VoidCallback onSeeAllDeals;
-
-  const _QuickActions({required this.onSeeAllDeals});
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 50,
-      child: ListView(
-        key: const ValueKey('home-quick-actions'),
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.fromLTRB(18, 12, 18, 0),
+      padding: const EdgeInsets.symmetric(horizontal: 18),
+      child: Row(
         children: [
-          _QuickAction(
-            label: 'Offers',
-            icon: Icons.local_offer_rounded,
-            onTap: onSeeAllDeals,
-          ),
-          _QuickAction(
-            label: 'Under 30 min',
-            icon: Icons.bolt_rounded,
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => const NearbyRestaurantsScreen(
-                  preset: RestaurantBrowsePreset.under30Minutes,
+          Expanded(
+            child: Hero(
+              tag: 'discovery_search_bar_hero',
+              child: Material(
+                color: Colors.transparent,
+                child: DiscoverySearchBar.navigation(
+                  hintText: 'Search food...',
+                  selectedFilterLabel: 'Open now',
+                  shellKey: const ValueKey('home-search-field'),
+                  searchKey: const ValueKey('home-search'),
+                  filterKey: const ValueKey('home-open-now'),
+                  onSearchTap: onSearchTap ??
+                      () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const SearchScreen(),
+                            ),
+                          ),
+                  onFilterTap: onOpenNow,
                 ),
               ),
             ),
           ),
-          _QuickAction(
-            label: '4.0+',
-            icon: Icons.star_rounded,
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => const NearbyRestaurantsScreen(
-                  preset: RestaurantBrowsePreset.rated4Plus,
-                ),
-              ),
-            ),
-          ),
-          _QuickAction(
-            label: 'Veg',
-            icon: Icons.eco_rounded,
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) =>
-                    const FoodTypeShopsScreen(foodType: 'Vegetarian'),
-              ),
-            ),
+          const SizedBox(width: 10),
+          _RoundIconButton(
+            key: const ValueKey('home-map'),
+            icon: Icons.map_outlined,
+            tooltip: 'Choose location on map',
+            size: 52,
+            onTap: onMap,
           ),
         ],
       ),
@@ -376,167 +489,129 @@ class _QuickActions extends StatelessWidget {
   }
 }
 
-class _QuickAction extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final VoidCallback onTap;
+typedef _CategoryRow = CategoryRow;
 
-  const _QuickAction({
-    required this.label,
-    required this.icon,
-    required this.onTap,
+
+class _HomeSectionHeader extends StatelessWidget {
+  final String title;
+  final String actionKey;
+  final VoidCallback onAction;
+
+  const _HomeSectionHeader({
+    required this.title,
+    required this.actionKey,
+    required this.onAction,
   });
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: Material(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(20),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(20),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            decoration: BoxDecoration(
-              border: Border.all(color: AppColors.border),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(icon, size: 16, color: AppColors.orange),
-                const SizedBox(width: 6),
-                Text(
-                  label,
-                  style: const TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
+      padding: const EdgeInsets.fromLTRB(18, 0, 10, 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              title,
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
-        ),
+          TextButton(
+            key: ValueKey(actionKey),
+            onPressed: onAction,
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.orange,
+              minimumSize: const Size(64, 44),
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              textStyle: Theme.of(
+                context,
+              ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            child: const Text('See all'),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _OfferCarousel extends StatefulWidget {
-  final List<Deal> deals;
-  final VoidCallback onSeeAllDeals;
+typedef _RailItemBuilder = Widget Function(BuildContext context, int index);
 
-  const _OfferCarousel({required this.deals, required this.onSeeAllDeals});
+class _OfferRail extends StatelessWidget {
+  final int itemCount;
+  final _RailItemBuilder? itemBuilder;
+  final bool isLoading;
+  final VoidCallback? onSeeAll;
 
-  @override
-  State<_OfferCarousel> createState() => _OfferCarouselState();
-}
-
-class _OfferCarouselState extends State<_OfferCarousel> {
-  final PageController _controller = PageController();
-  Timer? _timer;
-  int _index = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    _startTimer();
-  }
-
-  @override
-  void didUpdateWidget(covariant _OfferCarousel oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.deals.length != widget.deals.length) {
-      _index = 0;
-      _startTimer();
-    }
-  }
-
-  void _startTimer() {
-    _timer?.cancel();
-    if (widget.deals.length < 2) return;
-    _timer = Timer.periodic(const Duration(seconds: 5), (_) {
-      if (!mounted || !_controller.hasClients) return;
-      final next = (_index + 1) % widget.deals.length;
-      _controller.animateToPage(
-        next,
-        duration: const Duration(milliseconds: 420),
-        curve: Curves.easeOutCubic,
-      );
-    });
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    _controller.dispose();
-    super.dispose();
-  }
+  const _OfferRail({
+    this.itemCount = 0,
+    this.itemBuilder,
+    this.isLoading = false,
+    this.onSeeAll,
+  });
 
   @override
   Widget build(BuildContext context) {
-    if (widget.deals.isEmpty) return const SizedBox.shrink();
-    return SizedBox(
-      height: 156,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(18),
-        child: Stack(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = (constraints.maxWidth - 36)
+            .clamp(280.0, 320.0)
+            .toDouble();
+        final height = width * 152 / 320;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            PageView.builder(
-              clipBehavior: Clip.hardEdge,
-              controller: _controller,
-              itemCount: widget.deals.length,
-              onPageChanged: (value) => setState(() => _index = value),
-              itemBuilder: (context, index) => _OfferCard(
-                deal: widget.deals[index],
-                onTap: () => _openDeal(context, widget.deals[index]),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 0, 10, 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    "Today's Offers 🔥",
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0,
+                    ),
+                  ),
+                  if (!isLoading)
+                    TextButton(
+                      key: const ValueKey('home-see-all-deals'),
+                      onPressed: onSeeAll,
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppColors.orange,
+                        minimumSize: const Size(64, 44),
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        textStyle: Theme.of(context).textTheme.labelLarge
+                            ?.copyWith(fontWeight: FontWeight.w700),
+                      ),
+                      child: const Text('See all'),
+                    ),
+                ],
               ),
             ),
-            if (widget.deals.length > 1)
-              Positioned(
-                right: 14,
-                bottom: 12,
-                child: Row(
-                  children: List.generate(widget.deals.length, (index) {
-                    final active = index == _index;
-                    return AnimatedContainer(
-                      duration: const Duration(milliseconds: 180),
-                      width: active ? 14 : 5,
-                      height: 5,
-                      margin: const EdgeInsets.only(left: 4),
-                      decoration: BoxDecoration(
-                        color: active ? Colors.white : Colors.white54,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    );
-                  }),
+            SizedBox(
+              height: height,
+              child: ListView.separated(
+                key: const PageStorageKey('home-offers-rail'),
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 18),
+                itemCount: isLoading ? 3 : itemCount,
+                separatorBuilder: (_, _) => const SizedBox(width: 12),
+                itemBuilder: (context, index) => SizedBox(
+                  width: width,
+                  child: isLoading
+                      ? const _OfferSkeletonCard()
+                      : itemBuilder!(context, index),
                 ),
               ),
+            ),
           ],
-        ),
-      ),
+        );
+      },
     );
-  }
-
-  void _openDeal(BuildContext context, Deal deal) {
-    if (deal.vendorId != null && deal.vendorId!.isNotEmpty) {
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => RestaurantMenuScreen(
-            vendorId: deal.vendorId!,
-            restaurantName: deal.restaurant,
-            heroImageUrl: deal.imageUrl,
-            cuisine: 'Featured offer',
-            isOpen: true,
-          ),
-        ),
-      );
-    } else {
-      widget.onSeeAllDeals();
-    }
   }
 }
 
@@ -548,131 +623,143 @@ class _OfferCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final gradient = _restaurantOfferGradientFor(deal);
     return Material(
+      color: AppColors.transparent,
       borderRadius: BorderRadius.circular(18),
-      clipBehavior: Clip.antiAlias,
       child: InkWell(
+        key: ValueKey('home-deal-${deal.id ?? deal.title}'),
+        borderRadius: BorderRadius.circular(18),
         onTap: onTap,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            Image.asset(
-              'assets/images/home/home_food_banner.png',
-              fit: BoxFit.cover,
-            ),
-            const DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    Color(0xE01F1712),
-                    Color(0x601F1712),
-                    Color(0x001F1712),
-                  ],
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                ),
-              ),
-            ),
-            Positioned.fill(
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Padding(
-                  padding: const EdgeInsets.only(left: 16, right: 72),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        deal.discount,
-                        style: const TextStyle(
-                          color: Color(0xFFFFB18C),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: .65,
-                        ),
-                      ),
-                      const SizedBox(height: 7),
-                      Text(
-                        deal.title,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          height: 1.05,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -.55,
-                        ),
-                      ),
-                      const SizedBox(height: 7),
-                      Text(
-                        '${deal.restaurant} · ${deal.distance}',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Color(0xFFEDE7E2),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      const Text(
-                        'Order now →',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ],
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(18),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                    colors: gradient,
                   ),
                 ),
               ),
-            ),
-          ],
+              Positioned(
+                right: -24,
+                bottom: -24,
+                child: Container(
+                  width: 110,
+                  height: 110,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppColors.white.withValues(alpha: 0.1),
+                  ),
+                ),
+              ),
+              Positioned(
+                left: 14,
+                right: 14,
+                top: 13,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _OfferPill(label: deal.discount),
+                    _OfferPill(
+                      label: deal.timeLeft.isEmpty
+                          ? 'Limited time'
+                          : deal.timeLeft,
+                      icon: Icons.timer_outlined,
+                      dark: true,
+                    ),
+                  ],
+                ),
+              ),
+              Positioned(
+                left: 14,
+                right: 12,
+                bottom: 13,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            deal.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(
+                                  color: AppColors.white,
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: -0.3,
+                                ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            [
+                              deal.restaurant,
+                              deal.distance,
+                            ].where((value) => value.isNotEmpty).join(' · '),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  color: AppColors.white,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _HomeSectionHeader extends StatelessWidget {
-  final String title;
-  final String actionLabel;
-  final VoidCallback onAction;
+class _OfferPill extends StatelessWidget {
+  final String label;
+  final IconData? icon;
+  final bool dark;
 
-  const _HomeSectionHeader({
-    required this.title,
-    required this.actionLabel,
-    required this.onAction,
-  });
+  const _OfferPill({required this.label, this.icon, this.dark = false});
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 18, 18, 10),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: dark
+            ? AppColors.black.withValues(alpha: 0.38)
+            : AppColors.white.withValues(alpha: 0.22),
+        borderRadius: BorderRadius.circular(999),
+      ),
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Expanded(
-            child: Text(
-              title,
-              style: const TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-                letterSpacing: -.4,
-              ),
-            ),
-          ),
-          TextButton(
-            onPressed: onAction,
-            style: TextButton.styleFrom(
-              foregroundColor: AppColors.orange,
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-            ),
-            child: Text(
-              actionLabel,
-              style: const TextStyle(fontWeight: FontWeight.w700),
+          if (icon != null) ...[
+            Icon(icon, size: 13, color: AppColors.white),
+            const SizedBox(width: 4),
+          ],
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: AppColors.white,
+              fontSize: 10,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.3,
             ),
           ),
         ],
@@ -681,214 +768,74 @@ class _HomeSectionHeader extends StatelessWidget {
   }
 }
 
-class _RestaurantsEmptyState extends StatelessWidget {
-  const _RestaurantsEmptyState();
+List<Color> _restaurantOfferGradientFor(Deal deal) {
+  final value = deal.id ?? deal.title;
+  final index = value.codeUnits.fold<int>(0, (sum, codeUnit) => sum + codeUnit);
+  return restaurantOfferGradients[index % restaurantOfferGradients.length];
+}
+
+
+class _OfferSkeletonCard extends StatelessWidget {
+  const _OfferSkeletonCard();
 
   @override
   Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.fromLTRB(28, 12, 28, 128),
-      child: Text(
-        'Restaurants will appear here when they are available for your location.',
-        textAlign: TextAlign.center,
-        style: TextStyle(
-          color: AppColors.textSecondary,
-          fontSize: 13,
-          height: 1.4,
-          fontWeight: FontWeight.w600,
+    return Semantics(
+      label: 'Loading offers',
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: AppColors.surfaceRaised,
+          borderRadius: BorderRadius.circular(18),
         ),
       ),
     );
   }
 }
 
-class _CategoryRow extends StatelessWidget {
+class _RestaurantFeedSkeleton extends StatelessWidget {
+  const _RestaurantFeedSkeleton();
+
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 18),
-      child: Row(
-        children: homeCategories
-            .map(
-              (category) => Expanded(
-                child: InkWell(
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) =>
-                          FoodTypeShopsScreen(foodType: category.label),
-                    ),
-                  ),
-                  borderRadius: BorderRadius.circular(14),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 50,
-                        height: 50,
-                        decoration: BoxDecoration(
-                          color: AppColors.orangeTint,
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Icon(
-                          category.icon,
-                          color: AppColors.orange,
-                          size: 25,
-                        ),
-                      ),
-                      const SizedBox(height: 7),
-                      Text(
-                        category.label,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: AppColors.textSecondary,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
-                  ),
+    return Column(
+      children: List.generate(
+        3,
+        (index) => Padding(
+          padding: EdgeInsets.only(bottom: index == 2 ? 0 : 14),
+          child: Semantics(
+            label: 'Loading restaurants',
+            child: AspectRatio(
+              aspectRatio: 4 / 3,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceRaised,
+                  borderRadius: BorderRadius.circular(18),
                 ),
               ),
-            )
-            .toList(),
-      ),
-    );
-  }
-}
-
-class _RestaurantRow extends StatelessWidget {
-  final HomeRestaurant restaurant;
-
-  const _RestaurantRow({required this.restaurant});
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: () => Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => RestaurantMenuScreen(
-            vendorId: restaurant.id,
-            restaurantName: restaurant.name,
-            heroImageUrl: restaurant.imageUrl,
-            cuisine: restaurant.cuisine,
-            isOpen: restaurant.isOpen,
+            ),
           ),
         ),
       ),
-      borderRadius: BorderRadius.circular(16),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 2),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: SizedBox(
-                width: 102,
-                height: 102,
-                child: restaurant.imageUrl == null
-                    ? Image.asset(
-                        'assets/images/home/home_food_banner.png',
-                        fit: BoxFit.cover,
-                      )
-                    : Image.network(
-                        restaurant.imageUrl!,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, _, _) => Image.asset(
-                          'assets/images/home/home_food_banner.png',
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-              ),
-            ),
-            const SizedBox(width: 13),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          restaurant.name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: AppColors.textPrimary,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: -.3,
-                          ),
-                        ),
-                      ),
-                      if (restaurant.rating > 0) ...[
-                        const SizedBox(width: 8),
-                        const Icon(
-                          Icons.star_rounded,
-                          size: 15,
-                          color: Color(0xFFC4922E),
-                        ),
-                        const SizedBox(width: 3),
-                        Text(
-                          restaurant.rating.toStringAsFixed(1),
-                          style: const TextStyle(
-                            color: AppColors.textSecondary,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                  if (restaurant.cuisine.isNotEmpty) const SizedBox(height: 3),
-                  Text(
-                    restaurant.cuisine,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  if (restaurant.eta.isNotEmpty ||
-                      restaurant.distance.isNotEmpty)
-                    const SizedBox(height: 7),
-                  if (restaurant.eta.isNotEmpty ||
-                      restaurant.distance.isNotEmpty)
-                    Text(
-                      [
-                        restaurant.eta,
-                        restaurant.distance,
-                      ].where((value) => value.isNotEmpty).join(' · '),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  if (restaurant.offerLabel != null) ...[
-                    const SizedBox(height: 3),
-                    Text(
-                      restaurant.offerLabel!,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: AppColors.orange,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ],
+    );
+  }
+}
+
+class _HomeEmptyState extends StatelessWidget {
+  final String message;
+
+  const _HomeEmptyState({required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(18, 4, 18, 18),
+      child: Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceRaised,
+          borderRadius: BorderRadius.circular(18),
         ),
+        child: Text(message, style: Theme.of(context).textTheme.bodySmall),
       ),
     );
   }
@@ -896,34 +843,46 @@ class _RestaurantRow extends StatelessWidget {
 
 class _RoundIconButton extends StatelessWidget {
   final IconData icon;
+  final String tooltip;
   final VoidCallback onTap;
-  final bool compact;
+  final double size;
 
   const _RoundIconButton({
     super.key,
     required this.icon,
+    required this.tooltip,
     required this.onTap,
-    this.compact = false,
+    required this.size,
   });
 
   @override
   Widget build(BuildContext context) {
-    final size = compact ? 40.0 : 42.0;
-    return Material(
-      color: AppColors.surface,
-      borderRadius: BorderRadius.circular(compact ? 12 : 21),
-      child: InkWell(
-        key: key,
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(compact ? 12 : 21),
-        child: Container(
-          width: size,
-          height: size,
-          decoration: BoxDecoration(
-            border: Border.all(color: AppColors.border),
-            borderRadius: BorderRadius.circular(compact ? 12 : 21),
+    return Tooltip(
+      message: tooltip,
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.black.withValues(alpha: 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          shape: const CircleBorder(),
+          child: InkWell(
+            customBorder: const CircleBorder(),
+            onTap: onTap,
+            child: Center(
+              child: Icon(icon, size: 21, color: AppColors.textPrimary),
+            ),
           ),
-          child: Icon(icon, size: 21, color: AppColors.textPrimary),
         ),
       ),
     );

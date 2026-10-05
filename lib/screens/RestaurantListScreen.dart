@@ -1,38 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import '../app_colors.dart';
 import '../config/api_config.dart';
 import '../services/restaurant_service.dart';
+import '../widgets/discovery_search_bar.dart';
 import 'RestuarantMenuScreen.dart';
-
-/// ---------------------------------------------------------------------------
-/// NEARBY RESTAURANTS — REDESIGNED
-/// ---------------------------------------------------------------------------
-/// Visual redesign only:
-/// - All existing data, filters, sorting and navigation are preserved.
-/// - Restaurant selection still opens RestaurantMenuScreen.
-/// - Search still checks restaurant names and cuisines.
-/// - Promoted, open/closed, rating, distance, ETA, delivery and price data
-///   remain unchanged.
-/// - The visual language is intentionally editorial / premium rather than
-///   looking like a generic AI-generated card list.
-/// ---------------------------------------------------------------------------
-
-class AppColors {
-  static const primary = Color(0xFFEE5B2B);
-  static const primarySoft = Color(0xFFFFF0EA);
-
-  static const background = Color(0xFFFAFAFC);
-  static const surface = Color(0xFFFFFFFF);
-  static const surfaceAlt = Color(0xFFF0F0F3);
-
-  static const textPrimary = Color(0xFF2C1810);
-  static const textSecondary = Color(0xFF7A6B63);
-  static const textMuted = Color(0xFFA89890);
-
-  static const border = Color(0xFFF0F0F3);
-  static const success = Color(0xFF179B55);
-  static const warning = Color(0xFFD99018);
-  static const cardOverlay = Color(0xFF3D2B23);
-}
 
 typedef RestaurantListScreen = NearbyRestaurantsScreen;
 
@@ -69,16 +41,40 @@ RestaurantListing restaurantListingFromVendor(Map<String, dynamic> vendor) {
   if (vendor['best_offer'] is Map) {
     isPromoted = true;
     final bestOffer = vendor['best_offer'] as Map;
-    if (bestOffer['title']?.toString().toLowerCase().contains('free delivery') == true) {
+    if (bestOffer['title']?.toString().toLowerCase().contains(
+          'free delivery',
+        ) ==
+        true) {
       hasFreeDelivery = true;
     }
   }
 
-  final distanceKm = double.tryParse(vendor['distance_km']?.toString() ?? '') ?? 1.2;
-  final etaMins = int.tryParse(vendor['eta_minutes']?.toString() ?? vendor['eta']?.toString().replaceAll(RegExp(r'[^0-9]'), '') ?? '') ?? 25;
-  final rating = double.tryParse(vendor['rating']?.toString() ?? vendor['average_rating']?.toString() ?? '') ?? 4.8;
-  final reviewCount = int.tryParse(vendor['review_count']?.toString() ?? vendor['rating_count']?.toString() ?? '') ?? 120;
-  final isOpenNow = vendor['is_open_now'] is bool ? vendor['is_open_now'] as bool : true;
+  final distanceKm =
+      double.tryParse(vendor['distance_km']?.toString() ?? '') ?? 1.2;
+  final etaMins =
+      int.tryParse(
+        vendor['eta_minutes']?.toString() ??
+            vendor['eta']?.toString().replaceAll(RegExp(r'[^0-9]'), '') ??
+            '',
+      ) ??
+      25;
+  final rating =
+      double.tryParse(
+        vendor['rating']?.toString() ??
+            vendor['average_rating']?.toString() ??
+            '',
+      ) ??
+      4.8;
+  final reviewCount =
+      int.tryParse(
+        vendor['review_count']?.toString() ??
+            vendor['rating_count']?.toString() ??
+            '',
+      ) ??
+      120;
+  final isOpenNow = vendor['is_open_now'] is bool
+      ? vendor['is_open_now'] as bool
+      : true;
 
   return RestaurantListing(
     id: id,
@@ -109,6 +105,7 @@ class RestaurantListing {
   final int etaMins;
   final bool isOpenNow;
   final bool isPromoted;
+  final String? offerLabel;
   final bool hasFreeDelivery;
   final String priceLevel;
 
@@ -125,6 +122,7 @@ class RestaurantListing {
     required this.priceLevel,
     this.imageUrl,
     this.isPromoted = false,
+    this.offerLabel,
     this.hasFreeDelivery = false,
   });
 }
@@ -134,7 +132,7 @@ enum _QuickFilter { openNow, nearby, topRated, freeDelivery }
 /// An optional starting filter for callers that open restaurant discovery from
 /// a focused action on the Home feed. The screen remains fully usable without
 /// a preset, preserving existing callers.
-enum RestaurantBrowsePreset { under30Minutes, rated4Plus }
+enum RestaurantBrowsePreset { under30Minutes, rated4Plus, openNow }
 
 extension on _QuickFilter {
   String get label {
@@ -210,6 +208,9 @@ class _NearbyRestaurantsScreenState extends State<NearbyRestaurantsScreen> {
   @override
   void initState() {
     super.initState();
+    if (widget.preset == RestaurantBrowsePreset.openNow) {
+      _activeFilters.add(_QuickFilter.openNow);
+    }
     if (widget.restaurants != null && widget.restaurants!.isNotEmpty) {
       _all = List.from(widget.restaurants!);
     } else if (RestaurantService.cachedRestaurants.isNotEmpty) {
@@ -316,6 +317,10 @@ class _NearbyRestaurantsScreenState extends State<NearbyRestaurantsScreen> {
     return result;
   }
 
+  String get _searchPillLabel => _activeFilters.contains(_QuickFilter.openNow)
+      ? 'Open now'
+      : 'All shops';
+
   void _openRestaurant(RestaurantListing restaurant) {
     widget.onRestaurantSelected?.call(restaurant);
     Navigator.push(
@@ -335,7 +340,7 @@ class _NearbyRestaurantsScreenState extends State<NearbyRestaurantsScreen> {
   void _openSortSheet() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       isScrollControlled: true,
       builder: (context) => _SortSheet(
         current: _sort,
@@ -351,20 +356,35 @@ class _NearbyRestaurantsScreenState extends State<NearbyRestaurantsScreen> {
   Widget build(BuildContext context) {
     final results = _filtered;
 
-    final closest = [..._all]
+    final closest = [...results]
       ..sort((a, b) => a.distanceKm.compareTo(b.distanceKm));
 
     return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        bottom: false,
-        child: Column(
-          children: [
+      backgroundColor: AppColors.bg,
+      body: AnnotatedRegion<SystemUiOverlayStyle>(
+        value: SystemUiOverlayStyle.dark.copyWith(
+          statusBarColor: AppColors.transparent,
+          systemStatusBarContrastEnforced: false,
+        ),
+        child: SafeArea(
+          bottom: false,
+          child: Column(
+            children: [
             _Header(
               resultCount: results.length,
               onBack: () => Navigator.of(context).maybePop(),
               searchController: _searchController,
               onSearchChanged: (v) => setState(() => _query = v),
+              selectedFilterLabel: _searchPillLabel,
+              onOpenNowToggle: () {
+                setState(() {
+                  if (_activeFilters.contains(_QuickFilter.openNow)) {
+                    _activeFilters.remove(_QuickFilter.openNow);
+                  } else {
+                    _activeFilters.add(_QuickFilter.openNow);
+                  }
+                });
+              },
               onSortTap: _openSortSheet,
             ),
             _FilterRow(
@@ -382,13 +402,11 @@ class _NearbyRestaurantsScreenState extends State<NearbyRestaurantsScreen> {
             Expanded(
               child: _isLoading
                   ? const Center(
-                      child: CircularProgressIndicator(
-                        color: AppColors.primary,
-                      ),
+                      child: CircularProgressIndicator(color: AppColors.orange),
                     )
                   : results.isEmpty
-                      ? const _EmptyState()
-                      : ListView(
+                  ? const _EmptyState()
+                  : ListView(
                       physics: const BouncingScrollPhysics(),
                       padding: const EdgeInsets.only(bottom: 32),
                       children: [
@@ -427,7 +445,7 @@ class _NearbyRestaurantsScreenState extends State<NearbyRestaurantsScreen> {
                         for (final restaurant in results) ...[
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 16),
-                            child: _RestaurantCard(
+                            child: RestaurantCard(
                               restaurant: restaurant,
                               onTap: () => _openRestaurant(restaurant),
                             ),
@@ -438,6 +456,7 @@ class _NearbyRestaurantsScreenState extends State<NearbyRestaurantsScreen> {
                     ),
             ),
           ],
+          ),
         ),
       ),
     );
@@ -453,6 +472,8 @@ class _Header extends StatelessWidget {
   final VoidCallback onBack;
   final TextEditingController searchController;
   final ValueChanged<String> onSearchChanged;
+  final String selectedFilterLabel;
+  final VoidCallback onOpenNowToggle;
   final VoidCallback onSortTap;
 
   const _Header({
@@ -460,13 +481,15 @@ class _Header extends StatelessWidget {
     required this.onBack,
     required this.searchController,
     required this.onSearchChanged,
+    required this.selectedFilterLabel,
+    required this.onOpenNowToggle,
     required this.onSortTap,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: AppColors.surface,
+      color: AppColors.white,
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -508,54 +531,34 @@ class _Header extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: Container(
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: AppColors.background,
-                    borderRadius: BorderRadius.circular(15),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: TextField(
-                    controller: searchController,
-                    onChanged: onSearchChanged,
-                    textInputAction: TextInputAction.search,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textPrimary,
-                    ),
-                    decoration: const InputDecoration(
-                      hintText: 'Search restaurants or cuisines',
-                      hintStyle: TextStyle(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.textMuted,
-                      ),
-                      prefixIcon: Icon(
-                        Icons.search_rounded,
-                        size: 21,
-                        color: AppColors.textSecondary,
-                      ),
-                      border: InputBorder.none,
-                      isDense: true,
-                      contentPadding: EdgeInsets.symmetric(vertical: 14),
-                    ),
-                  ),
+                child: DiscoverySearchBar.editable(
+                  hintText: 'Search restaurants or cuisines',
+                  selectedFilterLabel: selectedFilterLabel,
+                  controller: searchController,
+                  onChanged: onSearchChanged,
+                  onClear: () {
+                    searchController.clear();
+                    onSearchChanged('');
+                  },
+                  shellKey: const ValueKey('nearby-search-field'),
+                  searchKey: const ValueKey('nearby-search'),
+                  filterKey: const ValueKey('nearby-open-now-toggle'),
+                  onFilterTap: onOpenNowToggle,
                 ),
               ),
               const SizedBox(width: 9),
               Material(
-                color: AppColors.textPrimary,
-                borderRadius: BorderRadius.circular(15),
+                color: AppColors.primary,
+                borderRadius: BorderRadius.circular(26),
                 child: InkWell(
                   onTap: onSortTap,
-                  borderRadius: BorderRadius.circular(15),
+                  borderRadius: BorderRadius.circular(26),
                   child: const SizedBox(
-                    width: 48,
-                    height: 48,
+                    width: 52,
+                    height: 52,
                     child: Icon(
                       Icons.swap_vert_rounded,
-                      color: Colors.white,
+                      color: AppColors.white,
                       size: 21,
                     ),
                   ),
@@ -578,11 +581,11 @@ class _RoundIconButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: AppColors.background,
-      borderRadius: BorderRadius.circular(13),
+      color: AppColors.surfaceRaised,
+      shape: const CircleBorder(),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(13),
+        customBorder: const CircleBorder(),
         child: SizedBox(
           width: 42,
           height: 42,
@@ -620,11 +623,12 @@ class _FilterRow extends StatelessWidget {
             final selected = active.contains(filter);
 
             return Material(
-              color: selected ? AppColors.primary : AppColors.background,
-              borderRadius: BorderRadius.circular(12),
+              color: selected ? AppColors.orange : AppColors.white,
+              shape: const StadiumBorder(),
               child: InkWell(
+                key: ValueKey('nearby-filter-${filter.name}'),
                 onTap: () => onToggle(filter),
-                borderRadius: BorderRadius.circular(12),
+                customBorder: const StadiumBorder(),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   child: Row(
@@ -633,7 +637,7 @@ class _FilterRow extends StatelessWidget {
                         filter.icon,
                         size: 15,
                         color: selected
-                            ? Colors.white
+                            ? AppColors.white
                             : AppColors.textSecondary,
                       ),
                       const SizedBox(width: 6),
@@ -643,7 +647,7 @@ class _FilterRow extends StatelessWidget {
                           fontSize: 11.5,
                           fontWeight: FontWeight.w700,
                           color: selected
-                              ? Colors.white
+                              ? AppColors.white
                               : AppColors.textSecondary,
                         ),
                       ),
@@ -699,7 +703,7 @@ class _ClosestRail extends StatelessWidget {
           ),
         ),
         SizedBox(
-          height: 126,
+          height: 126.0 + (MediaQuery.textScalerOf(context).scale(12.0) - 12.0) * 4,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             physics: const BouncingScrollPhysics(),
@@ -709,72 +713,91 @@ class _ClosestRail extends StatelessWidget {
             itemBuilder: (context, index) {
               final restaurant = restaurants[index];
 
-              return Material(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(18),
-                child: InkWell(
-                  onTap: () => onTap(restaurant),
+              return Container(
+                key: ValueKey('nearby-closest-${restaurant.id}'),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
                   borderRadius: BorderRadius.circular(18),
-                  child: SizedBox(
-                    width: 92,
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(7, 7, 7, 8),
-                      child: Column(
-                        children: [
-                          Stack(
-                            clipBehavior: Clip.none,
-                            children: [
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(14),
-                                child: SizedBox(
-                                  width: 78,
-                                  height: 70,
-                                  child: _RestaurantImage(
-                                    restaurant: restaurant,
-                                  ),
-                                ),
-                              ),
-                              Positioned(
-                                right: -2,
-                                bottom: -4,
-                                child: Container(
-                                  width: 18,
-                                  height: 18,
-                                  decoration: BoxDecoration(
-                                    color: restaurant.isOpenNow
-                                        ? AppColors.success
-                                        : AppColors.textMuted,
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: Colors.white,
-                                      width: 3,
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.black.withValues(alpha: 0.07),
+                      blurRadius: 24,
+                      offset: const Offset(0, 8),
+                    ),
+                    BoxShadow(
+                      color: AppColors.black.withValues(alpha: 0.025),
+                      blurRadius: 5,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Material(
+                  color: AppColors.transparent,
+                  borderRadius: BorderRadius.circular(18),
+                  clipBehavior: Clip.antiAlias,
+                  child: InkWell(
+                    onTap: () => onTap(restaurant),
+                    child: SizedBox(
+                      width: 92,
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(7, 7, 7, 8),
+                        child: Column(
+                          children: [
+                            Stack(
+                              clipBehavior: Clip.none,
+                              children: [
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(14),
+                                  child: SizedBox(
+                                    width: 78,
+                                    height: 70,
+                                    child: _RestaurantImage(
+                                      restaurant: restaurant,
                                     ),
                                   ),
                                 ),
+                                Positioned(
+                                  right: -2,
+                                  bottom: -4,
+                                  child: Container(
+                                    width: 18,
+                                    height: 18,
+                                    decoration: BoxDecoration(
+                                      color: restaurant.isOpenNow
+                                          ? AppColors.green
+                                          : AppColors.textMuted,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: AppColors.white,
+                                        width: 3,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              restaurant.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.textPrimary,
                               ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            restaurant.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.textPrimary,
                             ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            '${restaurant.distanceKm.toStringAsFixed(1)} km',
-                            style: const TextStyle(
-                              fontSize: 9.5,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.textMuted,
+                            const SizedBox(height: 2),
+                            Text(
+                              '${restaurant.distanceKm.toStringAsFixed(1)} km',
+                              style: const TextStyle(
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textMuted,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -792,194 +815,253 @@ class _ClosestRail extends StatelessWidget {
 /// Main restaurant card
 /// ---------------------------------------------------------------------------
 
-class _RestaurantCard extends StatelessWidget {
+/// The standard restaurant card used wherever restaurants are listed.
+class RestaurantCard extends StatelessWidget {
   final RestaurantListing restaurant;
   final VoidCallback onTap;
 
-  const _RestaurantCard({required this.restaurant, required this.onTap});
+  const RestaurantCard({
+    super.key,
+    required this.restaurant,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: AppColors.surface,
-      borderRadius: BorderRadius.circular(22),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(
-              height: 168,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  _RestaurantImage(restaurant: restaurant),
-                  Positioned(
-                    left: 12,
-                    top: 12,
-                    child: Row(
-                      children: [
-                        if (restaurant.isPromoted)
-                          _ImageBadge(
-                            icon: Icons.bolt_rounded,
-                            label: 'PROMOTED',
-                            dark: true,
-                          ),
-                        if (restaurant.isPromoted && restaurant.hasFreeDelivery)
-                          const SizedBox(width: 6),
-                        if (restaurant.hasFreeDelivery)
-                          const _ImageBadge(
-                            icon: Icons.delivery_dining_rounded,
-                            label: 'FREE DELIVERY',
-                            dark: false,
-                          ),
-                      ],
-                    ),
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.black.withValues(alpha: 0.085),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
+          ),
+          BoxShadow(
+            color: AppColors.black.withValues(alpha: 0.025),
+            blurRadius: 5,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Material(
+        color: AppColors.transparent,
+        borderRadius: BorderRadius.circular(24),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ─────────────────────────────────────────────
+              // IMAGE
+              // ─────────────────────────────────────────────
+              Padding(
+                padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+                child: Container(
+                  height: 168,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: AppColors.border, width: 1),
                   ),
-                  Positioned(
-                    right: 12,
-                    bottom: 12,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 9,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.cardOverlay.withOpacity(0.85),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            width: 6,
-                            height: 6,
-                            decoration: BoxDecoration(
-                              color: restaurant.isOpenNow
-                                  ? AppColors.success
-                                  : Colors.white54,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            restaurant.isOpenNow ? 'Open now' : 'Closed',
-                            style: const TextStyle(
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.w800,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(15, 14, 15, 15),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  clipBehavior: Clip.antiAlias,
+                  child: Stack(
+                    fit: StackFit.expand,
                     children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                      _RestaurantImage(restaurant: restaurant),
+
+                      // PROMOTED / FREE DELIVERY BADGES
+                      Positioned(
+                        left: 12,
+                        top: 12,
+                        child: Row(
                           children: [
-                            Text(
-                              restaurant.name,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 17,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: -0.35,
-                                color: AppColors.textPrimary,
+                            if (restaurant.offerLabel != null &&
+                                restaurant.offerLabel!.isNotEmpty)
+                              _ImageBadge(
+                                icon: Icons.bolt_rounded,
+                                label: restaurant.offerLabel!,
+                                dark: true,
+                              )
+                            else if (restaurant.isPromoted)
+                              const _ImageBadge(
+                                icon: Icons.bolt_rounded,
+                                label: 'PROMOTED',
+                                dark: true,
                               ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              restaurant.cuisines.join(' · '),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                                color: AppColors.textSecondary,
+
+                            if (restaurant.isPromoted &&
+                                restaurant.hasFreeDelivery)
+                              const SizedBox(width: 6),
+
+                            if (restaurant.hasFreeDelivery)
+                              const _ImageBadge(
+                                icon: Icons.delivery_dining_rounded,
+                                label: 'FREE DELIVERY',
+                                dark: false,
                               ),
-                            ),
                           ],
                         ),
                       ),
-                      const SizedBox(width: 10),
-                      _RatingBadge(rating: restaurant.rating),
-                    ],
-                  ),
-                  const SizedBox(height: 15),
-                  Container(height: 1, color: AppColors.border),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.near_me_rounded,
-                        size: 15,
-                        color: AppColors.textMuted,
-                      ),
-                      const SizedBox(width: 5),
-                      Text(
-                        '${restaurant.distanceKm.toStringAsFixed(1)} km',
-                        style: const TextStyle(
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textSecondary,
+
+                      // OPEN / CLOSED
+                      Positioned(
+                        right: 11,
+                        bottom: 11,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceWarm,
+                            borderRadius: BorderRadius.circular(999),
+                            border: Border.all(
+                              color: AppColors.orangeBorder,
+                              width: 0.7,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 7,
+                                height: 7,
+                                decoration: BoxDecoration(
+                                  color: restaurant.isOpenNow
+                                      ? AppColors.green
+                                      : AppColors.orangeLight,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+
+                              const SizedBox(width: 6),
+
+                              Text(
+                                restaurant.isOpenNow ? 'Open now' : 'Closed',
+                                style: TextStyle(
+                                  fontSize: 10.5,
+                                  height: 1,
+                                  fontWeight: FontWeight.w700,
+                                  color: restaurant.isOpenNow
+                                      ? AppColors.supportGreen
+                                      : AppColors.primaryDeep,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 14),
-                      const Icon(
-                        Icons.schedule_rounded,
-                        size: 15,
-                        color: AppColors.textMuted,
-                      ),
-                      const SizedBox(width: 5),
-                      Text(
-                        '${restaurant.etaMins} mins',
-                        style: const TextStyle(
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                      const Spacer(),
-                      Text(
-                        restaurant.priceLevel,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      const Icon(
-                        Icons.chevron_right_rounded,
-                        size: 20,
-                        color: AppColors.textMuted,
                       ),
                     ],
                   ),
-                ],
+                ),
               ),
-            ),
-          ],
+
+              // ─────────────────────────────────────────────
+              // DETAILS
+              // ─────────────────────────────────────────────
+              Padding(
+                padding: const EdgeInsets.fromLTRB(15, 13, 15, 14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                restaurant.name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 17,
+                                  height: 1.15,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: -0.35,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+
+                              const SizedBox(height: 4),
+
+                              Text(
+                                restaurant.cuisines.join(' · '),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  height: 1.15,
+                                  fontWeight: FontWeight.w500,
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(width: 10),
+
+                        _RatingBadge(rating: restaurant.rating),
+                      ],
+                    ),
+
+                    const SizedBox(height: 13),
+
+                    Container(height: 1, color: AppColors.border),
+
+                    const SizedBox(height: 11),
+
+                    // DISTANCE + ETA
+                    Row(
+                      children: [
+                        Text(
+                          '${restaurant.distanceKm.toStringAsFixed(1)} km',
+                          style: const TextStyle(
+                            fontSize: 11.5,
+                            height: 1,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+
+                        const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 8),
+                          child: Text(
+                            '·',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppColors.textMuted,
+                            ),
+                          ),
+                        ),
+
+                        Text(
+                          '${restaurant.etaMins} mins',
+                          style: const TextStyle(
+                            fontSize: 11.5,
+                            height: 1,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
+/// Restaurant image with a safe fallback.
 class _RestaurantImage extends StatelessWidget {
   final RestaurantListing restaurant;
 
@@ -987,12 +1069,20 @@ class _RestaurantImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (restaurant.imageUrl != null) {
+    final imageUrl = restaurant.imageUrl;
+
+    if (imageUrl != null && imageUrl.trim().isNotEmpty) {
       return Image.network(
-        restaurant.imageUrl!,
+        imageUrl,
         fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) =>
-            _PhotoFallback(icon: restaurant.fallbackIcon),
+        errorBuilder: (_, __, ___) {
+          return _PhotoFallback(icon: restaurant.fallbackIcon);
+        },
+        loadingBuilder: (_, child, progress) {
+          if (progress == null) return child;
+
+          return Container(color: AppColors.surfaceRaised);
+        },
       );
     }
 
@@ -1000,6 +1090,7 @@ class _RestaurantImage extends StatelessWidget {
   }
 }
 
+/// Fallback shown when a restaurant has no usable image.
 class _PhotoFallback extends StatelessWidget {
   final IconData icon;
 
@@ -1012,15 +1103,19 @@ class _PhotoFallback extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [AppColors.primarySoft, AppColors.surfaceAlt],
+          colors: [AppColors.orangeTint, AppColors.surfaceRaised],
         ),
       ),
       alignment: Alignment.center,
-      child: Icon(icon, size: 38, color: AppColors.primary),
+      child: Icon(icon, size: 38, color: AppColors.orange),
     );
   }
 }
 
+/// Small badge displayed over the restaurant image.
+///
+/// dark = promoted
+/// light = free delivery
 class _ImageBadge extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -1035,13 +1130,19 @@ class _ImageBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
       decoration: BoxDecoration(
-        color: dark ? AppColors.cardOverlay : Colors.white,
-        borderRadius: BorderRadius.circular(9),
+        // Promoted is now coral rather than brown.
+        color: dark ? AppColors.primary : AppColors.surface,
+        borderRadius: BorderRadius.circular(999),
+
+        border: dark
+            ? null
+            : Border.all(color: AppColors.orangeBorder, width: 0.8),
+
         boxShadow: const [
           BoxShadow(
-            color: Color(0x18000000),
+            color: AppColors.tone18000000,
             blurRadius: 8,
             offset: Offset(0, 3),
           ),
@@ -1050,15 +1151,22 @@ class _ImageBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 12, color: dark ? Colors.white : AppColors.success),
+          Icon(
+            icon,
+            size: 12,
+            color: dark ? AppColors.white : AppColors.primary,
+          ),
+
           const SizedBox(width: 4),
+
           Text(
             label,
             style: TextStyle(
               fontSize: 8.5,
+              height: 1,
               fontWeight: FontWeight.w900,
-              letterSpacing: 0.35,
-              color: dark ? Colors.white : AppColors.textPrimary,
+              letterSpacing: 0.3,
+              color: dark ? AppColors.white : AppColors.primaryDeep,
             ),
           ),
         ],
@@ -1067,6 +1175,10 @@ class _ImageBadge extends StatelessWidget {
   }
 }
 
+/// Compact rating shown beside the restaurant name.
+///
+/// Deliberately not a pill.
+/// Yellow star + neutral rating text.
 class _RatingBadge extends StatelessWidget {
   final double rating;
 
@@ -1074,29 +1186,23 @@ class _RatingBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ratingColor = rating >= 4.3 ? AppColors.success : AppColors.primary;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Icon(Icons.star_rounded, size: 18, color: AppColors.yellow),
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
-      decoration: BoxDecoration(
-        color: ratingColor.withOpacity(0.10),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.star_rounded, size: 15, color: ratingColor),
-          const SizedBox(width: 3),
-          Text(
-            rating.toStringAsFixed(1),
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w900,
-              color: ratingColor,
-            ),
+        const SizedBox(width: 3),
+
+        Text(
+          rating.toStringAsFixed(1),
+          style: const TextStyle(
+            fontSize: 13,
+            height: 1,
+            fontWeight: FontWeight.w800,
+            color: AppColors.textPrimary,
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -1163,8 +1269,8 @@ class _SortSheet extends StatelessWidget {
               padding: const EdgeInsets.only(bottom: 5),
               child: Material(
                 color: option == current
-                    ? AppColors.primarySoft
-                    : Colors.transparent,
+                    ? AppColors.orangeTint
+                    : AppColors.transparent,
                 borderRadius: BorderRadius.circular(14),
                 child: InkWell(
                   onTap: () => onSelected(option),
@@ -1182,7 +1288,7 @@ class _SortSheet extends StatelessWidget {
                               : Icons.radio_button_off_rounded,
                           size: 20,
                           color: option == current
-                              ? AppColors.primary
+                              ? AppColors.orange
                               : AppColors.textMuted,
                         ),
                         const SizedBox(width: 12),
@@ -1203,7 +1309,7 @@ class _SortSheet extends StatelessWidget {
                           const Icon(
                             Icons.check_rounded,
                             size: 19,
-                            color: AppColors.primary,
+                            color: AppColors.orange,
                           ),
                       ],
                     ),

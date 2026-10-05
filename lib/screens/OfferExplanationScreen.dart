@@ -1,16 +1,6 @@
+import '../app_colors.dart';
 import 'package:flutter/material.dart';
 
-class OfferExplanationColors {
-  static const primary = Color(0xFFEE5B2B);
-  static const primaryDeep = Color(0xFFC2410C);
-  static const bgLight = Color(0xFFFAFAFC);
-  static const bgDark = Color(0xFF1E1714);
-  static const cardLight = Colors.white;
-  static const cardDark = Color(0xFF281E19);
-  static const borderLight = Color(0xFFF0F0F3);
-  static const borderDark = Color(0xFF3D2B23);
-  static const textMutedDark = Color(0xFFC9A092);
-}
 
 class OfferApplicableItem {
   final String id;
@@ -109,11 +99,11 @@ class _OfferExplanationScreenState extends State<OfferExplanationScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColor = isDark ? OfferExplanationColors.bgDark : OfferExplanationColors.bgLight;
-    final cardBg = isDark ? OfferExplanationColors.cardDark : OfferExplanationColors.cardLight;
-    final cardBorder = isDark ? OfferExplanationColors.borderDark : OfferExplanationColors.borderLight;
-    final textColor = isDark ? Colors.white : const Color(0xFF1D1E20);
-    final subColor = isDark ? OfferExplanationColors.textMutedDark : Colors.grey[600]!;
+    final bgColor = isDark ? AppColors.bgDark : AppColors.bgLight;
+    final cardBg = isDark ? AppColors.cardDark : AppColors.cardLight;
+    final cardBorder = isDark ? AppColors.borderDark : AppColors.borderLight;
+    final textColor = isDark ? AppColors.white : AppColors.textPrimary;
+    final subColor = isDark ? AppColors.textMutedDark : AppColors.materialGrey[600]!;
 
     final defaultTerms = widget.terms ?? [
       'Discount is automatically applied to all eligible food items.',
@@ -124,8 +114,8 @@ class _OfferExplanationScreenState extends State<OfferExplanationScreen> {
     ];
 
     final headerGradient = widget.gradientColors ?? [
-      OfferExplanationColors.primary,
-      const Color(0xFFEA580C),
+      AppColors.primary,
+      AppColors.toneFFEA580C,
     ];
 
     return Scaffold(
@@ -179,7 +169,7 @@ class _OfferExplanationScreenState extends State<OfferExplanationScreen> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.2),
+                            color: AppColors.white.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
@@ -187,20 +177,20 @@ class _OfferExplanationScreenState extends State<OfferExplanationScreen> {
                             style: const TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w900,
-                              color: Colors.white,
+                              color: AppColors.white,
                               letterSpacing: 0.8,
                             ),
                           ),
                         ),
                         Row(
                           children: [
-                            const Icon(Icons.timer_outlined, color: Colors.white, size: 15),
+                            const Icon(Icons.timer_outlined, color: AppColors.white, size: 15),
                             const SizedBox(width: 4),
                             Text(
                               widget.expiry,
                               style: const TextStyle(
                                 fontSize: 12,
-                                color: Colors.white,
+                                color: AppColors.white,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -214,7 +204,7 @@ class _OfferExplanationScreenState extends State<OfferExplanationScreen> {
                       style: const TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.w900,
-                        color: Colors.white,
+                        color: AppColors.white,
                         letterSpacing: -0.5,
                       ),
                     ),
@@ -223,7 +213,7 @@ class _OfferExplanationScreenState extends State<OfferExplanationScreen> {
                       widget.subtitle,
                       style: TextStyle(
                         fontSize: 13.5,
-                        color: Colors.white.withValues(alpha: 0.9),
+                        color: AppColors.white.withValues(alpha: 0.9),
                         height: 1.3,
                       ),
                     ),
@@ -232,10 +222,10 @@ class _OfferExplanationScreenState extends State<OfferExplanationScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                       decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.25),
+                        color: AppColors.black.withValues(alpha: 0.25),
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.25),
+                          color: AppColors.white.withValues(alpha: 0.25),
                           width: 1.2,
                         ),
                       ),
@@ -244,12 +234,12 @@ class _OfferExplanationScreenState extends State<OfferExplanationScreen> {
                           Container(
                             padding: const EdgeInsets.all(6),
                             decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.2),
+                              color: AppColors.white.withValues(alpha: 0.2),
                               shape: BoxShape.circle,
                             ),
                             child: const Icon(
                               Icons.auto_awesome_rounded,
-                              color: Colors.white,
+                              color: AppColors.white,
                               size: 18,
                             ),
                           ),
@@ -263,7 +253,7 @@ class _OfferExplanationScreenState extends State<OfferExplanationScreen> {
                                   style: TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.w800,
-                                    color: Colors.white,
+                                    color: AppColors.white,
                                     letterSpacing: 0.8,
                                   ),
                                 ),
@@ -272,7 +262,7 @@ class _OfferExplanationScreenState extends State<OfferExplanationScreen> {
                                   'Price is reduced automatically. No coupon code needed.',
                                   style: TextStyle(
                                     fontSize: 11.5,
-                                    color: Color(0xFFEDE7E2),
+                                    color: AppColors.toneFFEDE7E2,
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
@@ -305,7 +295,7 @@ class _OfferExplanationScreenState extends State<OfferExplanationScreen> {
                             children: [
                               const Icon(
                                 Icons.restaurant_menu_rounded,
-                                color: OfferExplanationColors.primary,
+                                color: AppColors.primary,
                                 size: 18,
                               ),
                               const SizedBox(width: 6),
@@ -345,7 +335,7 @@ class _OfferExplanationScreenState extends State<OfferExplanationScreen> {
                             children: [
                               const Icon(
                                 Icons.savings_outlined,
-                                color: Color(0xFF22C55E),
+                                color: AppColors.vegGreen,
                                 size: 18,
                               ),
                               const SizedBox(width: 6),
@@ -388,7 +378,7 @@ class _OfferExplanationScreenState extends State<OfferExplanationScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
                       decoration: BoxDecoration(
-                        color: OfferExplanationColors.primary.withValues(alpha: 0.12),
+                        color: AppColors.primary.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(999),
                       ),
                       child: Text(
@@ -396,7 +386,7 @@ class _OfferExplanationScreenState extends State<OfferExplanationScreen> {
                         style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
-                          color: OfferExplanationColors.primary,
+                          color: AppColors.primary,
                         ),
                       ),
                     ),
@@ -417,12 +407,12 @@ class _OfferExplanationScreenState extends State<OfferExplanationScreen> {
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: OfferExplanationColors.primary.withValues(alpha: 0.1),
+                          color: AppColors.primary.withValues(alpha: 0.1),
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(
                           Icons.check_circle_outline_rounded,
-                          color: OfferExplanationColors.primary,
+                          color: AppColors.primary,
                           size: 24,
                         ),
                       ),
@@ -468,8 +458,8 @@ class _OfferExplanationScreenState extends State<OfferExplanationScreen> {
                         boxShadow: [
                           BoxShadow(
                             color: isDark
-                                ? Colors.black.withValues(alpha: 0.2)
-                                : Colors.black.withValues(alpha: 0.03),
+                                ? AppColors.black.withValues(alpha: 0.2)
+                                : AppColors.black.withValues(alpha: 0.03),
                             blurRadius: 8,
                             offset: const Offset(0, 2),
                           ),
@@ -489,19 +479,19 @@ class _OfferExplanationScreenState extends State<OfferExplanationScreen> {
                                       item.imageUrl,
                                       fit: BoxFit.cover,
                                       errorBuilder: (_, _, _) => Container(
-                                        color: isDark ? Colors.black26 : Colors.grey[200],
+                                        color: isDark ? AppColors.black26 : AppColors.materialGrey[200],
                                         child: const Icon(
                                           Icons.fastfood_rounded,
-                                          color: Colors.grey,
+                                          color: AppColors.materialGrey,
                                           size: 28,
                                         ),
                                       ),
                                     )
                                   : Container(
-                                      color: isDark ? Colors.black26 : Colors.grey[200],
+                                      color: isDark ? AppColors.black26 : AppColors.materialGrey[200],
                                       child: const Icon(
                                         Icons.fastfood_rounded,
-                                        color: Colors.grey,
+                                        color: AppColors.materialGrey,
                                         size: 28,
                                       ),
                                     ),
@@ -521,8 +511,8 @@ class _OfferExplanationScreenState extends State<OfferExplanationScreen> {
                                         decoration: BoxDecoration(
                                           border: Border.all(
                                             color: item.tag == 'VEG'
-                                                ? const Color(0xFF16A34A)
-                                                : const Color(0xFFDC2626),
+                                                ? AppColors.success
+                                                : AppColors.toneFFDC2626,
                                             width: 1.2,
                                           ),
                                           borderRadius: BorderRadius.circular(4),
@@ -532,8 +522,8 @@ class _OfferExplanationScreenState extends State<OfferExplanationScreen> {
                                           height: 6,
                                           decoration: BoxDecoration(
                                             color: item.tag == 'VEG'
-                                                ? const Color(0xFF16A34A)
-                                                : const Color(0xFFDC2626),
+                                                ? AppColors.success
+                                                : AppColors.toneFFDC2626,
                                             shape: BoxShape.circle,
                                           ),
                                         ),
@@ -577,7 +567,7 @@ class _OfferExplanationScreenState extends State<OfferExplanationScreen> {
                                           style: const TextStyle(
                                             fontSize: 15,
                                             fontWeight: FontWeight.w900,
-                                            color: OfferExplanationColors.primary,
+                                            color: AppColors.primary,
                                           ),
                                         ),
                                         if (item.hasDiscount) ...[
@@ -605,11 +595,11 @@ class _OfferExplanationScreenState extends State<OfferExplanationScreen> {
                                                 vertical: 5,
                                               ),
                                               decoration: BoxDecoration(
-                                                color: OfferExplanationColors.primary,
+                                                color: AppColors.primary,
                                                 borderRadius: BorderRadius.circular(20),
                                                 boxShadow: [
                                                   BoxShadow(
-                                                    color: OfferExplanationColors.primary
+                                                    color: AppColors.primary
                                                         .withValues(alpha: 0.35),
                                                     blurRadius: 6,
                                                     offset: const Offset(0, 2),
@@ -621,7 +611,7 @@ class _OfferExplanationScreenState extends State<OfferExplanationScreen> {
                                                 style: TextStyle(
                                                   fontSize: 12,
                                                   fontWeight: FontWeight.w700,
-                                                  color: Colors.white,
+                                                  color: AppColors.white,
                                                 ),
                                               ),
                                             ),
@@ -630,7 +620,7 @@ class _OfferExplanationScreenState extends State<OfferExplanationScreen> {
                                             height: 28,
                                             padding: const EdgeInsets.symmetric(horizontal: 4),
                                             decoration: BoxDecoration(
-                                              color: OfferExplanationColors.primary,
+                                              color: AppColors.primary,
                                               borderRadius: BorderRadius.circular(20),
                                             ),
                                             child: Row(
@@ -643,14 +633,14 @@ class _OfferExplanationScreenState extends State<OfferExplanationScreen> {
                                                     child: Icon(
                                                       Icons.remove_rounded,
                                                       size: 16,
-                                                      color: Colors.white,
+                                                      color: AppColors.white,
                                                     ),
                                                   ),
                                                 ),
                                                 Text(
                                                   '$qty',
                                                   style: const TextStyle(
-                                                    color: Colors.white,
+                                                    color: AppColors.white,
                                                     fontWeight: FontWeight.bold,
                                                     fontSize: 12,
                                                   ),
@@ -662,7 +652,7 @@ class _OfferExplanationScreenState extends State<OfferExplanationScreen> {
                                                     child: Icon(
                                                       Icons.add_rounded,
                                                       size: 16,
-                                                      color: Colors.white,
+                                                      color: AppColors.white,
                                                     ),
                                                   ),
                                                 ),
@@ -696,7 +686,7 @@ class _OfferExplanationScreenState extends State<OfferExplanationScreen> {
                       children: [
                         const Icon(
                           Icons.lightbulb_outline_rounded,
-                          color: OfferExplanationColors.primary,
+                          color: AppColors.primary,
                           size: 20,
                         ),
                         const SizedBox(width: 10),
@@ -752,7 +742,7 @@ class _OfferExplanationScreenState extends State<OfferExplanationScreen> {
                       children: [
                         const Icon(
                           Icons.gavel_rounded,
-                          color: OfferExplanationColors.primary,
+                          color: AppColors.primary,
                           size: 20,
                         ),
                         const SizedBox(width: 10),
@@ -778,7 +768,7 @@ class _OfferExplanationScreenState extends State<OfferExplanationScreen> {
                               width: 6,
                               height: 6,
                               decoration: const BoxDecoration(
-                                color: OfferExplanationColors.primary,
+                                color: AppColors.primary,
                                 shape: BoxShape.circle,
                               ),
                             ),
@@ -808,10 +798,10 @@ class _OfferExplanationScreenState extends State<OfferExplanationScreen> {
               height: 52,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: OfferExplanationColors.primary,
-                  foregroundColor: Colors.white,
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: AppColors.white,
                   elevation: 6,
-                  shadowColor: OfferExplanationColors.primary.withValues(alpha: 0.4),
+                  shadowColor: AppColors.primary.withValues(alpha: 0.4),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
                   ),
@@ -851,8 +841,8 @@ class _StepItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textColor = isDark ? Colors.white : const Color(0xFF1D1E20);
-    final subColor = isDark ? OfferExplanationColors.textMutedDark : Colors.grey[600]!;
+    final textColor = isDark ? AppColors.white : AppColors.textPrimary;
+    final subColor = isDark ? AppColors.textMutedDark : AppColors.materialGrey[600]!;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -864,7 +854,7 @@ class _StepItem extends StatelessWidget {
             height: 24,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: OfferExplanationColors.primary.withValues(alpha: 0.15),
+              color: AppColors.primary.withValues(alpha: 0.15),
               shape: BoxShape.circle,
             ),
             child: Text(
@@ -872,7 +862,7 @@ class _StepItem extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
-                color: OfferExplanationColors.primary,
+                color: AppColors.primary,
               ),
             ),
           ),

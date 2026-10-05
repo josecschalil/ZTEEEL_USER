@@ -91,9 +91,9 @@ abstract final class AppTypography {
       useMaterial3: true,
       scaffoldBackgroundColor: AppColors.bg,
       colorScheme: ColorScheme.fromSeed(
-        seedColor: AppColors.orange,
+        seedColor: AppColors.primary,
         brightness: Brightness.light,
-      ),
+      ).copyWith(primary: AppColors.primary, onPrimary: AppColors.white),
       textTheme: textTheme,
     );
 

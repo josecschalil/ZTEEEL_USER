@@ -1,27 +1,8 @@
+import '../app_colors.dart';
 import 'package:flutter/material.dart';
 import 'SupportChatScreen.dart';
 import 'RaiseTicketScreen.dart';
 
-// ── Local palette (self-contained, no external color file) ─────────────
-abstract final class _C {
-  static const Color bg = Color(0xFFFFFFFF);
-  static const Color surface = Color(0xFFFFFFFF);
-  static const Color surfaceRaised = Color(0xFFF7F5F3);
-  static const Color orange = Color(0xFFEF5A4C);
-  static const Color orangeDim = Color(0x1AEF5A4C);
-  static const Color orangeBorder = Color(0x40EF5A4C);
-  static const Color orangeTint = Color(0xFFFDECEA);
-  static const Color gold = Color(0xFFC4922E);
-  static const Color green = Color(0xFF1D9E6B);
-  static const Color greenDim = Color(0x1A1D9E6B);
-  static const Color greenBorder = Color(0x401D9E6B);
-  static const Color textPrimary = Color(0xFF1C1B1A);
-  static const Color textSecondary = Color(0xFF5C5751);
-  static const Color textMuted = Color(0xFF8C8680);
-  static const Color textOnAccent = Color(0xFFFFFFFF);
-  static const Color border = Color(0xFFECEAE7);
-  static const Color black = Colors.black;
-}
 
 /// A previously-raised support ticket (mock data — wire up to your backend).
 class SupportTicket {
@@ -111,7 +92,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _C.bg,
+      backgroundColor: AppColors.bg,
       body: SafeArea(
         child: Column(
           children: [
@@ -165,12 +146,12 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: _C.surfaceRaised,
+              color: AppColors.surfaceRaised,
               borderRadius: BorderRadius.circular(10),
             ),
             child: const Icon(
               Icons.arrow_back_ios_new_rounded,
-              color: _C.orange,
+              color: AppColors.orange,
               size: 16,
             ),
           ),
@@ -183,7 +164,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
               const Text(
                 'Help & Support',
                 style: TextStyle(
-                  color: _C.textPrimary,
+                  color: AppColors.textPrimary,
                   fontSize: 20,
                   fontWeight: FontWeight.w800,
                   letterSpacing: -0.3,
@@ -193,7 +174,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
               Text(
                 'Talk to the app team — not the restaurant.',
                 style: TextStyle(
-                  color: _C.textSecondary,
+                  color: AppColors.textSecondary,
                   fontSize: 11,
                   fontWeight: FontWeight.w500,
                 ),
@@ -209,7 +190,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
     return Text(
       label.toUpperCase(),
       style: const TextStyle(
-        color: _C.textSecondary,
+        color: AppColors.textSecondary,
         fontSize: 11,
         fontWeight: FontWeight.w700,
         letterSpacing: 0.8,
@@ -225,8 +206,8 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
           child: _QuickActionCard(
             icon: Icons.chat_bubble_rounded,
             label: 'Live Chat',
-            accent: _C.orange,
-            accentDim: _C.orangeDim,
+            accent: AppColors.orange,
+            accentDim: AppColors.orangeDim,
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const SupportChatScreen()),
             ),
@@ -237,8 +218,8 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
           child: _QuickActionCard(
             icon: Icons.confirmation_number_rounded,
             label: 'Raise a\nTicket',
-            accent: _C.gold,
-            accentDim: const Color(0x1AC4922E),
+            accent: AppColors.gold,
+            accentDim: AppColors.tone1AC4922E,
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const RaiseTicketScreen()),
             ),
@@ -249,8 +230,8 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
           child: _QuickActionCard(
             icon: Icons.mail_rounded,
             label: 'Email Us',
-            accent: _C.green,
-            accentDim: _C.greenDim,
+            accent: AppColors.supportGreen,
+            accentDim: AppColors.greenDim,
             onTap: () => _showEmailSheet(context),
           ),
         ),
@@ -261,7 +242,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
   void _showEmailSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: _C.surface,
+      backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -276,14 +257,14 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
               height: 4,
               margin: const EdgeInsets.only(bottom: 20),
               decoration: BoxDecoration(
-                color: _C.border,
+                color: AppColors.border,
                 borderRadius: BorderRadius.circular(4),
               ),
             ),
             const Text(
               'Email the app team',
               style: TextStyle(
-                color: _C.textPrimary,
+                color: AppColors.textPrimary,
                 fontSize: 16,
                 fontWeight: FontWeight.w800,
               ),
@@ -292,7 +273,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
             const Text(
               'support@appteam.com',
               style: TextStyle(
-                color: _C.orange,
+                color: AppColors.orange,
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
               ),
@@ -301,7 +282,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
             const Text(
               'We usually reply within one business day.',
               style: TextStyle(
-                color: _C.textSecondary,
+                color: AppColors.textSecondary,
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
               ),
@@ -316,12 +297,12 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
   Widget _buildTicketsCard() {
     return Container(
       decoration: BoxDecoration(
-        color: _C.surface,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: _C.border, width: 0.8),
+        border: Border.all(color: AppColors.border, width: 0.8),
         boxShadow: [
           BoxShadow(
-            color: _C.black.withValues(alpha: 0.05),
+            color: AppColors.black.withValues(alpha: 0.05),
             blurRadius: 14,
             offset: const Offset(0, 4),
           ),
@@ -334,7 +315,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
             children: [
               _buildTicketRow(ticket),
               if (i != _tickets.length - 1)
-                const Divider(color: _C.border, height: 1),
+                const Divider(color: AppColors.border, height: 1),
             ],
           );
         }),
@@ -355,7 +336,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
                 Text(
                   ticket.id,
                   style: const TextStyle(
-                    color: _C.textSecondary,
+                    color: AppColors.textSecondary,
                     fontSize: 10,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 0.6,
@@ -367,7 +348,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    color: _C.textPrimary,
+                    color: AppColors.textPrimary,
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
                   ),
@@ -375,7 +356,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
                 const SizedBox(height: 4),
                 Text(
                   ticket.date,
-                  style: const TextStyle(color: _C.textMuted, fontSize: 10),
+                  style: const TextStyle(color: AppColors.textMuted, fontSize: 10),
                 ),
               ],
             ),
@@ -405,11 +386,11 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
   (Color, Color, Color) _statusColors(String status) {
     switch (status) {
       case 'Resolved':
-        return (_C.green, _C.greenDim, _C.greenBorder);
+        return (AppColors.supportGreen, AppColors.greenDim, AppColors.greenBorder);
       case 'In Progress':
-        return (_C.gold, const Color(0x1AC4922E), const Color(0x40C4922E));
+        return (AppColors.gold, AppColors.tone1AC4922E, AppColors.tone40C4922E);
       default:
-        return (_C.orange, _C.orangeDim, _C.orangeBorder);
+        return (AppColors.orange, AppColors.orangeDim, AppColors.orangeBorder);
     }
   }
 
@@ -418,12 +399,12 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
       decoration: BoxDecoration(
-        color: _C.surface,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: _C.border, width: 0.8),
+        border: Border.all(color: AppColors.border, width: 0.8),
         boxShadow: [
           BoxShadow(
-            color: _C.black.withValues(alpha: 0.05),
+            color: AppColors.black.withValues(alpha: 0.05),
             blurRadius: 14,
             offset: const Offset(0, 4),
           ),
@@ -439,7 +420,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
               }),
               if (i != _faqs.length - 1)
                 const Divider(
-                  color: _C.border,
+                  color: AppColors.border,
                   height: 1,
                   indent: 14,
                   endIndent: 14,
@@ -466,7 +447,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
                   child: Text(
                     faq.question,
                     style: const TextStyle(
-                      color: _C.textPrimary,
+                      color: AppColors.textPrimary,
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
                     ),
@@ -478,7 +459,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
                   duration: const Duration(milliseconds: 200),
                   child: const Icon(
                     Icons.keyboard_arrow_down_rounded,
-                    color: _C.orange,
+                    color: AppColors.orange,
                     size: 20,
                   ),
                 ),
@@ -495,7 +476,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
                 child: Text(
                   faq.answer,
                   style: const TextStyle(
-                    color: _C.textSecondary,
+                    color: AppColors.textSecondary,
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
                     height: 1.5,
@@ -515,9 +496,9 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: _C.orangeTint,
+        color: AppColors.orangeTint,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: _C.orangeBorder),
+        border: Border.all(color: AppColors.orangeBorder),
       ),
       child: Row(
         children: [
@@ -525,12 +506,12 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: _C.orange,
+              color: AppColors.orange,
               borderRadius: BorderRadius.circular(12),
             ),
             child: const Icon(
               Icons.support_agent_rounded,
-              color: _C.textOnAccent,
+              color: AppColors.textOnAccent,
               size: 20,
             ),
           ),
@@ -539,7 +520,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
             child: Text(
               "Still stuck? Raise a ticket and our team will follow up directly.",
               style: TextStyle(
-                color: _C.textPrimary,
+                color: AppColors.textPrimary,
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
                 height: 1.4,
@@ -575,12 +556,12 @@ class _QuickActionCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 8),
         decoration: BoxDecoration(
-          color: _C.surface,
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: _C.border, width: 0.8),
+          border: Border.all(color: AppColors.border, width: 0.8),
           boxShadow: [
             BoxShadow(
-              color: _C.black.withValues(alpha: 0.05),
+              color: AppColors.black.withValues(alpha: 0.05),
               blurRadius: 12,
               offset: const Offset(0, 3),
             ),
@@ -602,7 +583,7 @@ class _QuickActionCard extends StatelessWidget {
               label,
               textAlign: TextAlign.center,
               style: const TextStyle(
-                color: _C.textPrimary,
+                color: AppColors.textPrimary,
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
                 height: 1.2,

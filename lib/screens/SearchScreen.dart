@@ -1,23 +1,6 @@
+import '../app_colors.dart';
 import 'package:flutter/material.dart';
 
-class SearchColors {
-  static const primary = Color(0xFFEE5B2B);
-  static const backgroundLight = Color(0xFFF8F6F6);
-  static const cardLight = Colors.white;
-  static const borderLight = Color(0xFFE2E8F0); // slate-200
-  static const textPrimary = Color(0xFF0F172A); // slate-900
-  static const textSecondary = Color(0xFF64748B); // slate-500
-  static const textMuted = Color(0xFF94A3B8); // slate-400
-
-  static ThemeData get theme => ThemeData(
-    useMaterial3: true,
-    scaffoldBackgroundColor: backgroundLight,
-    colorScheme: ColorScheme.fromSeed(
-      seedColor: primary,
-      brightness: Brightness.light,
-    ),
-  );
-}
 
 /// ---------------------------------------------------------------------
 /// Data models
@@ -126,7 +109,7 @@ class _SearchScreenState extends State<SearchScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: SearchColors.backgroundLight,
+      backgroundColor: AppColors.backgroundLight,
       body: SafeArea(
         child: Column(
           children: [
@@ -178,7 +161,7 @@ class _SearchHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-      color: SearchColors.backgroundLight,
+      color: AppColors.backgroundLight,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -191,12 +174,12 @@ class _SearchHeader extends StatelessWidget {
                   padding: EdgeInsets.zero,
                   onPressed: () => Navigator.of(context).maybePop(),
                   style: IconButton.styleFrom(
-                    backgroundColor: SearchColors.cardLight,
+                    backgroundColor: AppColors.cardLight,
                     shape: const CircleBorder(),
                   ),
                   icon: const Icon(
                     Icons.arrow_back_ios_new,
-                    color: SearchColors.textSecondary,
+                    color: AppColors.textSecondary,
                     size: 18,
                   ),
                 ),
@@ -205,11 +188,11 @@ class _SearchHeader extends StatelessWidget {
               Expanded(
                 child: Container(
                   decoration: BoxDecoration(
-                    color: SearchColors.cardLight,
+                    color: AppColors.cardLight,
                     borderRadius: BorderRadius.circular(12),
                     boxShadow: const [
                       BoxShadow(
-                        color: Colors.black12,
+                        color: AppColors.black12,
                         blurRadius: 4,
                         offset: Offset(0, 1),
                       ),
@@ -219,20 +202,20 @@ class _SearchHeader extends StatelessWidget {
                     controller: controller,
                     autofocus: true,
                     style: const TextStyle(
-                      color: SearchColors.textPrimary,
+                      color: AppColors.textPrimary,
                       fontSize: 14,
                     ),
                     decoration: InputDecoration(
                       hintText: 'Pizza, Burger, or Restaurant',
-                      hintStyle: const TextStyle(color: SearchColors.textMuted),
+                      hintStyle: const TextStyle(color: AppColors.textMuted),
                       prefixIcon: const Icon(
                         Icons.search,
-                        color: SearchColors.textMuted,
+                        color: AppColors.textMuted,
                         size: 20,
                       ),
                       suffixIcon: const Icon(
                         Icons.tune,
-                        color: SearchColors.primary,
+                        color: AppColors.primary,
                         size: 22,
                       ),
                       border: InputBorder.none,
@@ -264,12 +247,12 @@ class _SearchHeader extends StatelessWidget {
                     ),
                     decoration: BoxDecoration(
                       color: selected
-                          ? SearchColors.primary
-                          : SearchColors.cardLight,
+                          ? AppColors.primary
+                          : AppColors.cardLight,
                       borderRadius: BorderRadius.circular(999),
                       border: selected
                           ? null
-                          : Border.all(color: SearchColors.borderLight),
+                          : Border.all(color: AppColors.borderLight),
                     ),
                     child: Text(
                       chip,
@@ -279,8 +262,8 @@ class _SearchHeader extends StatelessWidget {
                             ? FontWeight.bold
                             : FontWeight.w500,
                         color: selected
-                            ? Colors.white
-                            : SearchColors.textSecondary,
+                            ? AppColors.white
+                            : AppColors.textSecondary,
                       ),
                     ),
                   ),
@@ -320,7 +303,7 @@ class _RecentSearchesSection extends StatelessWidget {
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
-                color: SearchColors.textPrimary,
+                color: AppColors.textPrimary,
               ),
             ),
             InkWell(
@@ -330,7 +313,7 @@ class _RecentSearchesSection extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
-                  color: SearchColors.textSecondary,
+                  color: AppColors.textSecondary,
                 ),
               ),
             ),
@@ -340,7 +323,7 @@ class _RecentSearchesSection extends StatelessWidget {
           Container(
             decoration: const BoxDecoration(
               border: Border(
-                bottom: BorderSide(color: SearchColors.borderLight, width: 1),
+                bottom: BorderSide(color: AppColors.borderLight, width: 1),
               ),
             ),
             child: Padding(
@@ -352,7 +335,7 @@ class _RecentSearchesSection extends StatelessWidget {
                     children: [
                       const Icon(
                         Icons.history,
-                        color: SearchColors.textMuted,
+                        color: AppColors.textMuted,
                         size: 20,
                       ),
                       const SizedBox(width: 12),
@@ -360,7 +343,7 @@ class _RecentSearchesSection extends StatelessWidget {
                         term,
                         style: const TextStyle(
                           fontSize: 14,
-                          color: SearchColors.textPrimary,
+                          color: AppColors.textPrimary,
                         ),
                       ),
                     ],
@@ -369,7 +352,7 @@ class _RecentSearchesSection extends StatelessWidget {
                     onTap: () => onRemove(term),
                     child: const Icon(
                       Icons.close,
-                      color: SearchColors.textMuted,
+                      color: AppColors.textMuted,
                       size: 18,
                     ),
                   ),
@@ -396,7 +379,7 @@ class _TrendingSection extends StatelessWidget {
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
-            color: SearchColors.textPrimary,
+            color: AppColors.textPrimary,
           ),
         ),
         const SizedBox(height: 16),
@@ -416,9 +399,9 @@ class _TrendingSection extends StatelessWidget {
                     padding: const EdgeInsets.all(2),
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: tag.highlighted ? null : Colors.grey[100],
+                      color: tag.highlighted ? null : AppColors.materialGrey[100],
                       border: tag.highlighted
-                          ? Border.all(color: SearchColors.primary, width: 2)
+                          ? Border.all(color: AppColors.primary, width: 2)
                           : null,
                     ),
                     child: ClipOval(
@@ -431,7 +414,7 @@ class _TrendingSection extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
-                      color: SearchColors.textPrimary,
+                      color: AppColors.textPrimary,
                     ),
                   ),
                 ],
@@ -458,7 +441,7 @@ class _SuggestedSection extends StatelessWidget {
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
-            color: SearchColors.textPrimary,
+            color: AppColors.textPrimary,
           ),
         ),
         const SizedBox(height: 16),
@@ -477,11 +460,11 @@ class _SuggestedSection extends StatelessWidget {
             return Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: SearchColors.cardLight,
+                color: AppColors.cardLight,
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: const [
                   BoxShadow(
-                    color: Colors.black12,
+                    color: AppColors.black12,
                     blurRadius: 6,
                     offset: Offset(0, 2),
                   ),
@@ -513,14 +496,14 @@ class _SuggestedSection extends StatelessWidget {
                           style: const TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
-                            color: SearchColors.textPrimary,
+                            color: AppColors.textPrimary,
                           ),
                         ),
                         Text(
                           place.distance,
                           style: const TextStyle(
                             fontSize: 12,
-                            color: SearchColors.textSecondary,
+                            color: AppColors.textSecondary,
                           ),
                         ),
                       ],

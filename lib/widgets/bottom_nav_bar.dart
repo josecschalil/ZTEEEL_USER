@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 
+import '../app_colors.dart';
+
 /// Clean, modular Bottom Navigation Bar widget for ZTEEL application.
 class AppBottomNavBar extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onTap;
 
-  static const Color primaryColor = Color(0xFFEF5A4C);
-  static const Color inactiveColor = Color(0xFF8C8680);
+  static const Color primaryColor = AppColors.orange;
+  static const Color inactiveColor = AppColors.textMuted;
 
   const AppBottomNavBar({
     super.key,
@@ -24,54 +26,68 @@ class AppBottomNavBar extends StatelessWidget {
       (Icons.person_rounded, 'Profile'),
     ];
 
-    return Container(
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(
-          top: BorderSide(color: const Color(0xFFECEAE7), width: 1),
+    return Material(
+      color: AppColors.navBg,
+      child: DecoratedBox(
+        decoration: const BoxDecoration(
+          border: Border(top: BorderSide(color: AppColors.border, width: 1)),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Color(0x0F000000),
-            blurRadius: 10,
-            offset: Offset(0, -2),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: List.generate(items.length, (i) {
-          final item = items[i];
-          final (icon, label) = item;
-          final selected = i == currentIndex;
-          return Expanded(
-            child: InkWell(
-              onTap: () => onTap(i),
-              borderRadius: BorderRadius.circular(12),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    icon,
-                    size: 22,
-                    color: selected ? primaryColor : inactiveColor,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    label,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                      letterSpacing: 0.1,
-                      color: selected ? primaryColor : inactiveColor,
+        child: SafeArea(
+          top: false,
+          minimum: const EdgeInsets.only(bottom: 8),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: List.generate(items.length, (i) {
+                final item = items[i];
+                final (icon, label) = item;
+                final selected = i == currentIndex;
+                return Expanded(
+                  child: Semantics(
+                    selected: selected,
+                    button: true,
+                    child: InkWell(
+                      key: ValueKey('bottom-nav-$i'),
+                      onTap: () => onTap(i),
+                      borderRadius: BorderRadius.circular(12),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              icon,
+                              size: 22,
+                              color: selected ? primaryColor : inactiveColor,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              label,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.labelSmall
+                                  ?.copyWith(
+                                    fontSize: 11,
+                                    fontWeight: selected
+                                        ? FontWeight.w700
+                                        : FontWeight.w500,
+                                    letterSpacing: 0.1,
+                                    color: selected
+                                        ? primaryColor
+                                        : inactiveColor,
+                                  ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
-                ],
-              ),
+                );
+              }),
             ),
-          );
-        }),
+          ),
+        ),
       ),
     );
   }

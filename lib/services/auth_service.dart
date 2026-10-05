@@ -52,10 +52,12 @@ class AuthService {
   static Future<Map<String, dynamic>> verifyCustomerOtp({
     required String rawPhone,
     required String otp,
+    http.Client? client,
   }) async {
     final phone = formatPhoneNumber(rawPhone);
+    final requestClient = client ?? http.Client();
     try {
-      final response = await http.post(
+      final response = await requestClient.post(
         Uri.parse(ApiConfig.customerVerifyOtpUrl),
         headers: const {'Content-Type': 'application/json'},
         body: jsonEncode({'phone_number': phone, 'otp': otp}),
@@ -71,7 +73,10 @@ class AuthService {
           refresh: data['refresh']?.toString() ?? '',
           phone: data['phone_number']?.toString() ?? phone,
         );
-        return {'success': true};
+        return {
+          'success': true,
+          'is_onboarded': data['is_onboarded'] == true,
+        };
       }
       return {'success': false, 'error': _message(data, 'Unable to complete login.')};
     } catch (_) {
@@ -79,6 +84,8 @@ class AuthService {
         'success': false,
         'error': 'Unable to reach the server. Please try again.',
       };
+    } finally {
+      if (client == null) requestClient.close();
     }
   }
 
@@ -94,6 +101,67 @@ class AuthService {
       return {'Authorization': 'Bearer $token'};
     }
     return const {};
+  }
+
+  /// Saves the customer's required onboarding details.
+  static Future<Map<String, dynamic>> updateCustomerProfile({
+    required String firstName,
+    required String lastName,
+    http.Client? client,
+  }) async {
+    final headers = await getAuthHeaders();
+    if (headers['Authorization'] == null) {
+      return {'success': false, 'error': 'Your session has expired. Please sign in again.'};
+    }
+
+    final requestClient = client ?? http.Client();
+    try {
+      final response = await requestClient.patch(
+        Uri.parse(ApiConfig.customerProfileUrl),
+        headers: {
+          ...headers,
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'first_name': firstName.trim(),
+          'last_name': lastName.trim(),
+        }),
+      );
+      final data = _decodeBody(response.body);
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return {'success': true, 'profile': data};
+      }
+      return {
+        'success': false,
+        'error': _message(data, 'Unable to save your details. Please try again.'),
+      };
+    } catch (_) {
+      return {
+        'success': false,
+        'error': 'Unable to reach the server. Please try again.',
+      };
+    } finally {
+      if (client == null) requestClient.close();
+    }
+  }
+
+  /// Returns the current customer profile for personalized app surfaces.
+  static Future<Map<String, dynamic>?> getCustomerProfile() async {
+    final headers = await getAuthHeaders();
+    if (headers['Authorization'] == null) return null;
+
+    try {
+      final response = await http.get(
+        Uri.parse(ApiConfig.customerProfileUrl),
+        headers: headers,
+      );
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        return null;
+      }
+      return _decodeBody(response.body);
+    } catch (_) {
+      return null;
+    }
   }
 
   static Future<bool> isLoggedIn() async {

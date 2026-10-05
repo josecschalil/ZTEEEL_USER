@@ -207,7 +207,7 @@ class _LoginScreenState extends State<LoginScreen>
                                     'Welcome\nto ZTEEEL',
                                     style: TextStyle(
                                       color: AppColors.textPrimary,
-                                      fontSize: 44,
+                                      fontSize: 40,
                                       fontWeight: FontWeight.w800,
                                       height: 1.08,
                                       letterSpacing: -1.5,
@@ -387,7 +387,7 @@ class _Footer extends StatelessWidget {
                 foregroundColor: AppColors.textWhite,
                 elevation: 0,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(14),
                 ),
               ),
               child: isLoading

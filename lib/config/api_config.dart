@@ -9,7 +9,15 @@ class ApiConfig {
       '$baseUrl/api/v1/auth/customer/verify-otp/';
   static String get tokenRefreshUrl => '$baseUrl/api/v1/auth/refresh/';
   static String get meUrl => '$baseUrl/api/v1/auth/me/';
+  static String get customerProfileUrl => '$baseUrl/api/v1/profile/';
   static String get offerFeedUrl => '$baseUrl/api/v1/offers/feed/';
+  static String get foodTagsUrl => '$baseUrl/api/v1/food-tags/';
+  static String foodTagVendorsUrl(String tagId) =>
+      '$baseUrl/api/v1/food-tags/$tagId/vendors/';
+  static String foodTagOffersUrl(String tagId) =>
+      '$baseUrl/api/v1/food-tags/$tagId/offers/';
+  static String vendorFoodTagItemsUrl(String vendorId, String tagId) =>
+      '$baseUrl/api/v1/vendors/$vendorId/food-tags/$tagId/';
   static String get vendorsListUrl => '$baseUrl/api/v1/vendors/';
   static String get vendorAltListUrl => '$baseUrl/api/v1/vendor/list/';
   static String get searchVendorsUrl => '$baseUrl/api/v1/search/?q=a&filter=vendors';

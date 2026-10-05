@@ -1,3 +1,4 @@
+import '../app_colors.dart';
 import 'package:flutter/material.dart';
 import 'OfferExplanationScreen.dart';
 import 'FoodItemPage.dart';
@@ -6,25 +7,6 @@ import '../config/api_config.dart';
 import '../services/cart_service.dart';
 import '../services/restaurant_service.dart';
 
-class MenuColors {
-  static const primary = Color(0xFFEE5B2B);
-  static const bgLight = Color(0xFFFAFAFC);
-  static const bgDark = Color(0xFF1E1714);
-  static const cardLight = Colors.white;
-  static const cardDark = Color(0xFF281E19);
-  static const borderLight = Color(0xFFF0F0F3);
-  static const borderDark = Color(0xFF3D2B23);
-  static const textMutedDark = Color(0xFFC9A092);
-
-  static ThemeData get lightTheme => ThemeData(
-    useMaterial3: true,
-    scaffoldBackgroundColor: bgLight,
-    colorScheme: ColorScheme.fromSeed(
-      seedColor: primary,
-      brightness: Brightness.light,
-    ),
-  );
-}
 
 /// ---------------------------------------------------------------------
 /// Data models
@@ -132,12 +114,13 @@ class VendorDetailData {
   });
 }
 
-const List<List<Color>> _offerGradients = [
-  [MenuColors.primary, Color(0xFFEA580C)],
-  [Color(0xFF9333EA), Color(0xFF4F46E5)],
-  [Color(0xFF0D9488), Color(0xFF0284C7)],
-  [Color(0xFFE11D48), Color(0xFFC026D3)],
-  [Color(0xFFD97706), Color(0xFFEA580C)],
+/// Shared offer palette for restaurant and home offer cards.
+const List<List<Color>> restaurantOfferGradients = [
+  [AppColors.primary, AppColors.toneFFEA580C],
+  [AppColors.toneFF9333EA, AppColors.toneFF4F46E5],
+  [AppColors.toneFF0D9488, AppColors.toneFF0284C7],
+  [AppColors.toneFFE11D48, AppColors.toneFFC026D3],
+  [AppColors.toneFFD97706, AppColors.toneFFEA580C],
 ];
 
 List<MenuCategory> _mapCategories(
@@ -338,7 +321,8 @@ List<OfferCard> _mapOffers(
     final desc = offer['description']?.toString().trim() ?? '';
     final discount = double.tryParse(offer['discount_percentage']?.toString() ?? '') ?? 0.0;
     final endsAt = offer['ends_at']?.toString();
-    final gradient = _offerGradients[gradientIndex % _offerGradients.length];
+    final gradient = restaurantOfferGradients[
+        gradientIndex % restaurantOfferGradients.length];
     gradientIndex++;
 
     final scopeType = offer['scope_type']?.toString() ?? 'all_menu';
@@ -763,9 +747,9 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
               child: const Text('Cancel'),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: MenuColors.primary),
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Start New', style: TextStyle(color: Colors.white)),
+              child: const Text('Start New', style: TextStyle(color: AppColors.white)),
             ),
           ],
         ),
@@ -860,7 +844,7 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColor = isDark ? MenuColors.bgDark : MenuColors.bgLight;
+    final bgColor = isDark ? AppColors.bgDark : AppColors.bgLight;
 
     final vendor = _vendorDetail!;
 
@@ -869,7 +853,7 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
       body: Stack(
         children: [
           RefreshIndicator(
-            color: MenuColors.primary,
+            color: AppColors.primary,
             onRefresh: _loadData,
             child: NestedScrollView(
               headerSliverBuilder: (context, innerBoxIsScrolled) {
@@ -990,7 +974,7 @@ class _TopActionBar extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [Colors.black.withValues(alpha: 0.6), Colors.transparent],
+          colors: [AppColors.black.withValues(alpha: 0.6), AppColors.transparent],
         ),
       ),
       child: Row(
@@ -1038,14 +1022,14 @@ class _RoundIconButton extends StatelessWidget {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: isDark
-              ? Colors.black.withValues(alpha: 0.6)
-              : Colors.white.withValues(alpha: 0.9),
+              ? AppColors.black.withValues(alpha: 0.6)
+              : AppColors.white.withValues(alpha: 0.9),
           border: Border.all(
-            color: isDark ? const Color(0xFF3D2B23) : const Color(0xFFEEEEEE),
+            color: isDark ? AppColors.borderDark : AppColors.toneFFEEEEEE,
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
+              color: AppColors.black.withValues(alpha: 0.1),
               blurRadius: 10,
               offset: const Offset(0, 3),
             ),
@@ -1053,7 +1037,7 @@ class _RoundIconButton extends StatelessWidget {
         ),
         child: Icon(
           icon,
-          color: isDark ? Colors.white : const Color(0xFF1D1E20),
+          color: isDark ? AppColors.white : AppColors.textPrimary,
           size: size,
         ),
       ),
@@ -1087,7 +1071,7 @@ class _HeroSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bgColor = isDark ? MenuColors.bgDark : MenuColors.bgLight;
+    final bgColor = isDark ? AppColors.bgDark : AppColors.bgLight;
 
     return SizedBox(
       height: 280,
@@ -1099,13 +1083,13 @@ class _HeroSection extends StatelessWidget {
                   imageUrl,
                   fit: BoxFit.cover,
                   errorBuilder: (context, error, stackTrace) => Container(
-                    color: isDark ? MenuColors.cardDark : Colors.grey[300],
-                    child: const Icon(Icons.restaurant_rounded, size: 60, color: Colors.grey),
+                    color: isDark ? AppColors.cardDark : AppColors.materialGrey[300],
+                    child: const Icon(Icons.restaurant_rounded, size: 60, color: AppColors.materialGrey),
                   ),
                 )
               : Container(
-                  color: isDark ? MenuColors.cardDark : Colors.grey[300],
-                  child: const Icon(Icons.restaurant_rounded, size: 60, color: Colors.grey),
+                  color: isDark ? AppColors.cardDark : AppColors.materialGrey[300],
+                  child: const Icon(Icons.restaurant_rounded, size: 60, color: AppColors.materialGrey),
                 ),
           DecoratedBox(
             decoration: BoxDecoration(
@@ -1115,7 +1099,7 @@ class _HeroSection extends StatelessWidget {
                 colors: [
                   bgColor,
                   bgColor.withValues(alpha: 0.5),
-                  Colors.transparent,
+                  AppColors.transparent,
                 ],
                 stops: const [0.0, 0.45, 1.0],
               ),
@@ -1140,8 +1124,8 @@ class _HeroSection extends StatelessWidget {
                             fontSize: 26,
                             fontWeight: FontWeight.w800,
                             color: isDark
-                                ? Colors.white
-                                : const Color(0xFF1D1E20),
+                                ? AppColors.white
+                                : AppColors.textPrimary,
                             letterSpacing: -0.4,
                             height: 1.1,
                           ),
@@ -1153,10 +1137,10 @@ class _HeroSection extends StatelessWidget {
                           vertical: 5,
                         ),
                         decoration: BoxDecoration(
-                          color: (isOpen ? const Color(0xFF22C55E) : const Color(0xFFEF4444)).withValues(alpha: 0.15),
+                          color: (isOpen ? AppColors.vegGreen : AppColors.nonVegRed).withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(999),
                           border: Border.all(
-                            color: (isOpen ? const Color(0xFF22C55E) : const Color(0xFFEF4444)).withValues(alpha: 0.3),
+                            color: (isOpen ? AppColors.vegGreen : AppColors.nonVegRed).withValues(alpha: 0.3),
                           ),
                         ),
                         child: Text(
@@ -1164,7 +1148,7 @@ class _HeroSection extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
-                            color: isOpen ? const Color(0xFF22C55E) : const Color(0xFFEF4444),
+                            color: isOpen ? AppColors.vegGreen : AppColors.nonVegRed,
                             letterSpacing: 0.5,
                           ),
                         ),
@@ -1176,7 +1160,7 @@ class _HeroSection extends StatelessWidget {
                     children: [
                       const Icon(
                         Icons.star_rounded,
-                        color: MenuColors.primary,
+                        color: AppColors.primary,
                         size: 18,
                       ),
                       const SizedBox(width: 4),
@@ -1184,8 +1168,8 @@ class _HeroSection extends StatelessWidget {
                         rating.toStringAsFixed(1),
                         style: TextStyle(
                           color: isDark
-                              ? Colors.white
-                              : const Color(0xFF1D1E20),
+                              ? AppColors.white
+                              : AppColors.textPrimary,
                           fontWeight: FontWeight.w700,
                           fontSize: 13,
                         ),
@@ -1194,8 +1178,8 @@ class _HeroSection extends StatelessWidget {
                         ' ($reviewCount)',
                         style: TextStyle(
                           color: isDark
-                              ? MenuColors.textMutedDark
-                              : Colors.grey[500],
+                              ? AppColors.textMutedDark
+                              : AppColors.materialGrey[500],
                           fontSize: 13,
                         ),
                       ),
@@ -1207,8 +1191,8 @@ class _HeroSection extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             color: isDark
-                                ? MenuColors.textMutedDark
-                                : Colors.grey[700],
+                                ? AppColors.textMutedDark
+                                : AppColors.materialGrey[700],
                             fontSize: 13,
                             fontWeight: FontWeight.w500,
                           ),
@@ -1218,7 +1202,7 @@ class _HeroSection extends StatelessWidget {
                       Text(
                         distance,
                         style: const TextStyle(
-                          color: MenuColors.primary,
+                          color: AppColors.primary,
                           fontSize: 13,
                           fontWeight: FontWeight.w700,
                         ),
@@ -1247,7 +1231,7 @@ class _Dot extends StatelessWidget {
       height: 4,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: isDark ? Colors.white30 : Colors.grey[400],
+        color: isDark ? AppColors.white30 : AppColors.materialGrey[400],
       ),
     );
   }
@@ -1282,10 +1266,10 @@ class _TabsHeaderDelegate extends SliverPersistentHeaderDelegate {
     double shrinkOffset,
     bool overlapsContent,
   ) {
-    final bgColor = isDark ? MenuColors.bgDark : MenuColors.bgLight;
+    final bgColor = isDark ? AppColors.bgDark : AppColors.bgLight;
     final borderColor = isDark
-        ? MenuColors.borderDark
-        : const Color(0xFFF0F0F3);
+        ? AppColors.borderDark
+        : AppColors.border;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -1304,7 +1288,7 @@ class _TabsHeaderDelegate extends SliverPersistentHeaderDelegate {
                 decoration: BoxDecoration(
                   border: Border(
                     bottom: BorderSide(
-                      color: selected ? MenuColors.primary : Colors.transparent,
+                      color: selected ? AppColors.primary : AppColors.transparent,
                       width: 2.5,
                     ),
                   ),
@@ -1321,10 +1305,10 @@ class _TabsHeaderDelegate extends SliverPersistentHeaderDelegate {
                             ? FontWeight.w700
                             : FontWeight.w500,
                         color: selected
-                            ? MenuColors.primary
+                            ? AppColors.primary
                             : (isDark
-                                  ? MenuColors.textMutedDark
-                                  : Colors.grey[500]),
+                                  ? AppColors.textMutedDark
+                                  : AppColors.materialGrey[500]),
                       ),
                     ),
                     if (_tabs[i] == 'Offers' && offersCount > 0) ...[
@@ -1335,14 +1319,14 @@ class _TabsHeaderDelegate extends SliverPersistentHeaderDelegate {
                           vertical: 1,
                         ),
                         decoration: BoxDecoration(
-                          color: MenuColors.primary,
+                          color: AppColors.primary,
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(
                           '$offersCount',
                           style: const TextStyle(
                             fontSize: 10,
-                            color: Colors.white,
+                            color: AppColors.white,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -1401,27 +1385,27 @@ class _CategoryPills extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
               decoration: BoxDecoration(
                 color: isSelected
-                    ? MenuColors.primary
-                    : (isDark ? MenuColors.cardDark : Colors.white),
+                    ? AppColors.primary
+                    : (isDark ? AppColors.cardDark : AppColors.white),
                 borderRadius: BorderRadius.circular(999),
                 border: isSelected
                     ? null
                     : Border.all(
                         color: isDark
-                            ? MenuColors.borderDark
-                            : const Color(0xFFF0F0F3),
+                            ? AppColors.borderDark
+                            : AppColors.border,
                       ),
                 boxShadow: isSelected
                     ? [
                         BoxShadow(
-                          color: MenuColors.primary.withValues(alpha: 0.3),
+                          color: AppColors.primary.withValues(alpha: 0.3),
                           blurRadius: 10,
                           offset: const Offset(0, 3),
                         ),
                       ]
                     : [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.03),
+                          color: AppColors.black.withValues(alpha: 0.03),
                           blurRadius: 6,
                           offset: const Offset(0, 2),
                         ),
@@ -1433,10 +1417,10 @@ class _CategoryPills extends StatelessWidget {
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
                   color: isSelected
-                      ? Colors.white
+                      ? AppColors.white
                       : (isDark
-                            ? MenuColors.textMutedDark
-                            : const Color(0xFF2D2D2D)),
+                            ? AppColors.textMutedDark
+                            : AppColors.toneFF2D2D2D),
                 ),
               ),
             ),
@@ -1484,7 +1468,7 @@ class _TodaysOffers extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
-                  color: isDark ? Colors.white : const Color(0xFF1D1E20),
+                  color: isDark ? AppColors.white : AppColors.textPrimary,
                   letterSpacing: -0.3,
                 ),
               ),
@@ -1493,7 +1477,7 @@ class _TodaysOffers extends StatelessWidget {
                 style: const TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: MenuColors.primary,
+                  color: AppColors.primary,
                 ),
               ),
             ],
@@ -1593,7 +1577,7 @@ class _OfferCardWidget extends StatelessWidget {
                   height: 110,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Colors.white.withValues(alpha: 0.1),
+                    color: AppColors.white.withValues(alpha: 0.1),
                   ),
                 ),
               ),
@@ -1610,7 +1594,7 @@ class _OfferCardWidget extends StatelessWidget {
                           vertical: 3,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.2),
+                          color: AppColors.white.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
@@ -1618,7 +1602,7 @@ class _OfferCardWidget extends StatelessWidget {
                           style: const TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.w800,
-                            color: Colors.white,
+                            color: AppColors.white,
                             letterSpacing: 0.5,
                           ),
                         ),
@@ -1629,7 +1613,7 @@ class _OfferCardWidget extends StatelessWidget {
                           vertical: 3,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.25),
+                          color: AppColors.black.withValues(alpha: 0.25),
                           borderRadius: BorderRadius.circular(999),
                         ),
                         child: Row(
@@ -1637,7 +1621,7 @@ class _OfferCardWidget extends StatelessWidget {
                           children: [
                             const Icon(
                               Icons.timer_outlined,
-                              color: Colors.white,
+                              color: AppColors.white,
                               size: 13,
                             ),
                             const SizedBox(width: 4),
@@ -1646,7 +1630,7 @@ class _OfferCardWidget extends StatelessWidget {
                               style: const TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600,
-                                color: Colors.white,
+                                color: AppColors.white,
                               ),
                             ),
                           ],
@@ -1664,7 +1648,7 @@ class _OfferCardWidget extends StatelessWidget {
                         style: const TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w900,
-                          color: Colors.white,
+                          color: AppColors.white,
                           letterSpacing: -0.3,
                         ),
                       ),
@@ -1673,7 +1657,7 @@ class _OfferCardWidget extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.9),
+                          color: AppColors.white.withValues(alpha: 0.9),
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
                         ),
@@ -1724,7 +1708,7 @@ class _CategorySection extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
-                  color: isDark ? Colors.white : const Color(0xFF1D1E20),
+                  color: isDark ? AppColors.white : AppColors.textPrimary,
                   letterSpacing: -0.3,
                 ),
               ),
@@ -1732,7 +1716,7 @@ class _CategorySection extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: isDark ? MenuColors.cardDark : const Color(0xFFEEEEEE),
+                  color: isDark ? AppColors.cardDark : AppColors.toneFFEEEEEE,
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
@@ -1740,7 +1724,7 @@ class _CategorySection extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
-                    color: isDark ? MenuColors.textMutedDark : Colors.grey[600],
+                    color: isDark ? AppColors.textMutedDark : AppColors.materialGrey[600],
                   ),
                 ),
               ),
@@ -1794,8 +1778,8 @@ class _MenuItemCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cardBg = isDark ? MenuColors.cardDark : Colors.white;
-    final cardBorder = isDark ? MenuColors.borderDark : const Color(0xFFF0F0F3);
+    final cardBg = isDark ? AppColors.cardDark : AppColors.white;
+    final cardBorder = isDark ? AppColors.borderDark : AppColors.border;
 
     return GestureDetector(
       onTap: () {
@@ -1834,8 +1818,8 @@ class _MenuItemCard extends StatelessWidget {
           boxShadow: [
             BoxShadow(
               color: isDark
-                  ? Colors.black.withValues(alpha: 0.2)
-                  : Colors.black.withValues(alpha: 0.05),
+                  ? AppColors.black.withValues(alpha: 0.2)
+                  : AppColors.black.withValues(alpha: 0.05),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),
@@ -1859,8 +1843,8 @@ class _MenuItemCard extends StatelessWidget {
                           shape: BoxShape.rectangle,
                           border: Border.all(
                             color: item.tag == 'VEG'
-                                ? Colors.green
-                                : const Color(0xFFB91C1C),
+                                ? AppColors.materialGreen
+                                : AppColors.toneFFB91C1C,
                             width: 1.5,
                           ),
                           borderRadius: BorderRadius.circular(3),
@@ -1871,8 +1855,8 @@ class _MenuItemCard extends StatelessWidget {
                             height: 7,
                             decoration: BoxDecoration(
                               color: item.tag == 'VEG'
-                                  ? Colors.green
-                                  : const Color(0xFFB91C1C),
+                                  ? AppColors.materialGreen
+                                  : AppColors.toneFFB91C1C,
                               shape: BoxShape.circle,
                             ),
                           ),
@@ -1886,7 +1870,7 @@ class _MenuItemCard extends StatelessWidget {
                             vertical: 2,
                           ),
                           decoration: BoxDecoration(
-                            color: MenuColors.primary.withValues(alpha: 0.12),
+                            color: AppColors.primary.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
@@ -1894,7 +1878,7 @@ class _MenuItemCard extends StatelessWidget {
                             style: const TextStyle(
                               fontSize: 9,
                               fontWeight: FontWeight.w800,
-                              color: MenuColors.primary,
+                              color: AppColors.primary,
                               letterSpacing: 0.4,
                             ),
                           ),
@@ -1912,7 +1896,7 @@ class _MenuItemCard extends StatelessWidget {
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
                       height: 1.25,
-                      color: isDark ? Colors.white : const Color(0xFF1D1E20),
+                      color: isDark ? AppColors.white : AppColors.textPrimary,
                     ),
                   ),
                   const SizedBox(height: 5),
@@ -1926,8 +1910,8 @@ class _MenuItemCard extends StatelessWidget {
                         fontSize: 12,
                         height: 1.45,
                         color: isDark
-                            ? MenuColors.textMutedDark
-                            : const Color(0xFF8A8A9A),
+                            ? AppColors.textMutedDark
+                            : AppColors.textMuted,
                       ),
                     ),
                   const SizedBox(height: 12),
@@ -1941,7 +1925,7 @@ class _MenuItemCard extends StatelessWidget {
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w800,
-                          color: MenuColors.primary,
+                          color: AppColors.primary,
                           letterSpacing: -0.3,
                         ),
                       ),
@@ -1952,7 +1936,7 @@ class _MenuItemCard extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w500,
-                            color: isDark ? MenuColors.textMutedDark : Colors.grey[500],
+                            color: isDark ? AppColors.textMutedDark : AppColors.materialGrey[500],
                             decoration: TextDecoration.lineThrough,
                           ),
                         ),
@@ -1981,15 +1965,15 @@ class _MenuItemCard extends StatelessWidget {
                             errorBuilder: (context, error, stackTrace) => Container(
                               width: 96,
                               height: 96,
-                              color: isDark ? Colors.black26 : Colors.grey[200],
-                              child: const Icon(Icons.fastfood_rounded, color: Colors.grey, size: 36),
+                              color: isDark ? AppColors.black26 : AppColors.materialGrey[200],
+                              child: const Icon(Icons.fastfood_rounded, color: AppColors.materialGrey, size: 36),
                             ),
                           )
                         : Container(
                             width: 96,
                             height: 96,
-                            color: isDark ? Colors.black26 : Colors.grey[200],
-                            child: const Icon(Icons.fastfood_rounded, color: Colors.grey, size: 36),
+                            color: isDark ? AppColors.black26 : AppColors.materialGrey[200],
+                            child: const Icon(Icons.fastfood_rounded, color: AppColors.materialGrey, size: 36),
                           ),
                   ),
                   // Add / Stepper button — overlaps bottom centre of image
@@ -2033,11 +2017,11 @@ class _AddButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         decoration: BoxDecoration(
-          color: MenuColors.primary,
+          color: AppColors.primary,
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: MenuColors.primary.withValues(alpha: 0.35),
+              color: AppColors.primary.withValues(alpha: 0.35),
               blurRadius: 8,
               offset: const Offset(0, 3),
             ),
@@ -2048,7 +2032,7 @@ class _AddButton extends StatelessWidget {
           style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w700,
-            color: Colors.white,
+            color: AppColors.white,
           ),
         ),
       ),
@@ -2074,11 +2058,11 @@ class _StepperButton extends StatelessWidget {
     return Container(
       height: 30,
       decoration: BoxDecoration(
-        color: MenuColors.primary,
+        color: AppColors.primary,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: MenuColors.primary.withValues(alpha: 0.35),
+            color: AppColors.primary.withValues(alpha: 0.35),
             blurRadius: 8,
             offset: const Offset(0, 3),
           ),
@@ -2091,7 +2075,7 @@ class _StepperButton extends StatelessWidget {
             onTap: onRemove,
             child: const Padding(
               padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              child: Icon(Icons.remove, color: Colors.white, size: 14),
+              child: Icon(Icons.remove, color: AppColors.white, size: 14),
             ),
           ),
           Text(
@@ -2099,14 +2083,14 @@ class _StepperButton extends StatelessWidget {
             style: const TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w800,
-              color: Colors.white,
+              color: AppColors.white,
             ),
           ),
           GestureDetector(
             onTap: onAdd,
             child: const Padding(
               padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              child: Icon(Icons.add, color: Colors.white, size: 14),
+              child: Icon(Icons.add, color: AppColors.white, size: 14),
             ),
           ),
         ],
@@ -2136,11 +2120,11 @@ class _ViewCartButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
         decoration: BoxDecoration(
-          color: MenuColors.primary,
+          color: AppColors.primary,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: MenuColors.primary.withValues(alpha: 0.4),
+              color: AppColors.primary.withValues(alpha: 0.4),
               blurRadius: 16,
               offset: const Offset(0, 6),
             ),
@@ -2154,7 +2138,7 @@ class _ViewCartButton extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.25),
+                    color: AppColors.white.withValues(alpha: 0.25),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
@@ -2162,7 +2146,7 @@ class _ViewCartButton extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w800,
-                      color: Colors.white,
+                      color: AppColors.white,
                     ),
                   ),
                 ),
@@ -2176,7 +2160,7 @@ class _ViewCartButton extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.w800,
-                        color: Colors.white70,
+                        color: AppColors.white70,
                         letterSpacing: 0.5,
                       ),
                     ),
@@ -2185,7 +2169,7 @@ class _ViewCartButton extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w800,
-                        color: Colors.white,
+                        color: AppColors.white,
                       ),
                     ),
                   ],
@@ -2199,11 +2183,11 @@ class _ViewCartButton extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
-                    color: Colors.white,
+                    color: AppColors.white,
                   ),
                 ),
                 SizedBox(width: 4),
-                Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 18),
+                Icon(Icons.arrow_forward_rounded, color: AppColors.white, size: 18),
               ],
             ),
           ],
@@ -2249,7 +2233,7 @@ class _MenuView extends StatelessWidget {
       return const Center(
         child: Padding(
           padding: EdgeInsets.all(40),
-          child: CircularProgressIndicator(color: MenuColors.primary),
+          child: CircularProgressIndicator(color: AppColors.primary),
         ),
       );
     }
@@ -2261,14 +2245,14 @@ class _MenuView extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.restaurant_menu_rounded, size: 48, color: isDark ? MenuColors.textMutedDark : Colors.grey[400]),
+              Icon(Icons.restaurant_menu_rounded, size: 48, color: isDark ? AppColors.textMutedDark : AppColors.materialGrey[400]),
               const SizedBox(height: 12),
               Text(
                 'No menu items found',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
-                  color: isDark ? Colors.white : const Color(0xFF1D1E20),
+                  color: isDark ? AppColors.white : AppColors.textPrimary,
                 ),
               ),
               const SizedBox(height: 6),
@@ -2277,7 +2261,7 @@ class _MenuView extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 13,
-                  color: isDark ? MenuColors.textMutedDark : Colors.grey[600],
+                  color: isDark ? AppColors.textMutedDark : AppColors.materialGrey[600],
                 ),
               ),
             ],
@@ -2351,10 +2335,10 @@ class _OffersView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cardBg = isDark ? MenuColors.cardDark : Colors.white;
-    final cardBorder = isDark ? MenuColors.borderDark : const Color(0xFFF0F0F3);
-    final textColor = isDark ? Colors.white : const Color(0xFF1D1E20);
-    final subColor = isDark ? MenuColors.textMutedDark : Colors.grey[600]!;
+    final cardBg = isDark ? AppColors.cardDark : AppColors.white;
+    final cardBorder = isDark ? AppColors.borderDark : AppColors.border;
+    final textColor = isDark ? AppColors.white : AppColors.textPrimary;
+    final subColor = isDark ? AppColors.textMutedDark : AppColors.materialGrey[600]!;
 
     if (offers.isEmpty) {
       return Center(
@@ -2363,7 +2347,7 @@ class _OffersView extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.local_offer_outlined, size: 48, color: isDark ? MenuColors.textMutedDark : Colors.grey[400]),
+              Icon(Icons.local_offer_outlined, size: 48, color: isDark ? AppColors.textMutedDark : AppColors.materialGrey[400]),
               const SizedBox(height: 12),
               Text(
                 'No Active Offers',
@@ -2427,8 +2411,8 @@ class _OffersView extends StatelessWidget {
               boxShadow: [
                 BoxShadow(
                   color: isDark
-                      ? Colors.black.withValues(alpha: 0.25)
-                      : Colors.black.withValues(alpha: 0.05),
+                      ? AppColors.black.withValues(alpha: 0.25)
+                      : AppColors.black.withValues(alpha: 0.05),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),
@@ -2510,8 +2494,8 @@ class _OffersView extends StatelessWidget {
                   ),
                   decoration: BoxDecoration(
                     color: isDark
-                        ? Colors.black.withValues(alpha: 0.2)
-                        : const Color(0xFFF9FAFB),
+                        ? AppColors.black.withValues(alpha: 0.2)
+                        : AppColors.toneFFF9FAFB,
                     borderRadius: const BorderRadius.vertical(
                       bottom: Radius.circular(16),
                     ),
@@ -2542,7 +2526,7 @@ class _OffersView extends StatelessWidget {
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          color: MenuColors.primary,
+                          color: AppColors.primary,
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: const Text(
@@ -2550,7 +2534,7 @@ class _OffersView extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
-                            color: Colors.white,
+                            color: AppColors.white,
                           ),
                         ),
                       ),
@@ -2581,10 +2565,10 @@ class _ReviewsView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cardBg = isDark ? MenuColors.cardDark : Colors.white;
-    final cardBorder = isDark ? MenuColors.borderDark : const Color(0xFFF0F0F3);
-    final textColor = isDark ? Colors.white : const Color(0xFF1D1E20);
-    final subColor = isDark ? MenuColors.textMutedDark : Colors.grey[600]!;
+    final cardBg = isDark ? AppColors.cardDark : AppColors.white;
+    final cardBorder = isDark ? AppColors.borderDark : AppColors.border;
+    final textColor = isDark ? AppColors.white : AppColors.textPrimary;
+    final subColor = isDark ? AppColors.textMutedDark : AppColors.materialGrey[600]!;
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 120),
@@ -2610,13 +2594,13 @@ class _ReviewsView extends StatelessWidget {
                   ),
                   const Row(
                     children: [
-                      Icon(Icons.star_rounded, color: Colors.amber, size: 18),
-                      Icon(Icons.star_rounded, color: Colors.amber, size: 18),
-                      Icon(Icons.star_rounded, color: Colors.amber, size: 18),
-                      Icon(Icons.star_rounded, color: Colors.amber, size: 18),
+                      Icon(Icons.star_rounded, color: AppColors.materialAmber, size: 18),
+                      Icon(Icons.star_rounded, color: AppColors.materialAmber, size: 18),
+                      Icon(Icons.star_rounded, color: AppColors.materialAmber, size: 18),
+                      Icon(Icons.star_rounded, color: AppColors.materialAmber, size: 18),
                       Icon(
                         Icons.star_half_rounded,
-                        color: Colors.amber,
+                        color: AppColors.materialAmber,
                         size: 18,
                       ),
                     ],
@@ -2677,12 +2661,12 @@ class _ReviewsView extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: MenuColors.primary.withValues(alpha: 0.12),
+                      color: AppColors.primary.withValues(alpha: 0.12),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
                       Icons.recommend_rounded,
-                      color: MenuColors.primary,
+                      color: AppColors.primary,
                       size: 20,
                     ),
                   ),
@@ -2738,7 +2722,7 @@ class _RatingBar extends StatelessWidget {
               stars,
               style: TextStyle(
                 fontSize: 10,
-                color: isDark ? MenuColors.textMutedDark : Colors.grey[600],
+                color: isDark ? AppColors.textMutedDark : AppColors.materialGrey[600],
               ),
             ),
           ),
@@ -2749,8 +2733,8 @@ class _RatingBar extends StatelessWidget {
               child: LinearProgressIndicator(
                 value: percent,
                 minHeight: 6,
-                backgroundColor: isDark ? Colors.white10 : Colors.grey[200],
-                valueColor: const AlwaysStoppedAnimation<Color>(Colors.amber),
+                backgroundColor: isDark ? AppColors.white10 : AppColors.materialGrey[200],
+                valueColor: const AlwaysStoppedAnimation<Color>(AppColors.materialAmber),
               ),
             ),
           ),
@@ -2770,10 +2754,10 @@ class _InfoView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cardBg = isDark ? MenuColors.cardDark : Colors.white;
-    final cardBorder = isDark ? MenuColors.borderDark : const Color(0xFFF0F0F3);
-    final textColor = isDark ? Colors.white : const Color(0xFF1D1E20);
-    final subColor = isDark ? MenuColors.textMutedDark : Colors.grey[600]!;
+    final cardBg = isDark ? AppColors.cardDark : AppColors.white;
+    final cardBorder = isDark ? AppColors.borderDark : AppColors.border;
+    final textColor = isDark ? AppColors.white : AppColors.textPrimary;
+    final subColor = isDark ? AppColors.textMutedDark : AppColors.materialGrey[600]!;
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 120),
@@ -2793,12 +2777,12 @@ class _InfoView extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: MenuColors.primary.withValues(alpha: 0.12),
+                      color: AppColors.primary.withValues(alpha: 0.12),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
                       Icons.location_on_rounded,
-                      color: MenuColors.primary,
+                      color: AppColors.primary,
                       size: 20,
                     ),
                   ),
@@ -2842,7 +2826,7 @@ class _InfoView extends StatelessWidget {
                 children: [
                   Icon(
                     Icons.access_time_filled_rounded,
-                    color: vendor.isOpen ? const Color(0xFF22C55E) : const Color(0xFFEF4444),
+                    color: vendor.isOpen ? AppColors.vegGreen : AppColors.nonVegRed,
                     size: 20,
                   ),
                   const SizedBox(width: 12),
@@ -2873,7 +2857,7 @@ class _InfoView extends StatelessWidget {
                   children: [
                     const Icon(
                       Icons.phone_in_talk_rounded,
-                      color: Color(0xFF3B82F6),
+                      color: AppColors.toneFF3B82F6,
                       size: 20,
                     ),
                     const SizedBox(width: 12),
@@ -2917,7 +2901,7 @@ class _InfoView extends StatelessWidget {
                 children: [
                   const Icon(
                     Icons.verified_user_rounded,
-                    color: MenuColors.primary,
+                    color: AppColors.primary,
                     size: 20,
                   ),
                   const SizedBox(width: 12),
@@ -2975,20 +2959,20 @@ class _FeatureChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: isDark ? Colors.white10 : const Color(0xFFF0F0F3),
+        color: isDark ? AppColors.white10 : AppColors.border,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: MenuColors.primary),
+          Icon(icon, size: 14, color: AppColors.primary),
           const SizedBox(width: 6),
           Text(
             label,
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w600,
-              color: isDark ? Colors.white : const Color(0xFF1D1E20),
+              color: isDark ? AppColors.white : AppColors.textPrimary,
             ),
           ),
         ],

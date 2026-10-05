@@ -1,33 +1,10 @@
+import '../app_colors.dart';
 import 'package:flutter/material.dart';
 import 'QrScreen.dart';
 import 'RecentOrderScreen.dart';
 import '../services/cart_service.dart';
 import '../services/redemption_service.dart';
 
-class CheckoutColors {
-  static const primary = Color(0xFFEE5B2B);
-  static const backgroundLight = Color(0xFFF8F6F6);
-  static const backgroundDark = Color(0xFF221510);
-  static const navBarDark = Color(0xFF1A100C);
-
-  static ThemeData get lightTheme => ThemeData(
-    useMaterial3: true,
-    scaffoldBackgroundColor: backgroundLight,
-    colorScheme: ColorScheme.fromSeed(
-      seedColor: primary,
-      brightness: Brightness.light,
-    ),
-  );
-
-  static ThemeData get darkTheme => ThemeData(
-    useMaterial3: true,
-    scaffoldBackgroundColor: backgroundDark,
-    colorScheme: ColorScheme.fromSeed(
-      seedColor: primary,
-      brightness: Brightness.dark,
-    ),
-  );
-}
 
 class CheckoutScreen extends StatefulWidget {
   final String? vendorId;
@@ -113,7 +90,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Your cart is empty.'),
-            backgroundColor: CheckoutColors.primary,
+            backgroundColor: AppColors.primary,
           ),
         );
         return;
@@ -129,7 +106,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('${sessions.length} separate shop orders created! QR codes are active.'),
-            backgroundColor: const Color(0xFF10B981),
+            backgroundColor: AppColors.green,
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -144,7 +121,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(errorMsg),
-            backgroundColor: Colors.red.shade700,
+            backgroundColor: AppColors.materialRed.shade700,
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -157,7 +134,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Your cart is empty.'),
-          backgroundColor: CheckoutColors.primary,
+          backgroundColor: AppColors.primary,
         ),
       );
       return;
@@ -172,7 +149,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Please select your free milestone reward item above!'),
-          backgroundColor: CheckoutColors.primary,
+          backgroundColor: AppColors.primary,
         ),
       );
       return;
@@ -196,7 +173,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(errorMsg),
-          backgroundColor: Colors.red.shade700,
+          backgroundColor: AppColors.materialRed.shade700,
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -247,7 +224,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 reward.availableOptions.isNotEmpty));
 
     return Scaffold(
-      backgroundColor: isDark ? CheckoutColors.backgroundDark : CheckoutColors.backgroundLight,
+      backgroundColor: isDark ? AppColors.checkoutBgDark : AppColors.backgroundLight,
       body: SafeArea(
         child: Column(
           children: [
@@ -258,7 +235,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             if (_isLoading)
               const Expanded(
                 child: Center(
-                  child: CircularProgressIndicator(color: CheckoutColors.primary),
+                  child: CircularProgressIndicator(color: AppColors.primary),
                 ),
               )
             else if (cart.isEmpty)
@@ -327,7 +304,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     final grandTotal = CartService.grandTotal;
 
     return Scaffold(
-      backgroundColor: isDark ? CheckoutColors.backgroundDark : CheckoutColors.backgroundLight,
+      backgroundColor: isDark ? AppColors.checkoutBgDark : AppColors.backgroundLight,
       body: SafeArea(
         child: Column(
           children: [
@@ -338,7 +315,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             if (_isLoading)
               const Expanded(
                 child: Center(
-                  child: CircularProgressIndicator(color: CheckoutColors.primary),
+                  child: CircularProgressIndicator(color: AppColors.primary),
                 ),
               )
             else if (baskets.isEmpty)
@@ -358,7 +335,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                           children: [
                             const Icon(
                               Icons.storefront_rounded,
-                              color: CheckoutColors.primary,
+                              color: AppColors.primary,
                               size: 18,
                             ),
                             const SizedBox(width: 8),
@@ -367,7 +344,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
-                                color: isDark ? Colors.white : Colors.black87,
+                                color: isDark ? AppColors.white : AppColors.black87,
                               ),
                             ),
                           ],
@@ -422,7 +399,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             Icon(
               Icons.shopping_basket_outlined,
               size: 64,
-              color: isDark ? Colors.grey[600] : Colors.grey[400],
+              color: isDark ? AppColors.materialGrey[600] : AppColors.materialGrey[400],
             ),
             const SizedBox(height: 16),
             Text(
@@ -430,7 +407,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
-                color: isDark ? Colors.white : Colors.black87,
+                color: isDark ? AppColors.white : AppColors.black87,
               ),
             ),
             const SizedBox(height: 8),
@@ -438,21 +415,21 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               'Add items from a restaurant menu to proceed.',
               style: TextStyle(
                 fontSize: 13,
-                color: isDark ? Colors.grey[400] : Colors.grey[600],
+                color: isDark ? AppColors.materialGrey[400] : AppColors.materialGrey[600],
               ),
             ),
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: () => Navigator.of(context).maybePop(),
               style: ElevatedButton.styleFrom(
-                backgroundColor: CheckoutColors.primary,
+                backgroundColor: AppColors.primary,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
               child: const Text(
                 'Explore Menu',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                style: TextStyle(color: AppColors.white, fontWeight: FontWeight.bold),
               ),
             ),
           ],
@@ -475,11 +452,11 @@ class _Header extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: (isDark ? CheckoutColors.backgroundDark : CheckoutColors.backgroundLight)
+        color: (isDark ? AppColors.checkoutBgDark : AppColors.backgroundLight)
             .withValues(alpha: 0.95),
         border: Border(
           bottom: BorderSide(
-            color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.grey[200]!,
+            color: isDark ? AppColors.white.withValues(alpha: 0.1) : AppColors.materialGrey[200]!,
           ),
         ),
       ),
@@ -493,7 +470,7 @@ class _Header extends StatelessWidget {
               onPressed: () => Navigator.of(context).maybePop(),
               icon: Icon(
                 Icons.arrow_back,
-                color: isDark ? Colors.white : Colors.black87,
+                color: isDark ? AppColors.white : AppColors.black87,
               ),
             ),
           ),
@@ -507,7 +484,7 @@ class _Header extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: isDark ? Colors.white : Colors.black,
+                    color: isDark ? AppColors.white : AppColors.black,
                   ),
                 ),
                 if (vendorName != null && vendorName!.isNotEmpty)
@@ -519,7 +496,7 @@ class _Header extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
-                      color: isDark ? Colors.grey[400] : Colors.grey[600],
+                      color: isDark ? AppColors.materialGrey[400] : AppColors.materialGrey[600],
                     ),
                   ),
               ],
@@ -556,16 +533,16 @@ class _SelectionItemCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
+        color: isDark ? AppColors.white.withValues(alpha: 0.05) : AppColors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey[100]!,
+          color: isDark ? AppColors.white.withValues(alpha: 0.05) : AppColors.materialGrey[100]!,
         ),
         boxShadow: isDark
             ? null
             : const [
                 BoxShadow(
-                  color: Colors.black12,
+                  color: AppColors.black12,
                   blurRadius: 4,
                   offset: Offset(0, 1),
                 ),
@@ -579,7 +556,7 @@ class _SelectionItemCard extends StatelessWidget {
             child: Container(
               width: 80,
               height: 80,
-              color: isDark ? const Color(0xFF332019) : const Color(0xFFF3F4F6),
+              color: isDark ? AppColors.redeemSurfaceDark : AppColors.surfaceRaised,
               child: item.imageUrl != null && item.imageUrl!.isNotEmpty
                   ? Image.network(
                       item.imageUrl!,
@@ -588,13 +565,13 @@ class _SelectionItemCard extends StatelessWidget {
                       fit: BoxFit.cover,
                       errorBuilder: (_, __, ___) => const Icon(
                         Icons.restaurant_rounded,
-                        color: CheckoutColors.primary,
+                        color: AppColors.primary,
                         size: 32,
                       ),
                     )
                   : const Icon(
                       Icons.restaurant_rounded,
-                      color: CheckoutColors.primary,
+                      color: AppColors.primary,
                       size: 32,
                     ),
             ),
@@ -611,7 +588,7 @@ class _SelectionItemCard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
-                    color: isDark ? Colors.white : Colors.black,
+                    color: isDark ? AppColors.white : AppColors.black,
                   ),
                 ),
                 Padding(
@@ -624,7 +601,7 @@ class _SelectionItemCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 13,
-                      color: isDark ? Colors.grey[400] : Colors.grey[500],
+                      color: isDark ? AppColors.materialGrey[400] : AppColors.materialGrey[500],
                     ),
                   ),
                 ),
@@ -638,7 +615,7 @@ class _SelectionItemCard extends StatelessWidget {
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 15,
-                            color: CheckoutColors.primary,
+                            color: AppColors.primary,
                           ),
                         ),
                         if (hasDiscount) ...[
@@ -648,7 +625,7 @@ class _SelectionItemCard extends StatelessWidget {
                             style: TextStyle(
                               decoration: TextDecoration.lineThrough,
                               fontSize: 11,
-                              color: isDark ? Colors.grey[500] : Colors.grey[400],
+                              color: isDark ? AppColors.materialGrey[500] : AppColors.materialGrey[400],
                             ),
                           ),
                         ],
@@ -658,8 +635,8 @@ class _SelectionItemCard extends StatelessWidget {
                       padding: const EdgeInsets.all(2),
                       decoration: BoxDecoration(
                         color: isDark
-                            ? Colors.white.withValues(alpha: 0.1)
-                            : Colors.grey[100],
+                            ? AppColors.white.withValues(alpha: 0.1)
+                            : AppColors.materialGrey[100],
                         borderRadius: BorderRadius.circular(999),
                       ),
                       child: Row(
@@ -679,7 +656,7 @@ class _SelectionItemCard extends StatelessWidget {
                               style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w500,
-                                color: isDark ? Colors.white : Colors.black,
+                                color: isDark ? AppColors.white : AppColors.black,
                               ),
                             ),
                           ),
@@ -727,18 +704,18 @@ class _StepperButton extends StatelessWidget {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: filled
-              ? CheckoutColors.primary
-              : (isDark ? Colors.white.withValues(alpha: 0.2) : Colors.white),
+              ? AppColors.primary
+              : (isDark ? AppColors.white.withValues(alpha: 0.2) : AppColors.white),
           boxShadow: filled
               ? null
-              : const [BoxShadow(color: Colors.black12, blurRadius: 2)],
+              : const [BoxShadow(color: AppColors.black12, blurRadius: 2)],
         ),
         child: Icon(
           icon,
           size: 16,
           color: filled
-              ? Colors.white
-              : (isDark ? Colors.white : Colors.black87),
+              ? AppColors.white
+              : (isDark ? AppColors.white : AppColors.black87),
         ),
       ),
     );
@@ -767,7 +744,7 @@ class _AddMoreItemsButton extends StatelessWidget {
             children: [
               Icon(
                 Icons.add_circle,
-                color: isDark ? Colors.grey[300] : Colors.grey[700],
+                color: isDark ? AppColors.materialGrey[300] : AppColors.materialGrey[700],
               ),
               const SizedBox(width: 8),
               Text(
@@ -775,7 +752,7 @@ class _AddMoreItemsButton extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
-                  color: isDark ? Colors.grey[300] : Colors.grey[700],
+                  color: isDark ? AppColors.materialGrey[300] : AppColors.materialGrey[700],
                 ),
               ),
             ],
@@ -795,7 +772,7 @@ class DottedBorderBox extends StatelessWidget {
   Widget build(BuildContext context) {
     return CustomPaint(
       painter: _DashedBorderPainter(
-        color: isDark ? Colors.white.withValues(alpha: 0.2) : Colors.grey[300]!,
+        color: isDark ? AppColors.white.withValues(alpha: 0.2) : AppColors.materialGrey[300]!,
         radius: 12,
       ),
       child: child,
@@ -868,12 +845,12 @@ class _RewardsProgressCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
+        color: isDark ? AppColors.white.withValues(alpha: 0.05) : AppColors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isUnlocked
-              ? const Color(0xFF10B981).withValues(alpha: 0.5)
-              : (isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey[100]!),
+              ? AppColors.green.withValues(alpha: 0.5)
+              : (isDark ? AppColors.white.withValues(alpha: 0.05) : AppColors.materialGrey[100]!),
         ),
       ),
       child: Column(
@@ -883,7 +860,7 @@ class _RewardsProgressCard extends StatelessWidget {
             children: [
               Icon(
                 isUnlocked ? Icons.stars_rounded : Icons.card_giftcard,
-                color: isUnlocked ? const Color(0xFF10B981) : CheckoutColors.primary,
+                color: isUnlocked ? AppColors.green : AppColors.primary,
                 size: 20,
               ),
               const SizedBox(width: 8),
@@ -894,7 +871,7 @@ class _RewardsProgressCard extends StatelessWidget {
                         style: const TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF10B981),
+                          color: AppColors.green,
                         ),
                       )
                     : RichText(
@@ -902,14 +879,14 @@ class _RewardsProgressCard extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w500,
-                            color: isDark ? Colors.grey[200] : Colors.grey[700],
+                            color: isDark ? AppColors.materialGrey[200] : AppColors.materialGrey[700],
                           ),
                           children: [
                             const TextSpan(text: 'Spend '),
                             TextSpan(
                               text: '\$${amountToFreeItem.toStringAsFixed(2)}',
                               style: const TextStyle(
-                                color: CheckoutColors.primary,
+                                color: AppColors.primary,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -932,18 +909,18 @@ class _RewardsProgressCard extends StatelessWidget {
                 Container(
                   height: 8,
                   color: isDark
-                      ? Colors.white.withValues(alpha: 0.1)
-                      : Colors.grey[200],
+                      ? AppColors.white.withValues(alpha: 0.1)
+                      : AppColors.materialGrey[200],
                 ),
                 FractionallySizedBox(
                   widthFactor: progress.clamp(0.0, 1.0),
                   child: Container(
                     height: 8,
                     decoration: BoxDecoration(
-                      color: isUnlocked ? const Color(0xFF10B981) : CheckoutColors.primary,
+                      color: isUnlocked ? AppColors.green : AppColors.primary,
                       boxShadow: [
                         BoxShadow(
-                          color: (isUnlocked ? const Color(0xFF10B981) : CheckoutColors.primary).withValues(alpha: 0.5),
+                          color: (isUnlocked ? AppColors.green : AppColors.primary).withValues(alpha: 0.5),
                           blurRadius: 8,
                         ),
                       ],
@@ -959,15 +936,15 @@ class _RewardsProgressCard extends StatelessWidget {
             children: [
               _ProgressMarker(
                 label: 'Start',
-                color: isDark ? Colors.grey[500]! : Colors.grey[400]!,
+                color: isDark ? AppColors.materialGrey[500]! : AppColors.materialGrey[400]!,
               ),
               _ProgressMarker(
                 label: 'Discount',
-                color: CheckoutColors.primary,
+                color: AppColors.primary,
               ),
               _ProgressMarker(
                 label: isUnlocked ? 'Unlocked!' : 'Reward',
-                color: isUnlocked ? const Color(0xFF10B981) : (isDark ? Colors.grey[500]! : Colors.grey[400]!),
+                color: isUnlocked ? AppColors.green : (isDark ? AppColors.materialGrey[500]! : AppColors.materialGrey[400]!),
               ),
             ],
           ),
@@ -980,7 +957,7 @@ class _RewardsProgressCard extends StatelessWidget {
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
-                color: isDark ? Colors.grey[300] : Colors.grey[800],
+                color: isDark ? AppColors.materialGrey[300] : AppColors.materialGrey[800],
               ),
             ),
             const SizedBox(height: 8),
@@ -996,11 +973,11 @@ class _RewardsProgressCard extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
                       color: isSelected
-                          ? const Color(0xFF10B981).withValues(alpha: 0.15)
-                          : (isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey[100]),
+                          ? AppColors.green.withValues(alpha: 0.15)
+                          : (isDark ? AppColors.white.withValues(alpha: 0.05) : AppColors.materialGrey[100]),
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
-                        color: isSelected ? const Color(0xFF10B981) : Colors.transparent,
+                        color: isSelected ? AppColors.green : AppColors.transparent,
                         width: 1.5,
                       ),
                     ),
@@ -1010,7 +987,7 @@ class _RewardsProgressCard extends StatelessWidget {
                         Icon(
                           isSelected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
                           size: 14,
-                          color: isSelected ? const Color(0xFF10B981) : Colors.grey,
+                          color: isSelected ? AppColors.green : AppColors.materialGrey,
                         ),
                         const SizedBox(width: 6),
                         Text(
@@ -1019,8 +996,8 @@ class _RewardsProgressCard extends StatelessWidget {
                             fontSize: 12,
                             fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
                             color: isSelected
-                                ? const Color(0xFF10B981)
-                                : (isDark ? Colors.white : Colors.black87),
+                                ? AppColors.green
+                                : (isDark ? AppColors.white : AppColors.black87),
                           ),
                         ),
                       ],
@@ -1087,10 +1064,10 @@ class _PriceBreakdownCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
+        color: isDark ? AppColors.white.withValues(alpha: 0.05) : AppColors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey[100]!,
+          color: isDark ? AppColors.white.withValues(alpha: 0.05) : AppColors.materialGrey[100]!,
         ),
       ),
       child: Column(
@@ -1102,14 +1079,14 @@ class _PriceBreakdownCard extends StatelessWidget {
                 'Subtotal',
                 style: TextStyle(
                   fontSize: 14,
-                  color: isDark ? Colors.grey[400] : Colors.grey[500],
+                  color: isDark ? AppColors.materialGrey[400] : AppColors.materialGrey[500],
                 ),
               ),
               Text(
                 '\$${subtotal.toStringAsFixed(2)}',
                 style: TextStyle(
                   fontWeight: FontWeight.w500,
-                  color: isDark ? Colors.white : Colors.black,
+                  color: isDark ? AppColors.white : AppColors.black,
                 ),
               ),
             ],
@@ -1124,7 +1101,7 @@ class _PriceBreakdownCard extends StatelessWidget {
                     'Discount',
                     style: TextStyle(
                       fontSize: 14,
-                      color: isDark ? Colors.grey[400] : Colors.grey[500],
+                      color: isDark ? AppColors.materialGrey[400] : AppColors.materialGrey[500],
                     ),
                   ),
                   if (discountPct > 0) ...[
@@ -1136,8 +1113,8 @@ class _PriceBreakdownCard extends StatelessWidget {
                       ),
                       decoration: BoxDecoration(
                         color: isDark
-                            ? Colors.green.withValues(alpha: 0.2)
-                            : Colors.green[100],
+                            ? AppColors.materialGreen.withValues(alpha: 0.2)
+                            : AppColors.materialGreen[100],
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
@@ -1145,7 +1122,7 @@ class _PriceBreakdownCard extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
-                          color: isDark ? Colors.green[300] : Colors.green[700],
+                          color: isDark ? AppColors.materialGreen[300] : AppColors.materialGreen[700],
                         ),
                       ),
                     ),
@@ -1156,7 +1133,7 @@ class _PriceBreakdownCard extends StatelessWidget {
                 '-\$${discount.toStringAsFixed(2)}',
                 style: TextStyle(
                   fontWeight: FontWeight.w500,
-                  color: isDark ? Colors.green[300] : Colors.green[600],
+                  color: isDark ? AppColors.materialGreen[300] : AppColors.materialGreen[600],
                 ),
               ),
             ],
@@ -1165,7 +1142,7 @@ class _PriceBreakdownCard extends StatelessWidget {
             padding: const EdgeInsets.symmetric(vertical: 12),
             child: Divider(
               height: 1,
-              color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.grey[200],
+              color: isDark ? AppColors.white.withValues(alpha: 0.1) : AppColors.materialGrey[200],
             ),
           ),
           Row(
@@ -1176,7 +1153,7 @@ class _PriceBreakdownCard extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: isDark ? Colors.white : Colors.black,
+                  color: isDark ? AppColors.white : AppColors.black,
                 ),
               ),
               Text(
@@ -1184,7 +1161,7 @@ class _PriceBreakdownCard extends StatelessWidget {
                 style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: CheckoutColors.primary,
+                  color: AppColors.primary,
                 ),
               ),
             ],
@@ -1223,10 +1200,10 @@ class _GenerateQrButton extends StatelessWidget {
           child: ElevatedButton(
             onPressed: isLoading ? null : onPressed,
             style: ElevatedButton.styleFrom(
-              backgroundColor: CheckoutColors.primary,
-              foregroundColor: Colors.white,
+              backgroundColor: AppColors.primary,
+              foregroundColor: AppColors.white,
               elevation: 6,
-              shadowColor: CheckoutColors.primary.withValues(alpha: 0.25),
+              shadowColor: AppColors.primary.withValues(alpha: 0.25),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -1236,7 +1213,7 @@ class _GenerateQrButton extends StatelessWidget {
                     width: 24,
                     height: 24,
                     child: CircularProgressIndicator(
-                      color: Colors.white,
+                      color: AppColors.white,
                       strokeWidth: 2.5,
                     ),
                   )
@@ -1259,7 +1236,7 @@ class _GenerateQrButton extends StatelessWidget {
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 11,
-            color: isDark ? Colors.grey[500] : Colors.grey[400],
+            color: isDark ? AppColors.materialGrey[500] : AppColors.materialGrey[400],
           ),
         ),
       ],

@@ -1,22 +1,6 @@
+import '../app_colors.dart';
 import 'package:flutter/material.dart';
 
-class DealColors {
-  static const primary = Color(0xFFEE5B2B);
-  static const bgLight = Color(0xFFFAFAFC);
-  static const bgDark = Color(0xFF1E1714);
-  static const cardDark = Color(0xFF281E19);
-  static const borderDark = Color(0xFF3D2B23);
-  static const mutedTextDark = Color(0xFFC9A092);
-
-  static ThemeData get theme => ThemeData(
-    useMaterial3: true,
-    scaffoldBackgroundColor: bgLight,
-    colorScheme: ColorScheme.fromSeed(
-      seedColor: primary,
-      brightness: Brightness.light,
-    ),
-  );
-}
 
 /// ---------------------------------------------------------------------
 /// Data models
@@ -59,7 +43,7 @@ class FoodDetailsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColor = isDark ? DealColors.bgDark : DealColors.bgLight;
+    final bgColor = isDark ? AppColors.bgDark : AppColors.bgLight;
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -151,14 +135,14 @@ class _RoundIconButton extends StatelessWidget {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: isDark
-              ? Colors.black.withValues(alpha: 0.6)
-              : Colors.white.withValues(alpha: 0.9),
+              ? AppColors.black.withValues(alpha: 0.6)
+              : AppColors.white.withValues(alpha: 0.9),
           border: Border.all(
-            color: isDark ? const Color(0xFF3B2921) : const Color(0xFFEEEEEE),
+            color: isDark ? AppColors.toneFF3B2921 : AppColors.toneFFEEEEEE,
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
+              color: AppColors.black.withValues(alpha: 0.1),
               blurRadius: 10,
               offset: const Offset(0, 3),
             ),
@@ -166,7 +150,7 @@ class _RoundIconButton extends StatelessWidget {
         ),
         child: Icon(
           icon,
-          color: isDark ? Colors.white : const Color(0xFF1D1E20),
+          color: isDark ? AppColors.white : AppColors.textPrimary,
           size: size,
         ),
       ),
@@ -183,7 +167,7 @@ class _HeroImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bgColor = isDark ? DealColors.bgDark : DealColors.bgLight;
+    final bgColor = isDark ? AppColors.bgDark : AppColors.bgLight;
 
     return SizedBox(
       width: double.infinity,
@@ -200,7 +184,7 @@ class _HeroImage extends StatelessWidget {
                 colors: [
                   bgColor,
                   bgColor.withValues(alpha: 0.4),
-                  Colors.transparent,
+                  AppColors.transparent,
                 ],
                 stops: const [0.0, 0.4, 1.0],
               ),
@@ -217,11 +201,11 @@ class _HeroImage extends StatelessWidget {
                     vertical: 6,
                   ),
                   decoration: BoxDecoration(
-                    color: DealColors.primary,
+                    color: AppColors.primary,
                     borderRadius: BorderRadius.circular(999),
                     boxShadow: [
                       BoxShadow(
-                        color: DealColors.primary.withValues(alpha: 0.35),
+                        color: AppColors.primary.withValues(alpha: 0.35),
                         blurRadius: 14,
                         offset: const Offset(0, 4),
                       ),
@@ -232,14 +216,14 @@ class _HeroImage extends StatelessWidget {
                     children: [
                       Icon(
                         Icons.local_fire_department_rounded,
-                        color: Colors.white,
+                        color: AppColors.white,
                         size: 15,
                       ),
                       SizedBox(width: 4),
                       Text(
                         'HOT DEAL',
                         style: TextStyle(
-                          color: Colors.white,
+                          color: AppColors.white,
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
                           letterSpacing: 0.3,
@@ -256,13 +240,13 @@ class _HeroImage extends StatelessWidget {
                   ),
                   decoration: BoxDecoration(
                     color: isDark
-                        ? Colors.black.withValues(alpha: 0.6)
-                        : Colors.white.withValues(alpha: 0.9),
+                        ? AppColors.black.withValues(alpha: 0.6)
+                        : AppColors.white.withValues(alpha: 0.9),
                     borderRadius: BorderRadius.circular(999),
                     border: Border.all(
                       color: isDark
-                          ? Colors.white.withValues(alpha: 0.2)
-                          : const Color(0xFFEEEEEE),
+                          ? AppColors.white.withValues(alpha: 0.2)
+                          : AppColors.toneFFEEEEEE,
                     ),
                   ),
                   child: Row(
@@ -270,7 +254,7 @@ class _HeroImage extends StatelessWidget {
                     children: [
                       const Icon(
                         Icons.timer_outlined,
-                        color: DealColors.primary,
+                        color: AppColors.primary,
                         size: 15,
                       ),
                       const SizedBox(width: 4),
@@ -278,8 +262,8 @@ class _HeroImage extends StatelessWidget {
                         '1h 45m left',
                         style: TextStyle(
                           color: isDark
-                              ? Colors.white
-                              : const Color(0xFF1D1E20),
+                              ? AppColors.white
+                              : AppColors.textPrimary,
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
                         ),
@@ -313,7 +297,7 @@ class _TitleRow extends StatelessWidget {
           style: TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.w700,
-            color: isDark ? Colors.white : const Color(0xFF1D1E20),
+            color: isDark ? AppColors.white : AppColors.textPrimary,
             letterSpacing: -0.4,
           ),
         ),
@@ -323,7 +307,7 @@ class _TitleRow extends StatelessWidget {
             Text(
               'Pizza Hut',
               style: TextStyle(
-                color: isDark ? DealColors.mutedTextDark : Colors.grey[700],
+                color: isDark ? AppColors.mutedTextDark : AppColors.materialGrey[700],
                 fontWeight: FontWeight.w600,
                 fontSize: 14,
               ),
@@ -334,20 +318,20 @@ class _TitleRow extends StatelessWidget {
               height: 4,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: isDark ? Colors.white30 : Colors.grey[400],
+                color: isDark ? AppColors.white30 : AppColors.materialGrey[400],
               ),
             ),
             const SizedBox(width: 8),
             Icon(
               Icons.near_me_outlined,
               size: 15,
-              color: isDark ? DealColors.mutedTextDark : Colors.grey[600],
+              color: isDark ? AppColors.mutedTextDark : AppColors.materialGrey[600],
             ),
             const SizedBox(width: 4),
             Text(
               '1.2 km away',
               style: TextStyle(
-                color: isDark ? DealColors.mutedTextDark : Colors.grey[600],
+                color: isDark ? AppColors.mutedTextDark : AppColors.materialGrey[600],
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
               ),
@@ -382,7 +366,7 @@ class _WhatYouGet extends StatelessWidget {
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w700,
-            color: isDark ? Colors.white : const Color(0xFF1D1E20),
+            color: isDark ? AppColors.white : AppColors.textPrimary,
             letterSpacing: -0.3,
           ),
         ),
@@ -390,7 +374,7 @@ class _WhatYouGet extends StatelessWidget {
         Text(
           'Enjoy our signature large thin-crust pizza topped with premium mozzarella, aged parmesan, and our secret herb-infused tomato sauce. Perfect for sharing or a serious solo treat.',
           style: TextStyle(
-            color: isDark ? DealColors.mutedTextDark : Colors.grey[600],
+            color: isDark ? AppColors.mutedTextDark : AppColors.materialGrey[600],
             fontSize: 14,
             height: 1.5,
           ),
@@ -404,7 +388,7 @@ class _WhatYouGet extends StatelessWidget {
               children: [
                 const Icon(
                   Icons.check_circle_rounded,
-                  color: DealColors.primary,
+                  color: AppColors.primary,
                   size: 20,
                 ),
                 const SizedBox(width: 10),
@@ -413,8 +397,8 @@ class _WhatYouGet extends StatelessWidget {
                     text,
                     style: TextStyle(
                       color: isDark
-                          ? Colors.grey[200]
-                          : const Color(0xFF2D2D2D),
+                          ? AppColors.materialGrey[200]
+                          : AppColors.toneFF2D2D2D,
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
                     ),
@@ -438,10 +422,10 @@ class _FinePrint extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cardBg = isDark ? DealColors.cardDark : Colors.white;
+    final cardBg = isDark ? AppColors.cardDark : AppColors.white;
     final borderColor = isDark
-        ? DealColors.borderDark
-        : const Color(0xFFF0F0F3);
+        ? AppColors.borderDark
+        : AppColors.border;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -451,7 +435,7 @@ class _FinePrint extends StatelessWidget {
           style: TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.w700,
-            color: isDark ? DealColors.mutedTextDark : Colors.grey[500],
+            color: isDark ? AppColors.mutedTextDark : AppColors.materialGrey[500],
             letterSpacing: 1.2,
           ),
         ),
@@ -466,8 +450,8 @@ class _FinePrint extends StatelessWidget {
             boxShadow: [
               BoxShadow(
                 color: isDark
-                    ? Colors.black.withValues(alpha: 0.2)
-                    : Colors.black.withValues(alpha: 0.04),
+                    ? AppColors.black.withValues(alpha: 0.2)
+                    : AppColors.black.withValues(alpha: 0.04),
                 blurRadius: 10,
                 offset: const Offset(0, 3),
               ),
@@ -477,7 +461,7 @@ class _FinePrint extends StatelessWidget {
             'Valid for dine-in or pickup only. Offer must be claimed through the ZTEEEL app. Limit 1 per customer. Redemption valid for 24 hours after claim.',
             style: TextStyle(
               fontSize: 12,
-              color: isDark ? DealColors.mutedTextDark : Colors.grey[600],
+              color: isDark ? AppColors.mutedTextDark : AppColors.materialGrey[600],
               height: 1.5,
             ),
           ),
@@ -504,7 +488,7 @@ class _RecommendedAddOns extends StatelessWidget {
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w700,
-            color: isDark ? Colors.white : const Color(0xFF1D1E20),
+            color: isDark ? AppColors.white : AppColors.textPrimary,
             letterSpacing: -0.3,
           ),
         ),
@@ -531,10 +515,10 @@ class _AddOnCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cardBg = isDark ? DealColors.cardDark : Colors.white;
+    final cardBg = isDark ? AppColors.cardDark : AppColors.white;
     final borderColor = isDark
-        ? DealColors.borderDark
-        : const Color(0xFFF0F0F3);
+        ? AppColors.borderDark
+        : AppColors.border;
 
     return Container(
       width: 144,
@@ -546,8 +530,8 @@ class _AddOnCard extends StatelessWidget {
         boxShadow: [
           BoxShadow(
             color: isDark
-                ? Colors.black.withValues(alpha: 0.2)
-                : Colors.black.withValues(alpha: 0.05),
+                ? AppColors.black.withValues(alpha: 0.2)
+                : AppColors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 3),
           ),
@@ -572,7 +556,7 @@ class _AddOnCard extends StatelessWidget {
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w700,
-              color: isDark ? Colors.white : const Color(0xFF1D1E20),
+              color: isDark ? AppColors.white : AppColors.textPrimary,
             ),
           ),
           const SizedBox(height: 3),
@@ -581,7 +565,7 @@ class _AddOnCard extends StatelessWidget {
             style: const TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w700,
-              color: DealColors.primary,
+              color: AppColors.primary,
             ),
           ),
         ],
@@ -599,10 +583,10 @@ class _AddToCartBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final barBg = isDark ? DealColors.bgDark : Colors.white;
+    final barBg = isDark ? AppColors.bgDark : AppColors.white;
     final borderTopColor = isDark
-        ? DealColors.borderDark
-        : const Color(0xFFF0F0F3);
+        ? AppColors.borderDark
+        : AppColors.border;
 
     return Container(
       padding: EdgeInsets.fromLTRB(
@@ -617,8 +601,8 @@ class _AddToCartBar extends StatelessWidget {
         boxShadow: [
           BoxShadow(
             color: isDark
-                ? Colors.black.withValues(alpha: 0.4)
-                : Colors.black.withValues(alpha: 0.08),
+                ? AppColors.black.withValues(alpha: 0.4)
+                : AppColors.black.withValues(alpha: 0.08),
             blurRadius: 16,
             offset: const Offset(0, -4),
           ),
@@ -636,7 +620,7 @@ class _AddToCartBar extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 10,
                   fontWeight: FontWeight.w700,
-                  color: isDark ? DealColors.mutedTextDark : Colors.grey[500],
+                  color: isDark ? AppColors.mutedTextDark : AppColors.materialGrey[500],
                   letterSpacing: 1.0,
                 ),
               ),
@@ -646,7 +630,7 @@ class _AddToCartBar extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.w800,
-                  color: isDark ? Colors.white : const Color(0xFF1D1E20),
+                  color: isDark ? AppColors.white : AppColors.textPrimary,
                 ),
               ),
             ],
@@ -658,7 +642,7 @@ class _AddToCartBar extends StatelessWidget {
               onPressed: () {},
               icon: const Icon(
                 Icons.shopping_bag_outlined,
-                color: Colors.white,
+                color: AppColors.white,
                 size: 20,
               ),
               label: const Text(
@@ -666,13 +650,13 @@ class _AddToCartBar extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
-                  color: Colors.white,
+                  color: AppColors.white,
                 ),
               ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: DealColors.primary,
+                backgroundColor: AppColors.primary,
                 elevation: 4,
-                shadowColor: DealColors.primary.withValues(alpha: 0.35),
+                shadowColor: AppColors.primary.withValues(alpha: 0.35),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
                 ),

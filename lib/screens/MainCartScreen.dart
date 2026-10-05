@@ -1,3 +1,4 @@
+import '../app_colors.dart';
 import 'package:flutter/material.dart';
 import 'CheckOutScreen.dart';
 import 'RestuarantMenuScreen.dart';
@@ -5,35 +6,6 @@ import '../config/api_config.dart';
 import '../services/cart_service.dart';
 import '../services/restaurant_service.dart';
 
-class SelectionsColors {
-  static const primary = Color(0xFFEE5B2B);
-  static const backgroundLight = Color(0xFFFAFAFC);
-  static const backgroundDark = Color(0xFF1E1714);
-  static const cardLight = Colors.white;
-  static const cardDark = Color(0xFF281E19);
-  static const borderLight = Color(0xFFF0F0F3);
-  static const borderDark = Color(0xFF3D2B23);
-  static const textMutedDark = Color(0xFFC9A092);
-  static const textMutedLight = Color(0xFF8A8A9A);
-
-  static ThemeData get lightTheme => ThemeData(
-    useMaterial3: true,
-    scaffoldBackgroundColor: backgroundLight,
-    colorScheme: ColorScheme.fromSeed(
-      seedColor: primary,
-      brightness: Brightness.light,
-    ),
-  );
-
-  static ThemeData get darkTheme => ThemeData(
-    useMaterial3: true,
-    scaffoldBackgroundColor: backgroundDark,
-    colorScheme: ColorScheme.fromSeed(
-      seedColor: primary,
-      brightness: Brightness.dark,
-    ),
-  );
-}
 
 class RecentVisit {
   final String id;
@@ -126,8 +98,8 @@ class _MySelectionsScreenState extends State<MySelectionsScreen> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bgColor = isDark
-        ? SelectionsColors.backgroundDark
-        : SelectionsColors.backgroundLight;
+        ? AppColors.backgroundDark
+        : AppColors.backgroundLight;
 
     final baskets = CartService.allBaskets;
     final hasItems = baskets.isNotEmpty;
@@ -141,7 +113,7 @@ class _MySelectionsScreenState extends State<MySelectionsScreen> {
             _Header(isDark: isDark),
             Expanded(
               child: RefreshIndicator(
-                color: SelectionsColors.primary,
+                color: AppColors.primary,
                 onRefresh: () async {
                   await Future.wait([
                     CartService.fetchCart(),
@@ -263,26 +235,26 @@ class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final canPop = Navigator.of(context).canPop();
-    final textPrimary = isDark ? Colors.white : const Color(0xFF1D1E20);
+    final textPrimary = isDark ? AppColors.white : AppColors.textPrimary;
     final textMuted = isDark
-        ? SelectionsColors.textMutedDark
-        : const Color(0xFF8E8E93);
+        ? AppColors.textMutedDark
+        : AppColors.toneFF8E8E93;
     final borderColor = isDark
-        ? SelectionsColors.borderDark
-        : const Color(0xFFF0F0F3);
+        ? AppColors.borderDark
+        : AppColors.border;
 
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
       decoration: BoxDecoration(
         color: isDark
-            ? SelectionsColors.backgroundDark
-            : SelectionsColors.backgroundLight,
+            ? AppColors.backgroundDark
+            : AppColors.backgroundLight,
         border: Border(bottom: BorderSide(color: borderColor, width: 1)),
         boxShadow: [
           BoxShadow(
             color: isDark
-                ? Colors.black.withValues(alpha: 0.15)
-                : Colors.black.withValues(alpha: 0.03),
+                ? AppColors.black.withValues(alpha: 0.15)
+                : AppColors.black.withValues(alpha: 0.03),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -305,14 +277,14 @@ class _Header extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(9),
                   decoration: BoxDecoration(
-                    color: SelectionsColors.primary.withValues(
+                    color: AppColors.primary.withValues(
                       alpha: isDark ? 0.2 : 0.1,
                     ),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
                     Icons.shopping_bag_rounded,
-                    color: SelectionsColors.primary,
+                    color: AppColors.primary,
                     size: 20,
                   ),
                 ),
@@ -385,14 +357,14 @@ class _RoundIconButton extends StatelessWidget {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: isDark
-              ? Colors.black.withValues(alpha: 0.6)
-              : Colors.white.withValues(alpha: 0.9),
+              ? AppColors.black.withValues(alpha: 0.6)
+              : AppColors.white.withValues(alpha: 0.9),
           border: Border.all(
-            color: isDark ? const Color(0xFF3D2B23) : const Color(0xFFEEEEEE),
+            color: isDark ? AppColors.borderDark : AppColors.toneFFEEEEEE,
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
+              color: AppColors.black.withValues(alpha: 0.06),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -400,7 +372,7 @@ class _RoundIconButton extends StatelessWidget {
         ),
         child: Icon(
           icon,
-          color: isDark ? Colors.white : const Color(0xFF1D1E20),
+          color: isDark ? AppColors.white : AppColors.textPrimary,
           size: size,
         ),
       ),
@@ -421,7 +393,7 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textPrimary = isDark ? Colors.white : const Color(0xFF1D1E20);
+    final textPrimary = isDark ? AppColors.white : AppColors.textPrimary;
 
     return Row(
       children: [
@@ -438,7 +410,7 @@ class _SectionHeader extends StatelessWidget {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
           decoration: BoxDecoration(
-            color: isDark ? SelectionsColors.cardDark : const Color(0xFFEEEEEE),
+            color: isDark ? AppColors.cardDark : AppColors.toneFFEEEEEE,
             borderRadius: BorderRadius.circular(12),
           ),
           child: Text(
@@ -446,7 +418,7 @@ class _SectionHeader extends StatelessWidget {
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w700,
-              color: isDark ? SelectionsColors.textMutedDark : Colors.grey[600],
+              color: isDark ? AppColors.textMutedDark : AppColors.materialGrey[600],
             ),
           ),
         ),
@@ -464,10 +436,10 @@ class _EmptyBasketCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cardBg = isDark ? SelectionsColors.cardDark : Colors.white;
-    final cardBorder = isDark ? SelectionsColors.borderDark : SelectionsColors.borderLight;
-    final textPrimary = isDark ? Colors.white : const Color(0xFF1D1E20);
-    final textMuted = isDark ? SelectionsColors.textMutedDark : const Color(0xFF8A8A9A);
+    final cardBg = isDark ? AppColors.cardDark : AppColors.white;
+    final cardBorder = isDark ? AppColors.borderDark : AppColors.borderLight;
+    final textPrimary = isDark ? AppColors.white : AppColors.textPrimary;
+    final textMuted = isDark ? AppColors.textMutedDark : AppColors.textMuted;
 
     return Container(
       padding: const EdgeInsets.all(24),
@@ -477,7 +449,7 @@ class _EmptyBasketCard extends StatelessWidget {
         border: Border.all(color: cardBorder, width: 1),
         boxShadow: [
           BoxShadow(
-            color: isDark ? Colors.black.withValues(alpha: 0.2) : Colors.black.withValues(alpha: 0.05),
+            color: isDark ? AppColors.black.withValues(alpha: 0.2) : AppColors.black.withValues(alpha: 0.05),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -488,12 +460,12 @@ class _EmptyBasketCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: SelectionsColors.primary.withValues(alpha: 0.1),
+              color: AppColors.primary.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: const Icon(
               Icons.shopping_cart_outlined,
-              color: SelectionsColors.primary,
+              color: AppColors.primary,
               size: 36,
             ),
           ),
@@ -544,14 +516,14 @@ class _ShopBasketCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cardBg = isDark ? SelectionsColors.cardDark : Colors.white;
+    final cardBg = isDark ? AppColors.cardDark : AppColors.white;
     final cardBorder = isDark
-        ? SelectionsColors.borderDark
-        : SelectionsColors.borderLight;
-    final textPrimary = isDark ? Colors.white : const Color(0xFF1D1E20);
+        ? AppColors.borderDark
+        : AppColors.borderLight;
+    final textPrimary = isDark ? AppColors.white : AppColors.textPrimary;
     final textMuted = isDark
-        ? SelectionsColors.textMutedDark
-        : const Color(0xFF8A8A9A);
+        ? AppColors.textMutedDark
+        : AppColors.textMuted;
 
     final shopName = basket.vendor?.businessName ?? 'Restaurant';
     final coverImage = basket.vendor?.coverImage;
@@ -564,8 +536,8 @@ class _ShopBasketCard extends StatelessWidget {
         boxShadow: [
           BoxShadow(
             color: isDark
-                ? Colors.black.withValues(alpha: 0.25)
-                : Colors.black.withValues(alpha: 0.05),
+                ? AppColors.black.withValues(alpha: 0.25)
+                : AppColors.black.withValues(alpha: 0.05),
             blurRadius: 14,
             offset: const Offset(0, 4),
           ),
@@ -587,20 +559,20 @@ class _ShopBasketCard extends StatelessWidget {
                     child: Container(
                       width: 44,
                       height: 44,
-                      color: isDark ? const Color(0xFF3A2820) : const Color(0xFFF3F4F6),
+                      color: isDark ? AppColors.toneFF3A2820 : AppColors.surfaceRaised,
                       child: coverImage != null && coverImage.isNotEmpty
                           ? Image.network(
                               coverImage,
                               fit: BoxFit.cover,
                               errorBuilder: (_, __, ___) => const Icon(
                                 Icons.storefront_rounded,
-                                color: SelectionsColors.primary,
+                                color: AppColors.primary,
                                 size: 24,
                               ),
                             )
                           : const Icon(
                               Icons.storefront_rounded,
-                              color: SelectionsColors.primary,
+                              color: AppColors.primary,
                               size: 24,
                             ),
                     ),
@@ -662,7 +634,7 @@ class _ShopBasketCard extends StatelessWidget {
                                 onClearBasket();
                               },
                               style: TextButton.styleFrom(
-                                foregroundColor: Colors.red,
+                                foregroundColor: AppColors.materialRed,
                               ),
                               child: const Text('Clear'),
                             ),
@@ -703,8 +675,8 @@ class _ShopBasketCard extends StatelessWidget {
                       child: Divider(
                         height: 1,
                         color: isDark
-                            ? const Color(0xFF35261F)
-                            : const Color(0xFFF3F4F6),
+                            ? AppColors.toneFF35261F
+                            : AppColors.surfaceRaised,
                       ),
                     ),
                 ],
@@ -756,7 +728,7 @@ class _ShopBasketCard extends StatelessWidget {
                         style: const TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w700,
-                          color: Color(0xFF10B981),
+                          color: AppColors.green,
                         ),
                       ),
                     ],
@@ -779,7 +751,7 @@ class _ShopBasketCard extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w900,
-                        color: SelectionsColors.primary,
+                        color: AppColors.primary,
                       ),
                     ),
                   ],
@@ -791,8 +763,8 @@ class _ShopBasketCard extends StatelessWidget {
                   child: ElevatedButton(
                     onPressed: onCheckout,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: SelectionsColors.primary,
-                      foregroundColor: Colors.white,
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: AppColors.white,
                       elevation: 0,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -812,7 +784,7 @@ class _ShopBasketCard extends StatelessWidget {
                         const Icon(
                           Icons.arrow_forward_rounded,
                           size: 16,
-                          color: Colors.white,
+                          color: AppColors.white,
                         ),
                       ],
                     ),
@@ -844,10 +816,10 @@ class _BasketItemRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textPrimary = isDark ? Colors.white : const Color(0xFF1D1E20);
+    final textPrimary = isDark ? AppColors.white : AppColors.textPrimary;
     final textMuted = isDark
-        ? SelectionsColors.textMutedDark
-        : const Color(0xFF8A8A9A);
+        ? AppColors.textMutedDark
+        : AppColors.textMuted;
 
     return Row(
       children: [
@@ -856,20 +828,20 @@ class _BasketItemRow extends StatelessWidget {
           child: Container(
             width: 48,
             height: 48,
-            color: isDark ? const Color(0xFF332019) : const Color(0xFFF3F4F6),
+            color: isDark ? AppColors.redeemSurfaceDark : AppColors.surfaceRaised,
             child: item.imageUrl != null && item.imageUrl!.isNotEmpty
                 ? Image.network(
                     item.imageUrl!,
                     fit: BoxFit.cover,
                     errorBuilder: (_, __, ___) => const Icon(
                       Icons.restaurant_rounded,
-                      color: SelectionsColors.primary,
+                      color: AppColors.primary,
                       size: 20,
                     ),
                   )
                 : const Icon(
                     Icons.restaurant_rounded,
-                    color: SelectionsColors.primary,
+                    color: AppColors.primary,
                     size: 20,
                   ),
           ),
@@ -897,7 +869,7 @@ class _BasketItemRow extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
-                      color: SelectionsColors.primary,
+                      color: AppColors.primary,
                     ),
                   ),
                   if (item.lineDiscount > 0) ...[
@@ -919,7 +891,7 @@ class _BasketItemRow extends StatelessWidget {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
           decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF35261F) : const Color(0xFFF3F4F6),
+            color: isDark ? AppColors.toneFF35261F : AppColors.surfaceRaised,
             borderRadius: BorderRadius.circular(20),
           ),
           child: Row(
@@ -975,11 +947,11 @@ class _MiniIconButton extends StatelessWidget {
         height: 26,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF453026) : Colors.white,
+          color: isDark ? AppColors.toneFF453026 : AppColors.white,
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
+              color: AppColors.black.withValues(alpha: 0.05),
               blurRadius: 2,
             ),
           ],
@@ -987,7 +959,7 @@ class _MiniIconButton extends StatelessWidget {
         child: Icon(
           icon,
           size: 14,
-          color: isDark ? Colors.white : const Color(0xFF1D1E20),
+          color: isDark ? AppColors.white : AppColors.textPrimary,
         ),
       ),
     );
@@ -1018,14 +990,14 @@ class _CartTotalFooter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cardBg = isDark ? SelectionsColors.cardDark : Colors.white;
+    final cardBg = isDark ? AppColors.cardDark : AppColors.white;
     final borderColor = isDark
-        ? SelectionsColors.borderDark
-        : SelectionsColors.borderLight;
-    final textPrimary = isDark ? Colors.white : const Color(0xFF1D1E20);
+        ? AppColors.borderDark
+        : AppColors.borderLight;
+    final textPrimary = isDark ? AppColors.white : AppColors.textPrimary;
     final textMuted = isDark
-        ? SelectionsColors.textMutedDark
-        : const Color(0xFF8A8A9A);
+        ? AppColors.textMutedDark
+        : AppColors.textMuted;
 
     return Container(
       decoration: BoxDecoration(
@@ -1035,8 +1007,8 @@ class _CartTotalFooter extends StatelessWidget {
         boxShadow: [
           BoxShadow(
             color: isDark
-                ? Colors.black.withValues(alpha: 0.25)
-                : Colors.black.withValues(alpha: 0.06),
+                ? AppColors.black.withValues(alpha: 0.25)
+                : AppColors.black.withValues(alpha: 0.06),
             blurRadius: 16,
             offset: const Offset(0, 4),
           ),
@@ -1047,33 +1019,41 @@ class _CartTotalFooter extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 8,
+              runSpacing: 8,
               children: [
                 Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Container(
                       padding: const EdgeInsets.all(7),
                       decoration: BoxDecoration(
-                        color: SelectionsColors.primary.withValues(
+                        color: AppColors.primary.withValues(
                           alpha: isDark ? 0.2 : 0.1,
                         ),
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(
                         Icons.receipt_long_rounded,
-                        color: SelectionsColors.primary,
+                        color: AppColors.primary,
                         size: 18,
                       ),
                     ),
                     const SizedBox(width: 10),
-                    Text(
-                      'All Baskets Summary',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: textPrimary,
-                        letterSpacing: -0.3,
+                    Flexible(
+                      child: Text(
+                        'All Baskets Summary',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: textPrimary,
+                          letterSpacing: -0.3,
+                        ),
                       ),
                     ),
                   ],
@@ -1085,8 +1065,8 @@ class _CartTotalFooter extends StatelessWidget {
                   ),
                   decoration: BoxDecoration(
                     color: isDark
-                        ? const Color(0xFF3A2820)
-                        : const Color(0xFFF3F4F6),
+                        ? AppColors.toneFF3A2820
+                        : AppColors.surfaceRaised,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
@@ -1132,7 +1112,7 @@ class _CartTotalFooter extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
-                      color: Color(0xFF10B981),
+                      color: AppColors.green,
                     ),
                   ),
                 ],
@@ -1143,8 +1123,8 @@ class _CartTotalFooter extends StatelessWidget {
               child: Divider(
                 height: 1,
                 color: isDark
-                    ? SelectionsColors.borderDark
-                    : const Color(0xFFE5E7EB),
+                    ? AppColors.borderDark
+                    : AppColors.toneFFE5E7EB,
               ),
             ),
             Row(
@@ -1168,7 +1148,7 @@ class _CartTotalFooter extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.w900,
-                        color: SelectionsColors.primary,
+                        color: AppColors.primary,
                         letterSpacing: -0.5,
                       ),
                     ),
@@ -1177,7 +1157,7 @@ class _CartTotalFooter extends StatelessWidget {
                 ElevatedButton(
                   onPressed: onCheckoutAll,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF10B981),
+                    backgroundColor: AppColors.green,
                     elevation: 0,
                     padding: const EdgeInsets.symmetric(
                       horizontal: 18,
@@ -1194,13 +1174,13 @@ class _CartTotalFooter extends StatelessWidget {
                         style: const TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w700,
-                          color: Colors.white,
+                          color: AppColors.white,
                         ),
                       ),
                       const SizedBox(width: 6),
                       const Icon(
                         Icons.arrow_forward_rounded,
-                        color: Colors.white,
+                        color: AppColors.white,
                         size: 16,
                       ),
                     ],
@@ -1230,8 +1210,8 @@ class _RecentlyVisitedSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textMuted = isDark
-        ? SelectionsColors.textMutedDark
-        : const Color(0xFF8A8A9A);
+        ? AppColors.textMutedDark
+        : AppColors.textMuted;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1281,10 +1261,10 @@ class _RecentlyVisitedSection extends StatelessWidget {
                           shape: BoxShape.circle,
                           border: Border.all(
                             color: visit.highlighted
-                                ? SelectionsColors.primary
+                                ? AppColors.primary
                                 : (isDark
-                                    ? SelectionsColors.borderDark
-                                    : const Color(0xFFE5E7EB)),
+                                    ? AppColors.borderDark
+                                    : AppColors.toneFFE5E7EB),
                             width: 2,
                           ),
                         ),
@@ -1294,7 +1274,7 @@ class _RecentlyVisitedSection extends StatelessWidget {
                             fit: BoxFit.cover,
                             errorBuilder: (_, __, ___) => const Icon(
                               Icons.restaurant_rounded,
-                              color: SelectionsColors.primary,
+                              color: AppColors.primary,
                               size: 24,
                             ),
                           ),
@@ -1310,8 +1290,8 @@ class _RecentlyVisitedSection extends StatelessWidget {
                           fontSize: 11,
                           fontWeight: FontWeight.w500,
                           color: isDark
-                              ? Colors.white70
-                              : const Color(0xFF4B5563),
+                              ? AppColors.white70
+                              : AppColors.toneFF4B5563,
                         ),
                       ),
                     ],
@@ -1339,14 +1319,14 @@ class _BottomNavBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final navBg = isDark
-        ? SelectionsColors.backgroundDark
-        : SelectionsColors.backgroundLight;
+        ? AppColors.backgroundDark
+        : AppColors.backgroundLight;
     final borderColor = isDark
-        ? SelectionsColors.borderDark
-        : const Color(0xFFF0F0F3);
+        ? AppColors.borderDark
+        : AppColors.border;
     final mutedText = isDark
-        ? SelectionsColors.textMutedDark
-        : Colors.grey[400]!;
+        ? AppColors.textMutedDark
+        : AppColors.materialGrey[400]!;
 
     final items = [
       (Icons.home_rounded, 'Home'),
@@ -1369,8 +1349,8 @@ class _BottomNavBar extends StatelessWidget {
         boxShadow: [
           BoxShadow(
             color: isDark
-                ? Colors.black.withValues(alpha: 0.3)
-                : Colors.black.withValues(alpha: 0.05),
+                ? AppColors.black.withValues(alpha: 0.3)
+                : AppColors.black.withValues(alpha: 0.05),
             blurRadius: 16,
             offset: const Offset(0, -4),
           ),
@@ -1392,7 +1372,7 @@ class _BottomNavBar extends StatelessWidget {
                   Icon(
                     icon,
                     size: 22,
-                    color: selected ? SelectionsColors.primary : mutedText,
+                    color: selected ? AppColors.primary : mutedText,
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -1400,7 +1380,7 @@ class _BottomNavBar extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                      color: selected ? SelectionsColors.primary : mutedText,
+                      color: selected ? AppColors.primary : mutedText,
                     ),
                   ),
                 ],

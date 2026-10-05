@@ -1,3 +1,4 @@
+import '../app_colors.dart';
 // ---------------------------------------------------------------------
 // SETUP REQUIRED (one-time, no API key needed):
 //
@@ -53,24 +54,6 @@ import '../services/location_service.dart';
 /// }
 /// ```
 
-class LocationColors {
-  static const primary = Color(0xFFEE5B2B);
-  static const backgroundLight = Color(0xFFF8F6F6);
-  static const cardLight = Colors.white;
-  static const borderLight = Color(0xFFE2E8F0);
-  static const textPrimary = Color(0xFF0F172A);
-  static const textSecondary = Color(0xFF64748B);
-  static const textMuted = Color(0xFF94A3B8);
-
-  static ThemeData get theme => ThemeData(
-    useMaterial3: true,
-    scaffoldBackgroundColor: backgroundLight,
-    colorScheme: ColorScheme.fromSeed(
-      seedColor: primary,
-      brightness: Brightness.light,
-    ),
-  );
-}
 
 /// ---------------------------------------------------------------------
 /// Models
@@ -425,7 +408,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen>
                           width: 16,
                           height: 6,
                           decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.25),
+                            color: AppColors.black.withOpacity(0.25),
                             borderRadius: BorderRadius.circular(999),
                           ),
                         ),
@@ -459,11 +442,11 @@ class _LocationPickerScreenState extends State<LocationPickerScreen>
                         Expanded(
                           child: Container(
                             decoration: BoxDecoration(
-                              color: LocationColors.cardLight,
+                              color: AppColors.cardLight,
                               borderRadius: BorderRadius.circular(14),
                               boxShadow: const [
                                 BoxShadow(
-                                  color: Colors.black26,
+                                  color: AppColors.black26,
                                   blurRadius: 10,
                                   offset: Offset(0, 4),
                                 ),
@@ -473,17 +456,17 @@ class _LocationPickerScreenState extends State<LocationPickerScreen>
                               controller: _searchController,
                               onChanged: _onSearchChanged,
                               style: const TextStyle(
-                                color: LocationColors.textPrimary,
+                                color: AppColors.textPrimary,
                                 fontSize: 14,
                               ),
                               decoration: InputDecoration(
                                 hintText: 'Search for area, street, landmark…',
                                 hintStyle: const TextStyle(
-                                  color: LocationColors.textMuted,
+                                  color: AppColors.textMuted,
                                 ),
                                 prefixIcon: const Icon(
                                   Icons.search,
-                                  color: LocationColors.textMuted,
+                                  color: AppColors.textMuted,
                                   size: 20,
                                 ),
                                 suffixIcon: _searching
@@ -494,7 +477,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen>
                                           height: 16,
                                           child: CircularProgressIndicator(
                                             strokeWidth: 2,
-                                            color: LocationColors.primary,
+                                            color: AppColors.primary,
                                           ),
                                         ),
                                       )
@@ -514,11 +497,11 @@ class _LocationPickerScreenState extends State<LocationPickerScreen>
                       Container(
                         margin: const EdgeInsets.only(top: 8),
                         decoration: BoxDecoration(
-                          color: LocationColors.cardLight,
+                          color: AppColors.cardLight,
                           borderRadius: BorderRadius.circular(14),
                           boxShadow: const [
                             BoxShadow(
-                              color: Colors.black26,
+                              color: AppColors.black26,
                               blurRadius: 10,
                               offset: Offset(0, 4),
                             ),
@@ -531,7 +514,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen>
                           itemCount: _searchResults.length,
                           separatorBuilder: (_, __) => const Divider(
                             height: 1,
-                            color: LocationColors.borderLight,
+                            color: AppColors.borderLight,
                           ),
                           itemBuilder: (context, i) {
                             final result = _searchResults[i];
@@ -539,7 +522,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen>
                               dense: true,
                               leading: const Icon(
                                 Icons.location_on_outlined,
-                                color: LocationColors.primary,
+                                color: AppColors.primary,
                                 size: 20,
                               ),
                               title: Text(
@@ -548,7 +531,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen>
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
                                   fontSize: 13,
-                                  color: LocationColors.textPrimary,
+                                  color: AppColors.textPrimary,
                                 ),
                               ),
                               onTap: () => _selectSearchResult(result),
@@ -568,7 +551,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen>
             bottom: 300,
             child: _RoundButton(
               icon: Icons.my_location,
-              iconColor: LocationColors.primary,
+              iconColor: AppColors.primary,
               loading: _locating,
               onTap: _useCurrentLocation,
             ),
@@ -620,10 +603,10 @@ class _RoundButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: LocationColors.cardLight,
+      color: AppColors.cardLight,
       shape: const CircleBorder(),
       elevation: 4,
-      shadowColor: Colors.black26,
+      shadowColor: AppColors.black26,
       child: InkWell(
         onTap: loading ? null : onTap,
         customBorder: const CircleBorder(),
@@ -635,13 +618,13 @@ class _RoundButton extends StatelessWidget {
                   padding: EdgeInsets.all(12),
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    color: LocationColors.primary,
+                    color: AppColors.primary,
                   ),
                 )
               : Icon(
                   icon,
                   size: 19,
-                  color: iconColor ?? LocationColors.textSecondary,
+                  color: iconColor ?? AppColors.textSecondary,
                 ),
         ),
       ),
@@ -683,11 +666,11 @@ class _PinPainter extends CustomPainter {
           ..close();
     path.addPath(trianglePath, Offset.zero);
 
-    final paint = Paint()..color = LocationColors.primary;
-    canvas.drawShadow(path, Colors.black, 3, false);
+    final paint = Paint()..color = AppColors.primary;
+    canvas.drawShadow(path, AppColors.black, 3, false);
     canvas.drawPath(path, paint);
 
-    final dotPaint = Paint()..color = Colors.white;
+    final dotPaint = Paint()..color = AppColors.white;
     canvas.drawCircle(Offset(w / 2, radius), radius * 0.4, dotPaint);
   }
 
@@ -725,11 +708,11 @@ class _LocationSheet extends StatelessWidget {
         20 + MediaQuery.of(context).padding.bottom,
       ),
       decoration: const BoxDecoration(
-        color: LocationColors.cardLight,
+        color: AppColors.cardLight,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black26,
+            color: AppColors.black26,
             blurRadius: 16,
             offset: Offset(0, -4),
           ),
@@ -745,7 +728,7 @@ class _LocationSheet extends StatelessWidget {
               height: 4,
               margin: const EdgeInsets.only(bottom: 16),
               decoration: BoxDecoration(
-                color: LocationColors.borderLight,
+                color: AppColors.borderLight,
                 borderRadius: BorderRadius.circular(999),
               ),
             ),
@@ -758,12 +741,12 @@ class _LocationSheet extends StatelessWidget {
                 height: 40,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: LocationColors.primary.withOpacity(0.1),
+                  color: AppColors.primary.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(
                   Icons.location_on,
-                  color: LocationColors.primary,
+                  color: AppColors.primary,
                   size: 22,
                 ),
               ),
@@ -777,7 +760,7 @@ class _LocationSheet extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
-                        color: LocationColors.textMuted,
+                        color: AppColors.textMuted,
                         letterSpacing: 0.4,
                       ),
                     ),
@@ -791,7 +774,7 @@ class _LocationSheet extends StatelessWidget {
                               style: TextStyle(
                                 fontSize: 14,
                                 fontStyle: FontStyle.italic,
-                                color: LocationColors.textMuted,
+                                color: AppColors.textMuted,
                               ),
                             )
                           : Text(
@@ -802,7 +785,7 @@ class _LocationSheet extends StatelessWidget {
                               style: const TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.bold,
-                                color: LocationColors.textPrimary,
+                                color: AppColors.textPrimary,
                               ),
                             ),
                     ),
@@ -812,7 +795,7 @@ class _LocationSheet extends StatelessWidget {
               TextButton.icon(
                 onPressed: locating ? null : onUseCurrentLocation,
                 style: TextButton.styleFrom(
-                  foregroundColor: LocationColors.primary,
+                  foregroundColor: AppColors.primary,
                   padding: const EdgeInsets.symmetric(horizontal: 4),
                 ),
                 icon: locating
@@ -821,7 +804,7 @@ class _LocationSheet extends StatelessWidget {
                         height: 14,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: LocationColors.primary,
+                          color: AppColors.primary,
                         ),
                       )
                     : const Icon(Icons.gps_fixed, size: 16),
@@ -854,10 +837,10 @@ class _LocationSheet extends StatelessWidget {
             child: ElevatedButton(
               onPressed: onConfirm,
               style: ElevatedButton.styleFrom(
-                backgroundColor: LocationColors.primary,
-                foregroundColor: Colors.white,
+                backgroundColor: AppColors.primary,
+                foregroundColor: AppColors.white,
                 elevation: 4,
-                shadowColor: LocationColors.primary.withOpacity(0.3),
+                shadowColor: AppColors.primary.withOpacity(0.3),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
                 ),
@@ -887,21 +870,21 @@ class _SavedAddressChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
         decoration: BoxDecoration(
-          color: LocationColors.backgroundLight,
+          color: AppColors.backgroundLight,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: LocationColors.borderLight),
+          border: Border.all(color: AppColors.borderLight),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(saved.icon, size: 18, color: LocationColors.primary),
+            Icon(saved.icon, size: 18, color: AppColors.primary),
             const SizedBox(height: 4),
             Text(
               saved.label,
               style: const TextStyle(
                 fontSize: 11.5,
                 fontWeight: FontWeight.bold,
-                color: LocationColors.textPrimary,
+                color: AppColors.textPrimary,
               ),
             ),
           ],
@@ -923,21 +906,21 @@ class _AddAddressChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
         decoration: BoxDecoration(
-          color: LocationColors.backgroundLight,
+          color: AppColors.backgroundLight,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: LocationColors.borderLight),
+          border: Border.all(color: AppColors.borderLight),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: const [
-            Icon(Icons.add, size: 18, color: LocationColors.textSecondary),
+            Icon(Icons.add, size: 18, color: AppColors.textSecondary),
             SizedBox(height: 4),
             Text(
               'Add New',
               style: TextStyle(
                 fontSize: 11.5,
                 fontWeight: FontWeight.bold,
-                color: LocationColors.textSecondary,
+                color: AppColors.textSecondary,
               ),
             ),
           ],

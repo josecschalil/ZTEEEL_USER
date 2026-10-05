@@ -1,16 +1,6 @@
+import '../app_colors.dart';
 import 'package:flutter/material.dart';
 
-class NotifColors {
-  static const primary = Color(0xFFEE5B2B);
-  static const backgroundLight = Color(0xFFFAFAFC);
-  static const backgroundDark = Color(0xFF1E1714);
-  static const cardLight = Colors.white;
-  static const cardDark = Color(0xFF281E19);
-  static const borderLight = Color(0xFFF0F0F3);
-  static const borderDark = Color(0xFF3D2B23);
-  static const mutedTextLight = Color(0xFF8A8A9A);
-  static const mutedTextDark = Color(0xFFC9A092);
-}
 
 /// ---------------------------------------------------------------------
 /// Data model
@@ -24,13 +14,13 @@ class NotifIconStyle {
 }
 
 const _typeStyles = {
-  NotifType.order: NotifIconStyle(Icons.receipt_long, Color(0xFF3B82F6)),
+  NotifType.order: NotifIconStyle(Icons.receipt_long, AppColors.toneFF3B82F6),
   NotifType.promo: NotifIconStyle(
     Icons.local_fire_department,
-    NotifColors.primary,
+    AppColors.primary,
   ),
-  NotifType.reward: NotifIconStyle(Icons.card_giftcard, Color(0xFF22C55E)),
-  NotifType.account: NotifIconStyle(Icons.person, Color(0xFFA855F7)),
+  NotifType.reward: NotifIconStyle(Icons.card_giftcard, AppColors.vegGreen),
+  NotifType.account: NotifIconStyle(Icons.person, AppColors.toneFFA855F7),
 };
 
 class NotifItem {
@@ -164,7 +154,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final hasAny = _sections.any((s) => s.items.isNotEmpty);
-    final bgColor = isDark ? NotifColors.backgroundDark : NotifColors.backgroundLight;
+    final bgColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -215,9 +205,9 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bgColor = isDark ? NotifColors.backgroundDark : NotifColors.backgroundLight;
-    final textColor = isDark ? Colors.white : const Color(0xFF1D1E20);
-    final borderColor = isDark ? NotifColors.borderDark : NotifColors.borderLight;
+    final bgColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
+    final textColor = isDark ? AppColors.white : AppColors.textPrimary;
+    final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -263,7 +253,7 @@ class _Header extends StatelessWidget {
                       vertical: 2,
                     ),
                     decoration: BoxDecoration(
-                      color: NotifColors.primary,
+                      color: AppColors.primary,
                       borderRadius: BorderRadius.circular(999),
                     ),
                     child: Text(
@@ -271,7 +261,7 @@ class _Header extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                        color: AppColors.white,
                       ),
                     ),
                   ),
@@ -288,7 +278,7 @@ class _Header extends StatelessWidget {
                     onPressed: onMarkAllRead,
                     icon: const Icon(
                       Icons.done_all,
-                      color: NotifColors.primary,
+                      color: AppColors.primary,
                       size: 20,
                     ),
                     tooltip: 'Mark all as read',
@@ -319,8 +309,8 @@ class _NotifSectionWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final labelColor = isDark
-        ? Colors.white.withValues(alpha: 0.4)
-        : const Color(0xFF8A8A9A);
+        ? AppColors.white.withValues(alpha: 0.4)
+        : AppColors.textMuted;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -348,12 +338,12 @@ class _NotifSectionWidget extends StatelessWidget {
                 alignment: Alignment.centerRight,
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 decoration: BoxDecoration(
-                  color: Colors.red.withValues(alpha: 0.15),
+                  color: AppColors.materialRed.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: const Icon(
                   Icons.delete_outline,
-                  color: Colors.redAccent,
+                  color: AppColors.materialRedAccent,
                 ),
               ),
               child: _NotifCard(
@@ -385,17 +375,17 @@ class _NotifCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final style = _typeStyles[item.type]!;
-    final cardBg = isDark ? NotifColors.cardDark : Colors.white;
-    final titleColor = isDark ? Colors.white : const Color(0xFF1D1E20);
+    final cardBg = isDark ? AppColors.cardDark : AppColors.white;
+    final titleColor = isDark ? AppColors.white : AppColors.textPrimary;
     final messageColor = isDark
-        ? Colors.white.withValues(alpha: 0.6)
-        : const Color(0xFF8A8A9A);
-    final timeColor = isDark ? NotifColors.mutedTextDark : NotifColors.mutedTextLight;
+        ? AppColors.white.withValues(alpha: 0.6)
+        : AppColors.textMuted;
+    final timeColor = isDark ? AppColors.mutedTextDark : AppColors.mutedTextLight;
     final borderColor = item.read
         ? (isDark
-            ? Colors.white.withValues(alpha: 0.05)
-            : NotifColors.borderLight)
-        : NotifColors.primary.withValues(alpha: 0.25);
+            ? AppColors.white.withValues(alpha: 0.05)
+            : AppColors.borderLight)
+        : AppColors.primary.withValues(alpha: 0.25);
 
     return Material(
       color: cardBg,
@@ -411,7 +401,7 @@ class _NotifCard extends StatelessWidget {
             boxShadow: [
               if (!isDark)
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
+                  color: AppColors.black.withValues(alpha: 0.04),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
@@ -455,7 +445,7 @@ class _NotifCard extends StatelessWidget {
                             height: 8,
                             decoration: const BoxDecoration(
                               shape: BoxShape.circle,
-                              color: NotifColors.primary,
+                              color: AppColors.primary,
                             ),
                           ),
                       ],
@@ -500,10 +490,10 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textColor = isDark ? Colors.white : const Color(0xFF1D1E20);
+    final textColor = isDark ? AppColors.white : AppColors.textPrimary;
     final subtextColor = isDark
-        ? Colors.white.withValues(alpha: 0.5)
-        : const Color(0xFF8A8A9A);
+        ? AppColors.white.withValues(alpha: 0.5)
+        : AppColors.textMuted;
 
     return Center(
       child: Padding(
@@ -515,12 +505,12 @@ class _EmptyState extends StatelessWidget {
               width: 72,
               height: 72,
               decoration: BoxDecoration(
-                color: NotifColors.primary.withValues(alpha: 0.1),
+                color: AppColors.primary.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
                 Icons.notifications_none,
-                color: NotifColors.primary,
+                color: AppColors.primary,
                 size: 34,
               ),
             ),

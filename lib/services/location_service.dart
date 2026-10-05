@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SavedLocationCoordinates {
@@ -18,6 +19,9 @@ class SavedLocationCoordinates {
 class LocationService {
   LocationService._();
 
+  static final ValueNotifier<String> addressNotifier =
+      ValueNotifier<String>('Choose your location');
+
   static const _latitudeKey = 'selected_location_latitude';
   static const _longitudeKey = 'selected_location_longitude';
   static const _labelKey = 'selected_location_label';
@@ -29,6 +33,9 @@ class LocationService {
     await prefs.setDouble(_longitudeKey, location.longitude);
     await prefs.setString(_labelKey, location.label);
     await prefs.setString(_addressKey, location.address);
+    if (location.address.isNotEmpty) {
+      addressNotifier.value = location.address;
+    }
   }
 
   static Future<SavedLocationCoordinates?> load() async {
@@ -36,11 +43,15 @@ class LocationService {
     final latitude = prefs.getDouble(_latitudeKey);
     final longitude = prefs.getDouble(_longitudeKey);
     if (latitude == null || longitude == null) return null;
+    final address = prefs.getString(_addressKey) ?? '';
+    if (address.isNotEmpty) {
+      addressNotifier.value = address;
+    }
     return SavedLocationCoordinates(
       latitude: latitude,
       longitude: longitude,
       label: prefs.getString(_labelKey) ?? 'Selected Location',
-      address: prefs.getString(_addressKey) ?? '',
+      address: address,
     );
   }
 }

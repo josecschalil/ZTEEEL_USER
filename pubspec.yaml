@@ -64,6 +64,12 @@ flutter:
 
   assets:
     - assets/images/home/home_food_banner.png
+    - assets/images/offers/
+    - assets/images/offers/food_01.png
+    - assets/images/offers/food_02.png
+    - assets/images/offers/food_03.png
+    - assets/images/offers/food_04.png
+    - assets/images/offers/food_05.png
 
   fonts:
     - family: Manrope

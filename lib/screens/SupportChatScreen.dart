@@ -1,17 +1,6 @@
+import '../app_colors.dart';
 import 'package:flutter/material.dart';
 
-// ── Local palette (self-contained, no external color file) ─────────────
-abstract final class _C {
-  static const Color bg = Color(0xFFFFFFFF);
-  static const Color surfaceRaised = Color(0xFFF7F5F3);
-  static const Color orange = Color(0xFFEF5A4C);
-  static const Color green = Color(0xFF1D9E6B);
-  static const Color textPrimary = Color(0xFF1C1B1A);
-  static const Color textSecondary = Color(0xFF5C5751);
-  static const Color textMuted = Color(0xFF8C8680);
-  static const Color textOnAccent = Color(0xFFFFFFFF);
-  static const Color border = Color(0xFFECEAE7);
-}
 
 class _ChatMessage {
   final String text;
@@ -95,7 +84,7 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _C.bg,
+      backgroundColor: AppColors.bg,
       body: SafeArea(
         child: Column(
           children: [
@@ -110,7 +99,7 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
                 ],
               ),
             ),
-            const Divider(color: _C.border, height: 1),
+            const Divider(color: AppColors.border, height: 1),
             Expanded(
               child: ListView.builder(
                 controller: _scrollController,
@@ -135,12 +124,12 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: _C.surfaceRaised,
+              color: AppColors.surfaceRaised,
               borderRadius: BorderRadius.circular(10),
             ),
             child: const Icon(
               Icons.arrow_back_ios_new_rounded,
-              color: _C.orange,
+              color: AppColors.orange,
               size: 16,
             ),
           ),
@@ -151,11 +140,11 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
           height: 36,
           decoration: const BoxDecoration(
             shape: BoxShape.circle,
-            color: _C.orange,
+            color: AppColors.orange,
           ),
           child: const Icon(
             Icons.support_agent_rounded,
-            color: _C.textOnAccent,
+            color: AppColors.textOnAccent,
             size: 18,
           ),
         ),
@@ -167,7 +156,7 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
               Text(
                 'App Support',
                 style: TextStyle(
-                  color: _C.textPrimary,
+                  color: AppColors.textPrimary,
                   fontSize: 15,
                   fontWeight: FontWeight.w800,
                 ),
@@ -180,7 +169,7 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
                   Text(
                     'Usually replies within a few hours',
                     style: TextStyle(
-                      color: _C.textSecondary,
+                      color: AppColors.textSecondary,
                       fontSize: 10,
                       fontWeight: FontWeight.w500,
                     ),
@@ -216,7 +205,7 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
                     vertical: 11,
                   ),
                   decoration: BoxDecoration(
-                    color: isUser ? _C.orange : _C.surfaceRaised,
+                    color: isUser ? AppColors.orange : AppColors.surfaceRaised,
                     borderRadius: BorderRadius.only(
                       topLeft: const Radius.circular(16),
                       topRight: const Radius.circular(16),
@@ -227,7 +216,7 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
                   child: Text(
                     message.text,
                     style: TextStyle(
-                      color: isUser ? _C.textOnAccent : _C.textPrimary,
+                      color: isUser ? AppColors.textOnAccent : AppColors.textPrimary,
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
                       height: 1.4,
@@ -237,7 +226,7 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
                 const SizedBox(height: 4),
                 Text(
                   message.time,
-                  style: const TextStyle(color: _C.textMuted, fontSize: 10),
+                  style: const TextStyle(color: AppColors.textMuted, fontSize: 10),
                 ),
               ],
             ),
@@ -255,17 +244,17 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
           Expanded(
             child: Container(
               decoration: BoxDecoration(
-                color: _C.surfaceRaised,
+                color: AppColors.surfaceRaised,
                 borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: _C.border),
+                border: Border.all(color: AppColors.border),
               ),
               child: TextField(
                 controller: _inputController,
                 onSubmitted: (_) => _send(),
-                style: const TextStyle(color: _C.textPrimary, fontSize: 13),
+                style: const TextStyle(color: AppColors.textPrimary, fontSize: 13),
                 decoration: const InputDecoration(
                   hintText: 'Type your message…',
-                  hintStyle: TextStyle(color: _C.textMuted, fontSize: 12),
+                  hintStyle: TextStyle(color: AppColors.textMuted, fontSize: 12),
                   contentPadding: EdgeInsets.symmetric(
                     horizontal: 18,
                     vertical: 12,
@@ -282,12 +271,12 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
               width: 44,
               height: 44,
               decoration: const BoxDecoration(
-                color: _C.orange,
+                color: AppColors.orange,
                 shape: BoxShape.circle,
               ),
               child: const Icon(
                 Icons.send_rounded,
-                color: _C.textOnAccent,
+                color: AppColors.textOnAccent,
                 size: 18,
               ),
             ),
@@ -306,7 +295,7 @@ class _OnlineDot extends StatelessWidget {
     return Container(
       width: 6,
       height: 6,
-      decoration: const BoxDecoration(color: _C.green, shape: BoxShape.circle),
+      decoration: const BoxDecoration(color: AppColors.supportGreen, shape: BoxShape.circle),
     );
   }
 }

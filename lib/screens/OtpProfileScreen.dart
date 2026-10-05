@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dashboard.dart';
+import 'customer_details_screen.dart';
 import '../app_colors.dart';
 import '../services/auth_service.dart';
 
@@ -151,7 +152,6 @@ class _OtpScreenState extends State<OtpScreen> with TickerProviderStateMixin {
   Future<void> _verify() async {
     if (!_filled) return;
     setState(() => _isLoading = true);
-    await Future.delayed(const Duration(seconds: 3));
     final result = await AuthService.verifyCustomerOtp(
       rawPhone: widget.phone,
       otp: _code,
@@ -159,6 +159,12 @@ class _OtpScreenState extends State<OtpScreen> with TickerProviderStateMixin {
     if (!mounted) return;
     setState(() => _isLoading = false);
     if (result['success'] == true) {
+      if (result['is_onboarded'] != true) {
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const CustomerDetailsScreen()),
+        );
+        return;
+      }
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => HomeDiscoveryScreen()),
         (_) => false,
@@ -200,7 +206,7 @@ class _OtpScreenState extends State<OtpScreen> with TickerProviderStateMixin {
                           _reveal(
                             0,
                             Padding(
-                              padding: const EdgeInsets.fromLTRB(20, 28, 20, 0),
+                              padding: const EdgeInsets.fromLTRB(28, 32, 28, 0),
                               child: Row(
                                 children: [
                                   // Back button
@@ -264,7 +270,7 @@ class _OtpScreenState extends State<OtpScreen> with TickerProviderStateMixin {
                           _reveal(
                             1,
                             Padding(
-                              padding: const EdgeInsets.fromLTRB(28, 52, 28, 0),
+                              padding: const EdgeInsets.fromLTRB(28, 56, 28, 0),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
@@ -295,7 +301,7 @@ class _OtpScreenState extends State<OtpScreen> with TickerProviderStateMixin {
                                     'Enter the\ncode',
                                     style: TextStyle(
                                       color: AppColors.textPrimary,
-                                      fontSize: 44,
+                                      fontSize: 40,
                                       fontWeight: FontWeight.w800,
                                       height: 1.08,
                                       letterSpacing: -1.5,
@@ -570,7 +576,7 @@ class _Footer extends StatelessWidget {
                 disabledForegroundColor: AppColors.textSecondary,
                 elevation: 0,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(14),
                 ),
               ),
               child: isLoading

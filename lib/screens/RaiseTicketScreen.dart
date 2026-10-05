@@ -1,20 +1,6 @@
+import '../app_colors.dart';
 import 'package:flutter/material.dart';
 
-// ── Local palette (self-contained, no external color file) ─────────────
-abstract final class _C {
-  static const Color bg = Color(0xFFFFFFFF);
-  static const Color surface = Color(0xFFFFFFFF);
-  static const Color surfaceRaised = Color(0xFFF7F5F3);
-  static const Color orange = Color(0xFFEF5A4C);
-  static const Color orangeDim = Color(0x1AEF5A4C);
-  static const Color orangeBorder = Color(0x40EF5A4C);
-  static const Color green = Color(0xFF1D9E6B);
-  static const Color textPrimary = Color(0xFF1C1B1A);
-  static const Color textSecondary = Color(0xFF5C5751);
-  static const Color textMuted = Color(0xFF8C8680);
-  static const Color textOnAccent = Color(0xFFFFFFFF);
-  static const Color border = Color(0xFFECEAE7);
-}
 
 class RaiseTicketScreen extends StatefulWidget {
   const RaiseTicketScreen({super.key});
@@ -56,7 +42,7 @@ class _RaiseTicketScreenState extends State<RaiseTicketScreen> {
     showDialog(
       context: context,
       builder: (_) => Dialog(
-        backgroundColor: _C.surface,
+        backgroundColor: AppColors.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -67,12 +53,12 @@ class _RaiseTicketScreenState extends State<RaiseTicketScreen> {
                 width: 56,
                 height: 56,
                 decoration: const BoxDecoration(
-                  color: _C.green,
+                  color: AppColors.supportGreen,
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
                   Icons.check_rounded,
-                  color: _C.textOnAccent,
+                  color: AppColors.textOnAccent,
                   size: 28,
                 ),
               ),
@@ -80,7 +66,7 @@ class _RaiseTicketScreenState extends State<RaiseTicketScreen> {
               const Text(
                 'Ticket Submitted',
                 style: TextStyle(
-                  color: _C.textPrimary,
+                  color: AppColors.textPrimary,
                   fontSize: 16,
                   fontWeight: FontWeight.w800,
                 ),
@@ -91,7 +77,7 @@ class _RaiseTicketScreenState extends State<RaiseTicketScreen> {
                 'progress from the Help & Support page.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: _C.textSecondary,
+                  color: AppColors.textSecondary,
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
                   height: 1.4,
@@ -106,8 +92,8 @@ class _RaiseTicketScreenState extends State<RaiseTicketScreen> {
                     Navigator.of(context).pop(); // back to Help & Support
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: _C.orange,
-                    foregroundColor: _C.textOnAccent,
+                    backgroundColor: AppColors.orange,
+                    foregroundColor: AppColors.textOnAccent,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
@@ -130,7 +116,7 @@ class _RaiseTicketScreenState extends State<RaiseTicketScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _C.bg,
+      backgroundColor: AppColors.bg,
       body: SafeArea(
         child: Column(
           children: [
@@ -197,12 +183,12 @@ class _RaiseTicketScreenState extends State<RaiseTicketScreen> {
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: _C.surfaceRaised,
+              color: AppColors.surfaceRaised,
               borderRadius: BorderRadius.circular(10),
             ),
             child: const Icon(
               Icons.arrow_back_ios_new_rounded,
-              color: _C.orange,
+              color: AppColors.orange,
               size: 16,
             ),
           ),
@@ -215,7 +201,7 @@ class _RaiseTicketScreenState extends State<RaiseTicketScreen> {
               Text(
                 'Raise a Ticket',
                 style: TextStyle(
-                  color: _C.textPrimary,
+                  color: AppColors.textPrimary,
                   fontSize: 20,
                   fontWeight: FontWeight.w800,
                   letterSpacing: -0.3,
@@ -225,7 +211,7 @@ class _RaiseTicketScreenState extends State<RaiseTicketScreen> {
               Text(
                 'Sent straight to the app development team.',
                 style: TextStyle(
-                  color: _C.textSecondary,
+                  color: AppColors.textSecondary,
                   fontSize: 11,
                   fontWeight: FontWeight.w500,
                 ),
@@ -241,7 +227,7 @@ class _RaiseTicketScreenState extends State<RaiseTicketScreen> {
     return Text(
       text.toUpperCase(),
       style: const TextStyle(
-        color: _C.textSecondary,
+        color: AppColors.textSecondary,
         fontSize: 11,
         fontWeight: FontWeight.w700,
         letterSpacing: 0.8,
@@ -261,14 +247,14 @@ class _RaiseTicketScreenState extends State<RaiseTicketScreen> {
             duration: const Duration(milliseconds: 150),
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
-              color: selected ? _C.orange : _C.surfaceRaised,
+              color: selected ? AppColors.orange : AppColors.surfaceRaised,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: selected ? _C.orange : _C.border),
+              border: Border.all(color: selected ? AppColors.orange : AppColors.border),
             ),
             child: Text(
               c,
               style: TextStyle(
-                color: selected ? _C.textOnAccent : _C.textSecondary,
+                color: selected ? AppColors.textOnAccent : AppColors.textSecondary,
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
               ),
@@ -291,16 +277,16 @@ class _RaiseTicketScreenState extends State<RaiseTicketScreen> {
               duration: const Duration(milliseconds: 150),
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
               decoration: BoxDecoration(
-                color: selected ? _C.orangeDim : _C.surfaceRaised,
+                color: selected ? AppColors.orangeDim : AppColors.surfaceRaised,
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(
-                  color: selected ? _C.orangeBorder : _C.border,
+                  color: selected ? AppColors.orangeBorder : AppColors.border,
                 ),
               ),
               child: Text(
                 p,
                 style: TextStyle(
-                  color: selected ? _C.orange : _C.textSecondary,
+                  color: selected ? AppColors.orange : AppColors.textSecondary,
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
                 ),
@@ -319,22 +305,22 @@ class _RaiseTicketScreenState extends State<RaiseTicketScreen> {
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: _C.surfaceRaised,
+        color: AppColors.surfaceRaised,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _C.border),
+        border: Border.all(color: AppColors.border),
       ),
       child: TextField(
         controller: controller,
         maxLines: maxLines,
         onChanged: (_) => setState(() {}),
         style: const TextStyle(
-          color: _C.textPrimary,
+          color: AppColors.textPrimary,
           fontSize: 13,
           fontWeight: FontWeight.w500,
         ),
         decoration: InputDecoration(
           hintText: hint,
-          hintStyle: const TextStyle(color: _C.textMuted, fontSize: 12),
+          hintStyle: const TextStyle(color: AppColors.textMuted, fontSize: 12),
           contentPadding: const EdgeInsets.all(14),
           border: InputBorder.none,
         ),
@@ -348,10 +334,10 @@ class _RaiseTicketScreenState extends State<RaiseTicketScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: _attachmentAdded ? _C.orangeDim : _C.surfaceRaised,
+          color: _attachmentAdded ? AppColors.orangeDim : AppColors.surfaceRaised,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: _attachmentAdded ? _C.orangeBorder : _C.border,
+            color: _attachmentAdded ? AppColors.orangeBorder : AppColors.border,
           ),
         ),
         child: Row(
@@ -360,7 +346,7 @@ class _RaiseTicketScreenState extends State<RaiseTicketScreen> {
               _attachmentAdded
                   ? Icons.check_circle_rounded
                   : Icons.attach_file_rounded,
-              color: _attachmentAdded ? _C.orange : _C.textSecondary,
+              color: _attachmentAdded ? AppColors.orange : AppColors.textSecondary,
               size: 18,
             ),
             const SizedBox(width: 10),
@@ -369,7 +355,7 @@ class _RaiseTicketScreenState extends State<RaiseTicketScreen> {
                   ? 'Screenshot attached'
                   : 'Attach a screenshot (optional)',
               style: TextStyle(
-                color: _attachmentAdded ? _C.orange : _C.textSecondary,
+                color: _attachmentAdded ? AppColors.orange : AppColors.textSecondary,
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
               ),
@@ -386,9 +372,9 @@ class _RaiseTicketScreenState extends State<RaiseTicketScreen> {
       child: ElevatedButton(
         onPressed: _canSubmit ? _submit : null,
         style: ElevatedButton.styleFrom(
-          backgroundColor: _C.orange,
-          disabledBackgroundColor: _C.border,
-          foregroundColor: _C.textOnAccent,
+          backgroundColor: AppColors.orange,
+          disabledBackgroundColor: AppColors.border,
+          foregroundColor: AppColors.textOnAccent,
           padding: const EdgeInsets.symmetric(vertical: 16),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),

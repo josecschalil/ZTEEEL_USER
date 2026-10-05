@@ -1,3 +1,5 @@
+import '../app_typography.dart';
+import '../app_colors.dart';
 import 'package:flutter/material.dart';
 
 /// ZTEEEL Saved Restaurants — light theme variant.
@@ -14,48 +16,15 @@ class ZteeelSavedRestaurantsApp extends StatelessWidget {
     return MaterialApp(
       title: 'ZTEEEL Saved Restaurants',
       debugShowCheckedModeBanner: false,
-      theme: SavedColors.theme,
+      theme: AppTypography.lightTheme(),
       home: const SavedRestaurantsScreen(),
     );
   }
 }
 
 /// ---------------------------------------------------------------------
-/// Design tokens — light theme
+/// Light layout using the shared app palette.
 /// ---------------------------------------------------------------------
-class SavedColors {
-  static const primary = Color(0xFFEE5B2B);
-  static const primaryDeep = Color(0xFFC2410C);
-
-  // Surfaces
-  static const bgLight = Color(0xFFFAFAFC);
-  static const cardLight = Colors.white;
-  static const borderLight = Color(0xFFF0F0F3);
-  static const chipLight = Color(0xFFF3F1EF);
-
-  // Text
-  static const textPrimary = Color(0xFF1F1B19); // near-black, warm
-  static const textSecondary = Color(0xFF7A716C); // warm gray
-  static const textMuted = Color(0xFFAFA7A2);
-
-  static const gold = Color(0xFFFBBF24);
-
-  // Aliases so this drop-in still matches the naming used elsewhere.
-  static const backgroundDark = bgLight;
-  static const surfaceDark = cardLight;
-  static const surfaceDarkAlt = cardLight;
-  static const navBorderDark = borderLight;
-  static const mutedText = textSecondary;
-
-  static ThemeData get theme => ThemeData(
-    useMaterial3: true,
-    scaffoldBackgroundColor: bgLight,
-    colorScheme: ColorScheme.fromSeed(
-      seedColor: primary,
-      brightness: Brightness.light,
-    ),
-  );
-}
 
 typedef SavedShopScreen = SavedRestaurantsScreen;
 
@@ -243,11 +212,11 @@ class _SavedRestaurantsScreenState extends State<SavedRestaurantsScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         behavior: SnackBarBehavior.floating,
-        backgroundColor: SavedColors.textPrimary,
+        backgroundColor: AppColors.textPrimary,
         content: Text('Removed "${r.name}" from saved'),
         action: SnackBarAction(
           label: 'UNDO',
-          textColor: SavedColors.primary,
+          textColor: AppColors.primary,
           onPressed: () => setState(() => _restaurants.add(r)),
         ),
       ),
@@ -257,7 +226,7 @@ class _SavedRestaurantsScreenState extends State<SavedRestaurantsScreen> {
   void _openSortSheet() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: SavedColors.cardLight,
+      backgroundColor: AppColors.cardLight,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -276,7 +245,7 @@ class _SavedRestaurantsScreenState extends State<SavedRestaurantsScreen> {
     final visible = _visible;
 
     return Scaffold(
-      backgroundColor: SavedColors.bgLight,
+      backgroundColor: AppColors.bgLight,
       body: SafeArea(
         child: Column(
           children: [
@@ -381,7 +350,7 @@ class _Header extends StatelessWidget {
               onPressed: () => Navigator.of(context).maybePop(),
               icon: const Icon(
                 Icons.arrow_back_ios_new,
-                color: SavedColors.textPrimary,
+                color: AppColors.textPrimary,
                 size: 22,
               ),
             ),
@@ -394,7 +363,7 @@ class _Header extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    color: SavedColors.textPrimary,
+                    color: AppColors.textPrimary,
                     letterSpacing: -0.3,
                   ),
                 ),
@@ -402,7 +371,7 @@ class _Header extends StatelessWidget {
                   '$count place${count == 1 ? '' : 's'} bookmarked',
                   style: const TextStyle(
                     fontSize: 12,
-                    color: SavedColors.textSecondary,
+                    color: AppColors.textSecondary,
                   ),
                 ),
               ],
@@ -439,12 +408,12 @@ class _SearchRow extends StatelessWidget {
             Expanded(
               child: Container(
                 decoration: BoxDecoration(
-                  color: SavedColors.cardLight,
+                  color: AppColors.cardLight,
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: SavedColors.borderLight),
+                  border: Border.all(color: AppColors.borderLight),
                   boxShadow: const [
                     BoxShadow(
-                      color: Colors.black12,
+                      color: AppColors.black12,
                       blurRadius: 6,
                       offset: Offset(0, 2),
                     ),
@@ -453,15 +422,15 @@ class _SearchRow extends StatelessWidget {
                 child: TextField(
                   controller: controller,
                   style: const TextStyle(
-                    color: SavedColors.textPrimary,
+                    color: AppColors.textPrimary,
                     fontSize: 14,
                   ),
                   decoration: InputDecoration(
                     hintText: 'Search saved restaurants',
-                    hintStyle: const TextStyle(color: SavedColors.textMuted),
+                    hintStyle: const TextStyle(color: AppColors.textMuted),
                     prefixIcon: const Icon(
                       Icons.search,
-                      color: SavedColors.textMuted,
+                      color: AppColors.textMuted,
                       size: 22,
                     ),
                     suffixIcon: ValueListenableBuilder<TextEditingValue>(
@@ -471,7 +440,7 @@ class _SearchRow extends StatelessWidget {
                         return IconButton(
                           icon: const Icon(
                             Icons.close,
-                            color: SavedColors.textMuted,
+                            color: AppColors.textMuted,
                             size: 18,
                           ),
                           onPressed: controller.clear,
@@ -493,15 +462,15 @@ class _SearchRow extends StatelessWidget {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: SavedColors.primary.withOpacity(0.1),
+                  color: AppColors.primary.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(
-                    color: SavedColors.primary.withOpacity(0.3),
+                    color: AppColors.primary.withOpacity(0.3),
                   ),
                 ),
                 child: const Icon(
                   Icons.swap_vert,
-                  color: SavedColors.primary,
+                  color: AppColors.primary,
                   size: 22,
                 ),
               ),
@@ -517,7 +486,7 @@ class _SearchRow extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: SavedColors.textSecondary.withOpacity(0.9),
+                  color: AppColors.textSecondary.withOpacity(0.9),
                 ),
               ),
             ),
@@ -539,7 +508,7 @@ class _ViewToggle extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
-        color: SavedColors.chipLight,
+        color: AppColors.chipLight,
         borderRadius: BorderRadius.circular(10),
       ),
       child: Row(
@@ -581,13 +550,13 @@ class _ToggleButton extends StatelessWidget {
         height: 28,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: selected ? SavedColors.primary : Colors.transparent,
+          color: selected ? AppColors.primary : AppColors.transparent,
           borderRadius: BorderRadius.circular(8),
         ),
         child: Icon(
           icon,
           size: 16,
-          color: selected ? Colors.white : SavedColors.textMuted,
+          color: selected ? AppColors.white : AppColors.textMuted,
         ),
       ),
     );
@@ -678,25 +647,25 @@ class _CollectionTile extends StatelessWidget {
               ? const LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [SavedColors.primary, SavedColors.primaryDeep],
+                  colors: [AppColors.primary, AppColors.primaryDeep],
                 )
               : null,
-          color: selected ? null : SavedColors.cardLight,
+          color: selected ? null : AppColors.cardLight,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: selected ? Colors.transparent : SavedColors.borderLight,
+            color: selected ? AppColors.transparent : AppColors.borderLight,
           ),
           boxShadow: selected
               ? [
                   BoxShadow(
-                    color: SavedColors.primary.withOpacity(0.25),
+                    color: AppColors.primary.withOpacity(0.25),
                     blurRadius: 10,
                     offset: const Offset(0, 4),
                   ),
                 ]
               : const [
                   BoxShadow(
-                    color: Colors.black12,
+                    color: AppColors.black12,
                     blurRadius: 6,
                     offset: Offset(0, 2),
                   ),
@@ -708,7 +677,7 @@ class _CollectionTile extends StatelessWidget {
             Icon(
               icon,
               size: 20,
-              color: selected ? Colors.white : SavedColors.primary,
+              color: selected ? AppColors.white : AppColors.primary,
             ),
             const Spacer(),
             Text(
@@ -718,7 +687,7 @@ class _CollectionTile extends StatelessWidget {
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
-                color: selected ? Colors.white : SavedColors.textPrimary,
+                color: selected ? AppColors.white : AppColors.textPrimary,
               ),
             ),
             const SizedBox(height: 2),
@@ -727,8 +696,8 @@ class _CollectionTile extends StatelessWidget {
               style: TextStyle(
                 fontSize: 10,
                 color: selected
-                    ? Colors.white.withOpacity(0.85)
-                    : SavedColors.textMuted,
+                    ? AppColors.white.withOpacity(0.85)
+                    : AppColors.textMuted,
               ),
             ),
           ],
@@ -751,21 +720,21 @@ class _AddCollectionTile extends StatelessWidget {
         width: 88,
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: SavedColors.chipLight,
+          color: AppColors.chipLight,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: SavedColors.borderLight,
+            color: AppColors.borderLight,
             style: BorderStyle.solid,
           ),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.add, color: SavedColors.textSecondary, size: 22),
+            const Icon(Icons.add, color: AppColors.textSecondary, size: 22),
             const SizedBox(height: 6),
             Text(
               'New List',
-              style: TextStyle(fontSize: 11, color: SavedColors.textSecondary),
+              style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
             ),
           ],
         ),
@@ -793,19 +762,19 @@ class _RestaurantListCard extends StatelessWidget {
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.symmetric(horizontal: 22),
         decoration: BoxDecoration(
-          color: Colors.red.withOpacity(0.1),
+          color: AppColors.materialRed.withOpacity(0.1),
           borderRadius: BorderRadius.circular(20),
         ),
-        child: const Icon(Icons.delete_outline, color: Colors.redAccent),
+        child: const Icon(Icons.delete_outline, color: AppColors.materialRedAccent),
       ),
       child: Container(
         decoration: BoxDecoration(
-          color: SavedColors.cardLight,
+          color: AppColors.cardLight,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: SavedColors.borderLight),
+          border: Border.all(color: AppColors.borderLight),
           boxShadow: const [
             BoxShadow(
-              color: Colors.black12,
+              color: AppColors.black12,
               blurRadius: 10,
               offset: Offset(0, 4),
             ),
@@ -829,8 +798,8 @@ class _RestaurantListCard extends StatelessWidget {
                         begin: Alignment.bottomCenter,
                         end: Alignment.topCenter,
                         colors: [
-                          Colors.black.withOpacity(0.7),
-                          Colors.transparent,
+                          AppColors.black.withOpacity(0.7),
+                          AppColors.transparent,
                         ],
                         stops: const [0.0, 0.7],
                       ),
@@ -861,7 +830,7 @@ class _RestaurantListCard extends StatelessWidget {
                             style: const TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
-                              color: Colors.white,
+                              color: AppColors.white,
                             ),
                           ),
                         ),
@@ -889,21 +858,21 @@ class _RestaurantListCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             fontSize: 12.5,
-                            color: SavedColors.textSecondary,
+                            color: AppColors.textSecondary,
                           ),
                         ),
                       ),
                       const Icon(
                         Icons.location_on,
                         size: 14,
-                        color: SavedColors.textMuted,
+                        color: AppColors.textMuted,
                       ),
                       const SizedBox(width: 2),
                       Text(
                         '${restaurant.distanceKm.toStringAsFixed(1)} km',
                         style: const TextStyle(
                           fontSize: 12,
-                          color: SavedColors.textSecondary,
+                          color: AppColors.textSecondary,
                         ),
                       ),
                     ],
@@ -969,11 +938,11 @@ class _RestaurantGridCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: SavedColors.cardLight,
+        color: AppColors.cardLight,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: SavedColors.borderLight),
+        border: Border.all(color: AppColors.borderLight),
         boxShadow: const [
-          BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 3)),
+          BoxShadow(color: AppColors.black12, blurRadius: 8, offset: Offset(0, 3)),
         ],
       ),
       clipBehavior: Clip.antiAlias,
@@ -991,8 +960,8 @@ class _RestaurantGridCard extends StatelessWidget {
                       begin: Alignment.bottomCenter,
                       end: Alignment.topCenter,
                       colors: [
-                        Colors.black.withOpacity(0.65),
-                        Colors.transparent,
+                        AppColors.black.withOpacity(0.65),
+                        AppColors.transparent,
                       ],
                       stops: const [0.0, 0.6],
                     ),
@@ -1019,7 +988,7 @@ class _RestaurantGridCard extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 13.5,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      color: AppColors.white,
                     ),
                   ),
                 ),
@@ -1030,14 +999,14 @@ class _RestaurantGridCard extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
             child: Row(
               children: [
-                const Icon(Icons.star, size: 13, color: SavedColors.gold),
+                const Icon(Icons.star, size: 13, color: AppColors.yellow),
                 const SizedBox(width: 3),
                 Text(
                   restaurant.rating.toStringAsFixed(1),
                   style: const TextStyle(
                     fontSize: 11.5,
                     fontWeight: FontWeight.bold,
-                    color: SavedColors.textPrimary,
+                    color: AppColors.textPrimary,
                   ),
                 ),
                 const SizedBox(width: 6),
@@ -1047,7 +1016,7 @@ class _RestaurantGridCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       fontSize: 11,
-                      color: SavedColors.textMuted,
+                      color: AppColors.textMuted,
                     ),
                   ),
                 ),
@@ -1070,7 +1039,7 @@ class _StatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isOpen ? Colors.green : Colors.redAccent;
+    final color = isOpen ? AppColors.materialGreen : AppColors.materialRedAccent;
     return Container(
       padding: EdgeInsets.symmetric(
         horizontal: compact ? 6 : 8,
@@ -1088,7 +1057,7 @@ class _StatusChip extends StatelessWidget {
             height: 5,
             decoration: const BoxDecoration(
               shape: BoxShape.circle,
-              color: Colors.white,
+              color: AppColors.white,
             ),
           ),
           const SizedBox(width: 4),
@@ -1097,7 +1066,7 @@ class _StatusChip extends StatelessWidget {
             style: TextStyle(
               fontSize: compact ? 8 : 9,
               fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: AppColors.white,
               letterSpacing: 0.3,
             ),
           ),
@@ -1117,21 +1086,21 @@ class _RatingPill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.55),
+        color: AppColors.black.withOpacity(0.55),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Colors.white.withOpacity(0.15)),
+        border: Border.all(color: AppColors.white.withOpacity(0.15)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.star, size: 13, color: SavedColors.gold),
+          const Icon(Icons.star, size: 13, color: AppColors.yellow),
           const SizedBox(width: 4),
           Text(
             rating.toStringAsFixed(1),
             style: const TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: AppColors.white,
             ),
           ),
           const SizedBox(width: 3),
@@ -1139,7 +1108,7 @@ class _RatingPill extends StatelessWidget {
             '($reviewCount)',
             style: TextStyle(
               fontSize: 10,
-              color: Colors.white.withOpacity(0.75),
+              color: AppColors.white.withOpacity(0.75),
             ),
           ),
         ],
@@ -1157,7 +1126,7 @@ class _CollectionTag extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: SavedColors.primary.withOpacity(0.1),
+        color: AppColors.primary.withOpacity(0.1),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
@@ -1165,7 +1134,7 @@ class _CollectionTag extends StatelessWidget {
         style: const TextStyle(
           fontSize: 10,
           fontWeight: FontWeight.w600,
-          color: SavedColors.primaryDeep,
+          color: AppColors.primaryDeep,
         ),
       ),
     );
@@ -1192,9 +1161,9 @@ class _ActionButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 9),
         decoration: BoxDecoration(
-          color: filled ? SavedColors.primary : SavedColors.chipLight,
+          color: filled ? AppColors.primary : AppColors.chipLight,
           borderRadius: BorderRadius.circular(10),
-          border: filled ? null : Border.all(color: SavedColors.borderLight),
+          border: filled ? null : Border.all(color: AppColors.borderLight),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -1202,7 +1171,7 @@ class _ActionButton extends StatelessWidget {
             Icon(
               icon,
               size: 16,
-              color: filled ? Colors.white : SavedColors.textPrimary,
+              color: filled ? AppColors.white : AppColors.textPrimary,
             ),
             const SizedBox(height: 2),
             Text(
@@ -1210,7 +1179,7 @@ class _ActionButton extends StatelessWidget {
               style: TextStyle(
                 fontSize: 9.5,
                 fontWeight: FontWeight.w600,
-                color: filled ? Colors.white : SavedColors.textPrimary,
+                color: filled ? AppColors.white : AppColors.textPrimary,
               ),
             ),
           ],
@@ -1263,16 +1232,16 @@ class _BookmarkButtonState extends State<_BookmarkButton>
         height: size,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: Colors.black.withOpacity(0.45),
+          color: AppColors.black.withOpacity(0.45),
           shape: BoxShape.circle,
-          border: Border.all(color: Colors.white.withOpacity(0.2)),
+          border: Border.all(color: AppColors.white.withOpacity(0.2)),
         ),
         child: ScaleTransition(
           scale: _controller,
           child: Icon(
             Icons.bookmark,
             size: widget.compact ? 14 : 16,
-            color: SavedColors.primary,
+            color: AppColors.primary,
           ),
         ),
       ),
@@ -1310,7 +1279,7 @@ class _SortSheet extends StatelessWidget {
                 height: 4,
                 margin: const EdgeInsets.only(bottom: 16),
                 decoration: BoxDecoration(
-                  color: SavedColors.borderLight,
+                  color: AppColors.borderLight,
                   borderRadius: BorderRadius.circular(999),
                 ),
               ),
@@ -1320,7 +1289,7 @@ class _SortSheet extends StatelessWidget {
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
-                color: SavedColors.textPrimary,
+                color: AppColors.textPrimary,
               ),
             ),
             const SizedBox(height: 12),
@@ -1336,8 +1305,8 @@ class _SortSheet extends StatelessWidget {
                         icon,
                         size: 20,
                         color: mode == selected
-                            ? SavedColors.primary
-                            : SavedColors.textMuted,
+                            ? AppColors.primary
+                            : AppColors.textMuted,
                       ),
                       const SizedBox(width: 14),
                       Expanded(
@@ -1349,8 +1318,8 @@ class _SortSheet extends StatelessWidget {
                                 ? FontWeight.bold
                                 : FontWeight.w500,
                             color: mode == selected
-                                ? SavedColors.textPrimary
-                                : SavedColors.textSecondary,
+                                ? AppColors.textPrimary
+                                : AppColors.textSecondary,
                           ),
                         ),
                       ),
@@ -1358,7 +1327,7 @@ class _SortSheet extends StatelessWidget {
                         const Icon(
                           Icons.check_circle,
                           size: 18,
-                          color: SavedColors.primary,
+                          color: AppColors.primary,
                         ),
                     ],
                   ),
@@ -1390,12 +1359,12 @@ class _EmptyState extends StatelessWidget {
               width: 76,
               height: 76,
               decoration: BoxDecoration(
-                color: SavedColors.primary.withOpacity(0.1),
+                color: AppColors.primary.withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 hasQuery ? Icons.search_off : Icons.bookmark_border,
-                color: SavedColors.primary,
+                color: AppColors.primary,
                 size: 34,
               ),
             ),
@@ -1405,7 +1374,7 @@ class _EmptyState extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
-                color: SavedColors.textPrimary,
+                color: AppColors.textPrimary,
               ),
             ),
             const SizedBox(height: 6),
@@ -1416,7 +1385,7 @@ class _EmptyState extends StatelessWidget {
               textAlign: TextAlign.center,
               style: const TextStyle(
                 fontSize: 13,
-                color: SavedColors.textSecondary,
+                color: AppColors.textSecondary,
                 height: 1.4,
               ),
             ),

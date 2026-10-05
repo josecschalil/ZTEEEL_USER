@@ -1,3 +1,4 @@
+import '../app_colors.dart';
 import 'package:flutter/material.dart';
 import 'WishlistScreen.dart';
 import 'SavedShopScreen.dart';
@@ -5,34 +6,6 @@ import 'PhoneAuthScreen.dart';
 import 'RecentOrderScreen.dart';
 import 'HelpSupportScreen.dart';
 
-class ProfileColors {
-  static const primary = Color(0xFFEE5B2B);
-  static const bgLight = Color(0xFFFAFAFC);
-  static const bgDeep = Color(0xFF1E1714);
-  static const cardLight = Colors.white;
-  static const cardFill = Color(0xFF281E19);
-  static const borderLight = Color(0xFFF0F0F3);
-  static const cardBorder = Color(0xFF3D2B23);
-  static const textDescription = Color(0xFFC9A092);
-
-  static ThemeData get lightTheme => ThemeData(
-    useMaterial3: true,
-    scaffoldBackgroundColor: bgLight,
-    colorScheme: ColorScheme.fromSeed(
-      seedColor: primary,
-      brightness: Brightness.light,
-    ),
-  );
-
-  static ThemeData get darkTheme => ThemeData(
-    useMaterial3: true,
-    scaffoldBackgroundColor: bgDeep,
-    colorScheme: ColorScheme.fromSeed(
-      seedColor: primary,
-      brightness: Brightness.dark,
-    ),
-  );
-}
 
 class _MenuItem {
   final IconData icon;
@@ -54,21 +27,21 @@ class _MenuItem {
 const _accountItems = [
   _MenuItem(
     icon: Icons.favorite_rounded,
-    iconColor: Color(0xFFEC4899), // pink-500
+    iconColor: AppColors.toneFFEC4899, // pink-500
     title: 'Wishlist',
     subtitle: 'Your favorite upcoming deals',
     menupage: 'WishlistScreen()',
   ),
   _MenuItem(
     icon: Icons.restaurant_rounded,
-    iconColor: Color(0xFF22C55E), // green-500
+    iconColor: AppColors.vegGreen, // green-500
     title: 'Saved Restaurants',
     subtitle: 'Places you love to visit',
     menupage: 'SavedShopScreen()',
   ),
   _MenuItem(
     icon: Icons.qr_code_2_rounded,
-    iconColor: Color(0xFF3B82F6), // blue-500
+    iconColor: AppColors.toneFF3B82F6, // blue-500
     title: 'My Redemptions',
     subtitle: 'Active and past QR code offers',
     menupage: 'OrderScreen',
@@ -78,14 +51,14 @@ const _accountItems = [
 const _supportItems = [
   _MenuItem(
     icon: Icons.help_outline_rounded,
-    iconColor: Color(0xFFA855F7), // purple-500
+    iconColor: AppColors.toneFFA855F7, // purple-500
     title: 'Help & Support',
     subtitle: 'FAQs and contact us',
     menupage: 'HelpScreen',
   ),
   _MenuItem(
     icon: Icons.logout_rounded,
-    iconColor: Color(0xFFEF4444), // red-500
+    iconColor: AppColors.nonVegRed, // red-500
     title: 'Logout',
     subtitle: 'Sign out of your account',
     menupage: 'LoginScreen',
@@ -102,8 +75,16 @@ const _avatarUrl =
 class ProfileScreen extends StatefulWidget {
   final bool showBottomNav;
   final VoidCallback? onBack;
+  final String fullName;
+  final String phoneNumber;
 
-  const ProfileScreen({super.key, this.showBottomNav = true, this.onBack});
+  const ProfileScreen({
+    super.key,
+    this.showBottomNav = true,
+    this.onBack,
+    this.fullName = '',
+    this.phoneNumber = '',
+  });
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -115,7 +96,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColor = isDark ? ProfileColors.bgDeep : ProfileColors.bgLight;
+    final bgColor = isDark ? AppColors.bgDeep : AppColors.bgLight;
 
     final bodyContent = SafeArea(
       child: Column(
@@ -129,7 +110,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
               padding: const EdgeInsets.only(bottom: 32),
               children: [
                 const SizedBox(height: 8),
-                _ProfileHeader(isDark: isDark),
+                _ProfileHeader(
+                  isDark: isDark,
+                  fullName: widget.fullName,
+                  phoneNumber: widget.phoneNumber,
+                ),
                 const SizedBox(height: 28),
                 _MenuSection(
                   title: 'Account Overview',
@@ -167,11 +152,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
         margin: const EdgeInsets.only(bottom: 18),
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: ProfileColors.primary,
+          color: AppColors.primary,
           border: Border.all(color: bgColor, width: 4),
           boxShadow: [
             BoxShadow(
-              color: ProfileColors.primary.withValues(alpha: 0.4),
+              color: AppColors.primary.withValues(alpha: 0.4),
               blurRadius: 16,
               offset: const Offset(0, 6),
             ),
@@ -179,7 +164,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         child: const Icon(
           Icons.qr_code_scanner_rounded,
-          color: Colors.white,
+          color: AppColors.white,
           size: 26,
         ),
       ),
@@ -199,7 +184,7 @@ class _TopBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.fromLTRB(8, 12, 8, 8),
-      color: isDark ? ProfileColors.bgDeep : ProfileColors.bgLight,
+      color: isDark ? AppColors.bgDeep : AppColors.bgLight,
       child: Row(
         children: [
           SizedBox(
@@ -210,7 +195,7 @@ class _TopBar extends StatelessWidget {
               onPressed: onBack,
               icon: Icon(
                 Icons.chevron_left_rounded,
-                color: isDark ? Colors.white : const Color(0xFF1D1E20),
+                color: isDark ? AppColors.white : AppColors.textPrimary,
                 size: 28,
               ),
             ),
@@ -222,7 +207,7 @@ class _TopBar extends StatelessWidget {
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
-                color: isDark ? Colors.white : const Color(0xFF1D1E20),
+                color: isDark ? AppColors.white : AppColors.textPrimary,
               ),
             ),
           ),
@@ -238,7 +223,14 @@ class _TopBar extends StatelessWidget {
 /// ---------------------------------------------------------------------
 class _ProfileHeader extends StatelessWidget {
   final bool isDark;
-  const _ProfileHeader({required this.isDark});
+  final String fullName;
+  final String phoneNumber;
+
+  const _ProfileHeader({
+    required this.isDark,
+    required this.fullName,
+    required this.phoneNumber,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -254,7 +246,7 @@ class _ProfileHeader extends StatelessWidget {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: ProfileColors.primary.withValues(
+                  color: AppColors.primary.withValues(
                     alpha: isDark ? 0.3 : 0.2,
                   ),
                   width: 4,
@@ -262,8 +254,8 @@ class _ProfileHeader extends StatelessWidget {
                 boxShadow: [
                   BoxShadow(
                     color: isDark
-                        ? Colors.black.withValues(alpha: 0.4)
-                        : Colors.black.withValues(alpha: 0.08),
+                        ? AppColors.black.withValues(alpha: 0.4)
+                        : AppColors.black.withValues(alpha: 0.08),
                     blurRadius: 14,
                     offset: const Offset(0, 4),
                   ),
@@ -281,16 +273,16 @@ class _ProfileHeader extends StatelessWidget {
                 height: 34,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: isDark ? ProfileColors.cardFill : Colors.white,
+                  color: isDark ? AppColors.cardFill : AppColors.white,
                   border: Border.all(
                     color: isDark
-                        ? ProfileColors.bgDeep
-                        : ProfileColors.bgLight,
+                        ? AppColors.bgDeep
+                        : AppColors.bgLight,
                     width: 2,
                   ),
                   boxShadow: const [
                     BoxShadow(
-                      color: Colors.black12,
+                      color: AppColors.black12,
                       blurRadius: 6,
                       offset: Offset(0, 2),
                     ),
@@ -298,7 +290,7 @@ class _ProfileHeader extends StatelessWidget {
                 ),
                 child: const Icon(
                   Icons.edit_rounded,
-                  color: ProfileColors.primary,
+                  color: AppColors.primary,
                   size: 17,
                 ),
               ),
@@ -307,21 +299,21 @@ class _ProfileHeader extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         Text(
-          'Alex Thompson',
+          fullName.isEmpty ? 'Your profile' : fullName,
           style: TextStyle(
             fontSize: 22,
             fontWeight: FontWeight.w700,
-            color: isDark ? Colors.white : const Color(0xFF1D1E20),
+            color: isDark ? AppColors.white : AppColors.textPrimary,
             letterSpacing: -0.3,
           ),
         ),
         const SizedBox(height: 4),
         Text(
-          '+1 (555) 012-3456',
+          phoneNumber.isEmpty ? 'Phone number unavailable' : phoneNumber,
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w500,
-            color: isDark ? ProfileColors.textDescription : Colors.grey[600],
+            color: isDark ? AppColors.textDescription : AppColors.materialGrey[600],
           ),
         ),
         const SizedBox(height: 14),
@@ -362,8 +354,8 @@ class _MenuSection extends StatelessWidget {
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
                     color: isDark
-                        ? ProfileColors.textDescription
-                        : Colors.grey[600],
+                        ? AppColors.textDescription
+                        : AppColors.materialGrey[600],
                     letterSpacing: 1.4,
                   ),
                 ),
@@ -389,10 +381,10 @@ class _MenuRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cardBg = isDark ? ProfileColors.cardFill : Colors.white;
+    final cardBg = isDark ? AppColors.cardFill : AppColors.white;
     final cardBorderColor = isDark
-        ? ProfileColors.cardBorder
-        : ProfileColors.borderLight;
+        ? AppColors.cardBorder
+        : AppColors.borderLight;
 
     void navigateToPage() {
       Widget? targetPage;
@@ -434,15 +426,15 @@ class _MenuRow extends StatelessWidget {
         boxShadow: [
           BoxShadow(
             color: isDark
-                ? Colors.black.withValues(alpha: 0.2)
-                : Colors.black.withValues(alpha: 0.05),
+                ? AppColors.black.withValues(alpha: 0.2)
+                : AppColors.black.withValues(alpha: 0.05),
             blurRadius: 12,
             offset: const Offset(0, 3),
           ),
         ],
       ),
       child: Material(
-        color: Colors.transparent,
+        color: AppColors.transparent,
         borderRadius: BorderRadius.circular(16),
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
@@ -474,10 +466,10 @@ class _MenuRow extends StatelessWidget {
                           fontWeight: FontWeight.w700,
                           height: 1.1,
                           color: item.destructive
-                              ? const Color(0xFFEF4444)
+                              ? AppColors.nonVegRed
                               : (isDark
-                                    ? Colors.white
-                                    : const Color(0xFF1D1E20)),
+                                    ? AppColors.white
+                                    : AppColors.textPrimary),
                         ),
                       ),
                       const SizedBox(height: 3),
@@ -488,10 +480,10 @@ class _MenuRow extends StatelessWidget {
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
                           color: item.destructive
-                              ? const Color(0xFFEF4444).withValues(alpha: 0.7)
+                              ? AppColors.nonVegRed.withValues(alpha: 0.7)
                               : (isDark
-                                    ? ProfileColors.textDescription
-                                    : Colors.grey[600]),
+                                    ? AppColors.textDescription
+                                    : AppColors.materialGrey[600]),
                         ),
                       ),
                     ],
@@ -500,10 +492,10 @@ class _MenuRow extends StatelessWidget {
                 Icon(
                   Icons.chevron_right_rounded,
                   color: item.destructive
-                      ? const Color(0xFFEF4444).withValues(alpha: 0.5)
+                      ? AppColors.nonVegRed.withValues(alpha: 0.5)
                       : (isDark
-                            ? ProfileColors.textDescription
-                            : Colors.grey[400]),
+                            ? AppColors.textDescription
+                            : AppColors.materialGrey[400]),
                 ),
               ],
             ),
@@ -536,12 +528,12 @@ class _BottomNavBar extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
       decoration: BoxDecoration(
-        color: isDark ? ProfileColors.bgDeep : Colors.white,
+        color: isDark ? AppColors.bgDeep : AppColors.white,
         border: Border(
           top: BorderSide(
             color: isDark
-                ? ProfileColors.cardBorder
-                : ProfileColors.borderLight,
+                ? AppColors.cardBorder
+                : AppColors.borderLight,
           ),
         ),
       ),
@@ -567,10 +559,10 @@ class _BottomNavBar extends StatelessWidget {
                         icon,
                         size: 22,
                         color: selected
-                            ? ProfileColors.primary
+                            ? AppColors.primary
                             : (isDark
-                                  ? ProfileColors.textDescription
-                                  : Colors.grey[400]),
+                                  ? AppColors.textDescription
+                                  : AppColors.materialGrey[400]),
                       ),
                       const SizedBox(height: 4),
                       Text(
@@ -581,10 +573,10 @@ class _BottomNavBar extends StatelessWidget {
                               ? FontWeight.w700
                               : FontWeight.w500,
                           color: selected
-                              ? ProfileColors.primary
+                              ? AppColors.primary
                               : (isDark
-                                    ? ProfileColors.textDescription
-                                    : Colors.grey[400]),
+                                    ? AppColors.textDescription
+                                    : AppColors.materialGrey[400]),
                         ),
                       ),
                     ],
