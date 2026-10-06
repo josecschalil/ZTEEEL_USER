@@ -112,6 +112,10 @@ class _HomeDiscoveryScreenState extends State<HomeDiscoveryScreen> {
           .toList();
       _isLoadingRestaurants = false;
     }
+    if (FoodTagService.cachedFoodTags.isNotEmpty) {
+      _foodTags = FoodTagService.cachedFoodTags;
+      _isLoadingFoodTags = false;
+    }
     _loadRestaurants();
     _loadDeals();
     _loadFoodTags();
@@ -175,12 +179,30 @@ class _HomeDiscoveryScreenState extends State<HomeDiscoveryScreen> {
   }
 
   Future<void> _loadFoodTags() async {
+    final cached = await FoodTagService.loadCachedFoodTags();
+    if (mounted && cached.isNotEmpty && _foodTags.isEmpty) {
+      setState(() {
+        _foodTags = cached;
+        _isLoadingFoodTags = false;
+      });
+      _precacheTagImages(cached);
+    }
     final tags = await FoodTagService.fetchFoodTags();
     if (!mounted) return;
     setState(() {
       _foodTags = tags;
       _isLoadingFoodTags = false;
     });
+    _precacheTagImages(tags);
+  }
+
+  void _precacheTagImages(List<FoodTag> tags) {
+    if (!mounted) return;
+    for (final tag in tags) {
+      if (tag.imageUrl != null && tag.imageUrl!.isNotEmpty) {
+        precacheImage(NetworkImage(tag.imageUrl!), context).catchError((_) {});
+      }
+    }
   }
 
   @override
@@ -201,7 +223,7 @@ class _HomeDiscoveryScreenState extends State<HomeDiscoveryScreen> {
           onOpenCart: () => setState(() => _navIndex = 3),
         ),
       ),
-      const DealsScreen(),
+      DealsScreen(onOpenCart: () => setState(() => _navIndex = 3)),
       const OrdersScreen(),
       const MainCartScreenPage(showBottomNav: false),
       ProfileScreen(
@@ -211,16 +233,13 @@ class _HomeDiscoveryScreenState extends State<HomeDiscoveryScreen> {
         phoneNumber: _phoneNumber,
       ),
     ];
-    final showNav = _navIndex != 4;
     return Scaffold(
       backgroundColor: AppColors.bg,
       body: IndexedStack(index: _navIndex, children: pages),
-      bottomNavigationBar: showNav
-          ? AppBottomNavBar(
-              currentIndex: _navIndex,
-              onTap: (index) => setState(() => _navIndex = index),
-            )
-          : null,
+      bottomNavigationBar: AppBottomNavBar(
+        currentIndex: _navIndex,
+        onTap: (index) => setState(() => _navIndex = index),
+      ),
     );
   }
 }

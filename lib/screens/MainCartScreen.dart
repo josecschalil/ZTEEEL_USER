@@ -317,17 +317,7 @@ class _Header extends StatelessWidget {
               ),
             ],
           ),
-          Row(
-            children: [
-              const SizedBox(width: 8),
-              _RoundIconButton(
-                icon: Icons.refresh_rounded,
-                size: 18,
-                isDark: isDark,
-                onTap: () => CartService.fetchCart(),
-              ),
-            ],
-          ),
+
         ],
       ),
     );

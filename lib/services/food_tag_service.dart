@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config/api_config.dart';
 
@@ -31,6 +32,14 @@ class FoodTag {
     );
   }
 
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'name': name,
+    'slug': slug,
+    if (imageUrl != null) 'image': imageUrl,
+    'matching_vendor_count': matchingVendorCount,
+  };
+
   static String resolveImage(String image) {
     if (image.startsWith('http://') || image.startsWith('https://')) {
       return image;
@@ -42,12 +51,85 @@ class FoodTag {
 class FoodTagService {
   FoodTagService._();
 
-  static Future<List<FoodTag>> fetchFoodTags() async {
+  static const String _kFoodTagsCacheKey = 'cached_food_tags_v1';
+  static List<FoodTag> _cachedFoodTags = [];
+
+  static List<FoodTag> get cachedFoodTags =>
+      List.unmodifiable(_cachedFoodTags);
+
+  /// Synchronously or instantly loads cached food tags from local storage.
+  static Future<List<FoodTag>> loadCachedFoodTags() async {
+    if (_cachedFoodTags.isNotEmpty) {
+      return _cachedFoodTags;
+    }
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_kFoodTagsCacheKey);
+      if (raw != null && raw.isNotEmpty) {
+        final decoded = jsonDecode(raw);
+        if (decoded is List) {
+          final tags = decoded
+              .whereType<Map>()
+              .map((item) => FoodTag.fromJson(Map<String, dynamic>.from(item)))
+              .where((t) => t.id.isNotEmpty && t.name.isNotEmpty)
+              .toList();
+          if (tags.isNotEmpty) {
+            _cachedFoodTags = tags;
+          }
+        }
+      }
+    } catch (_) {}
+    return _cachedFoodTags;
+  }
+
+  static Future<List<FoodTag>> fetchFoodTags({bool forceRefresh = false}) async {
+    if (!forceRefresh && _cachedFoodTags.isNotEmpty) {
+      // Trigger background refresh while returning cached
+      _refreshInBackground();
+      return _cachedFoodTags;
+    }
+
     final values = await _fetchRows(ApiConfig.foodTagsUrl);
-    return values
-        .map(FoodTag.fromJson)
-        .where((tag) => tag.id.isNotEmpty && tag.name.isNotEmpty)
-        .toList();
+    if (values.isNotEmpty) {
+      final freshTags = values
+          .map(FoodTag.fromJson)
+          .where((tag) => tag.id.isNotEmpty && tag.name.isNotEmpty)
+          .toList();
+
+      if (freshTags.isNotEmpty) {
+        _cachedFoodTags = freshTags;
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          final encoded = jsonEncode(freshTags.map((t) => t.toJson()).toList());
+          await prefs.setString(_kFoodTagsCacheKey, encoded);
+        } catch (_) {}
+      }
+      return freshTags;
+    }
+
+    if (_cachedFoodTags.isEmpty) {
+      await loadCachedFoodTags();
+    }
+    return _cachedFoodTags;
+  }
+
+  static void _refreshInBackground() {
+    _fetchRows(ApiConfig.foodTagsUrl).then((values) async {
+      if (values.isNotEmpty) {
+        final freshTags = values
+            .map(FoodTag.fromJson)
+            .where((tag) => tag.id.isNotEmpty && tag.name.isNotEmpty)
+            .toList();
+        if (freshTags.isNotEmpty) {
+          _cachedFoodTags = freshTags;
+          try {
+            final prefs = await SharedPreferences.getInstance();
+            final encoded = jsonEncode(freshTags.map((t) => t.toJson()).toList());
+            await prefs.setString(_kFoodTagsCacheKey, encoded);
+          } catch (_) {}
+        }
+      }
+    }).catchError((_) {});
   }
 
   static Future<List<Map<String, dynamic>>> fetchTagVendors(

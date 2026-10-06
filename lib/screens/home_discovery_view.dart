@@ -6,6 +6,9 @@ import '../services/food_tag_service.dart';
 import '../services/location_service.dart';
 import '../widgets/category_row.dart';
 import '../widgets/discovery_search_bar.dart';
+import '../widgets/offer_widgets.dart';
+import '../widgets/restaurant_card.dart';
+import '../widgets/shimmer_loading.dart';
 import 'DealsScreen.dart';
 import 'FoodTypeShopScreen.dart';
 import 'LocationPageScreen.dart';
@@ -44,7 +47,7 @@ class HomeRestaurant {
     id: id,
     name: name,
     imageUrl: imageUrl,
-    fallbackIcon: Icons.restaurant_rounded,
+    fallbackIcon: Icons.restaurant_menu_rounded,
     cuisines: cuisine
         .split('·')
         .map((v) => v.trim())
@@ -56,6 +59,7 @@ class HomeRestaurant {
     etaMins: int.tryParse(eta.split(RegExp(r'[^0-9]')).first) ?? 25,
     isOpenNow: isOpen,
     isPromoted: offerLabel != null,
+    offerLabel: offerLabel,
     hasFreeDelivery:
         offerLabel?.toLowerCase().contains('free delivery') == true,
     priceLevel: '₹₹',
@@ -153,26 +157,53 @@ class _HomeDiscoveryViewState extends State<HomeDiscoveryView> {
 
   void _openSearchDiscovery(FoodTag? tag) {
     Navigator.of(context).push(
-      PageRouteBuilder(
-        transitionDuration: const Duration(milliseconds: 350),
-        reverseTransitionDuration: const Duration(milliseconds: 300),
-        pageBuilder: (context, animation, secondaryAnimation) =>
-            FoodTypeShopsScreen(
-              foodType: tag?.name ?? 'All',
-              foodTagId: tag?.id,
-              foodTags: widget.foodTags,
-              autoFocusSearch: tag == null,
-            ),
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(
-            opacity: CurvedAnimation(
-              parent: animation,
-              curve: Curves.easeInOut,
-            ),
-            child: child,
-          );
-        },
+      MaterialPageRoute(
+        builder: (_) => FoodTypeShopsScreen(
+          foodType: tag?.name ?? 'All',
+          foodTagId: tag?.id,
+          foodTags: widget.foodTags,
+          autoFocusSearch: tag == null,
+        ),
       ),
+    );
+  }
+
+  OfferCardOption _optionForIndex(int index) {
+    switch (index % 3) {
+      case 0:
+        return OfferCardOption.dark;
+      case 1:
+        return OfferCardOption.white;
+      case 2:
+      default:
+        return OfferCardOption.gradient;
+    }
+  }
+
+  ImageProvider _foodImageFor(int index) {
+    final assetIndex = (index % 5) + 1;
+    return AssetImage('assets/images/offers/food_0$assetIndex.png');
+  }
+
+  OfferCardData _dealToOfferCardData(Deal deal) {
+    final index = widget.deals.indexOf(deal);
+    final option = _optionForIndex(index >= 0 ? index : 0);
+    final foodImage = _foodImageFor(index >= 0 ? index : 0);
+
+    return OfferCardData(
+      id: deal.id ?? deal.title,
+      title: deal.title,
+      discount: deal.discount,
+      restaurant: deal.restaurant,
+      distance: deal.distance,
+      category: deal.cuisine,
+      timeLeft: deal.timeLeft,
+      subtitle: deal.description.isNotEmpty
+          ? deal.description
+          : 'Special discount on select orders',
+      savings: deal.discount.isNotEmpty ? 'Save ${deal.discount}' : 'Save ₹120',
+      option: option,
+      foodImage: foodImage,
     );
   }
 
@@ -187,10 +218,9 @@ class _HomeDiscoveryViewState extends State<HomeDiscoveryView> {
       MaterialPageRoute(
         builder: (_) => OfferExplanationScreen(
           title: deal.title,
-          subtitle: subtitle.isEmpty ? 'Special offer' : subtitle,
+          subtitle: subtitle.isEmpty ? 'On selected items' : subtitle,
           badge: deal.discount,
           expiry: deal.timeLeft.isEmpty ? 'Limited time' : deal.timeLeft,
-          gradientColors: _restaurantOfferGradientFor(deal),
           restaurantName: deal.restaurant,
         ),
       ),
@@ -276,22 +306,31 @@ class _HomeDiscoveryViewState extends State<HomeDiscoveryView> {
                       ),
                       const SizedBox(height: 18),
                       widget.isLoadingDeals && widget.deals.isEmpty
-                          ? const _OfferRail(isLoading: true)
+                          ? const OfferRail(offers: [], isLoading: true)
                           : widget.deals.isEmpty
                           ? const _HomeEmptyState(
                               message:
                                   'No offers available right now. Check back soon.',
                             )
-                          : _OfferRail(
-                              itemCount: widget.deals.length,
-                              onSeeAll: widget.onSeeAllDeals,
-                              itemBuilder: (context, index) {
-                                final deal = widget.deals[index];
-                                return _OfferCard(
-                                  deal: deal,
-                                  onTap: () => _openDeal(deal),
+                          : OfferRail(
+                              offers: widget.deals.map(_dealToOfferCardData).toList(),
+                              isLoading: widget.isLoadingDeals,
+                              onOfferTap: (card) {
+                                final deal = widget.deals.firstWhere(
+                                  (d) => (d.id ?? d.title) == card.id,
+                                  orElse: () => Deal(
+                                    id: card.id,
+                                    title: card.title,
+                                    restaurant: card.restaurant,
+                                    distance: card.distance,
+                                    discount: card.discount,
+                                    timeLeft: card.timeLeft,
+                                    imageUrl: '',
+                                  ),
                                 );
+                                _openDeal(deal);
                               },
+                              onSeeAll: widget.onSeeAllDeals,
                             ),
                       const SizedBox(height: 18),
                     ],
@@ -467,7 +506,7 @@ class _HomeSearchBar extends StatelessWidget {
                   onSearchTap: onSearchTap ??
                       () => Navigator.of(context).push(
                             MaterialPageRoute(
-                              builder: (_) => const SearchScreen(),
+                              builder: (_) => SearchScreen(),
                             ),
                           ),
                   onFilterTap: onOpenNow,
@@ -537,261 +576,6 @@ class _HomeSectionHeader extends StatelessWidget {
   }
 }
 
-typedef _RailItemBuilder = Widget Function(BuildContext context, int index);
-
-class _OfferRail extends StatelessWidget {
-  final int itemCount;
-  final _RailItemBuilder? itemBuilder;
-  final bool isLoading;
-  final VoidCallback? onSeeAll;
-
-  const _OfferRail({
-    this.itemCount = 0,
-    this.itemBuilder,
-    this.isLoading = false,
-    this.onSeeAll,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final width = (constraints.maxWidth - 36)
-            .clamp(280.0, 320.0)
-            .toDouble();
-        final height = width * 152 / 320;
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(18, 0, 10, 8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    "Today's Offers 🔥",
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0,
-                    ),
-                  ),
-                  if (!isLoading)
-                    TextButton(
-                      key: const ValueKey('home-see-all-deals'),
-                      onPressed: onSeeAll,
-                      style: TextButton.styleFrom(
-                        foregroundColor: AppColors.orange,
-                        minimumSize: const Size(64, 44),
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        textStyle: Theme.of(context).textTheme.labelLarge
-                            ?.copyWith(fontWeight: FontWeight.w700),
-                      ),
-                      child: const Text('See all'),
-                    ),
-                ],
-              ),
-            ),
-            SizedBox(
-              height: height,
-              child: ListView.separated(
-                key: const PageStorageKey('home-offers-rail'),
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 18),
-                itemCount: isLoading ? 3 : itemCount,
-                separatorBuilder: (_, _) => const SizedBox(width: 12),
-                itemBuilder: (context, index) => SizedBox(
-                  width: width,
-                  child: isLoading
-                      ? const _OfferSkeletonCard()
-                      : itemBuilder!(context, index),
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-}
-
-class _OfferCard extends StatelessWidget {
-  final Deal deal;
-  final VoidCallback onTap;
-
-  const _OfferCard({required this.deal, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final gradient = _restaurantOfferGradientFor(deal);
-    return Material(
-      color: AppColors.transparent,
-      borderRadius: BorderRadius.circular(18),
-      child: InkWell(
-        key: ValueKey('home-deal-${deal.id ?? deal.title}'),
-        borderRadius: BorderRadius.circular(18),
-        onTap: onTap,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(18),
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.centerLeft,
-                    end: Alignment.centerRight,
-                    colors: gradient,
-                  ),
-                ),
-              ),
-              Positioned(
-                right: -24,
-                bottom: -24,
-                child: Container(
-                  width: 110,
-                  height: 110,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: AppColors.white.withValues(alpha: 0.1),
-                  ),
-                ),
-              ),
-              Positioned(
-                left: 14,
-                right: 14,
-                top: 13,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _OfferPill(label: deal.discount),
-                    _OfferPill(
-                      label: deal.timeLeft.isEmpty
-                          ? 'Limited time'
-                          : deal.timeLeft,
-                      icon: Icons.timer_outlined,
-                      dark: true,
-                    ),
-                  ],
-                ),
-              ),
-              Positioned(
-                left: 14,
-                right: 12,
-                bottom: 13,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            deal.title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.titleMedium
-                                ?.copyWith(
-                                  color: AppColors.white,
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w900,
-                                  letterSpacing: -0.3,
-                                ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            [
-                              deal.restaurant,
-                              deal.distance,
-                            ].where((value) => value.isNotEmpty).join(' · '),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(
-                                  color: AppColors.white,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _OfferPill extends StatelessWidget {
-  final String label;
-  final IconData? icon;
-  final bool dark;
-
-  const _OfferPill({required this.label, this.icon, this.dark = false});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: dark
-            ? AppColors.black.withValues(alpha: 0.38)
-            : AppColors.white.withValues(alpha: 0.22),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (icon != null) ...[
-            Icon(icon, size: 13, color: AppColors.white),
-            const SizedBox(width: 4),
-          ],
-          Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: AppColors.white,
-              fontSize: 10,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0.3,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-List<Color> _restaurantOfferGradientFor(Deal deal) {
-  final value = deal.id ?? deal.title;
-  final index = value.codeUnits.fold<int>(0, (sum, codeUnit) => sum + codeUnit);
-  return restaurantOfferGradients[index % restaurantOfferGradients.length];
-}
-
-
-class _OfferSkeletonCard extends StatelessWidget {
-  const _OfferSkeletonCard();
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      label: 'Loading offers',
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: AppColors.surfaceRaised,
-          borderRadius: BorderRadius.circular(18),
-        ),
-      ),
-    );
-  }
-}
-
 class _RestaurantFeedSkeleton extends StatelessWidget {
   const _RestaurantFeedSkeleton();
 
@@ -804,14 +588,165 @@ class _RestaurantFeedSkeleton extends StatelessWidget {
           padding: EdgeInsets.only(bottom: index == 2 ? 0 : 14),
           child: Semantics(
             label: 'Loading restaurants',
-            child: AspectRatio(
-              aspectRatio: 4 / 3,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceRaised,
-                  borderRadius: BorderRadius.circular(18),
-                ),
+            container: true,
+            child: const _RestaurantCardSkeleton(),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RestaurantCardSkeleton extends StatelessWidget {
+  const _RestaurantCardSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    const cardRadius = BorderRadius.all(Radius.circular(28));
+
+    return ExcludeSemantics(
+      child: ShimmerLoading(
+        child: Container(
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: cardRadius,
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.black.withValues(alpha: 0.05),
+                blurRadius: 16,
+                offset: const Offset(0, 5),
               ),
+              BoxShadow(
+                color: AppColors.black.withValues(alpha: 0.02),
+                blurRadius: 4,
+                offset: const Offset(0, 1),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: cardRadius,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Photo wireframe (height: 180)
+                SizedBox(
+                  height: 180,
+                  width: double.infinity,
+                  child: Stack(
+                    children: [
+                      Container(color: AppColors.surfaceRaised),
+                      // Top left badge placeholder
+                      Positioned(
+                        left: 12,
+                        top: 12,
+                        child: Container(
+                          width: 88,
+                          height: 24,
+                          decoration: BoxDecoration(
+                            color: AppColors.white.withValues(alpha: 0.85),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                        ),
+                      ),
+                      // Bottom right open status badge placeholder
+                      Positioned(
+                        right: 12,
+                        bottom: 12,
+                        child: Container(
+                          width: 74,
+                          height: 24,
+                          decoration: BoxDecoration(
+                            color: AppColors.white.withValues(alpha: 0.90),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Card details area
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Title bar
+                                Container(
+                                  width: 170,
+                                  height: 16,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.surfaceRaised,
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                // Cuisine bar
+                                Container(
+                                  width: 220,
+                                  height: 12,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.surfaceRaised,
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          // Rating badge placeholder
+                          Container(
+                            width: 46,
+                            height: 22,
+                            decoration: BoxDecoration(
+                              color: AppColors.surfaceRaised,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      // Distance and ETA row
+                      Row(
+                        children: [
+                          Container(
+                            width: 44,
+                            height: 11,
+                            decoration: BoxDecoration(
+                              color: AppColors.surfaceRaised,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            width: 4,
+                            height: 4,
+                            decoration: const BoxDecoration(
+                              color: AppColors.textMuted,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            width: 54,
+                            height: 11,
+                            decoration: BoxDecoration(
+                              color: AppColors.surfaceRaised,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
         ),

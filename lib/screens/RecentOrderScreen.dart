@@ -237,22 +237,7 @@ class _OrdersScreenState extends State<OrdersScreen>
             ],
           ),
         ),
-        GestureDetector(
-          onTap: _loadOrders,
-          child: Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: AppColors.surfaceRaised,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Icon(
-              Icons.refresh_rounded,
-              color: AppColors.primary,
-              size: 20,
-            ),
-          ),
-        ),
+
       ],
     );
   }

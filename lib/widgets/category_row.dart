@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../app_colors.dart';
 import '../services/food_tag_service.dart';
+import 'shimmer_loading.dart';
 
 class CategoryRow extends StatelessWidget {
   final List<FoodTag> foodTags;
@@ -216,27 +217,29 @@ class _CategorySkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: size,
-          height: size,
-          decoration: BoxDecoration(
-            color: AppColors.surfaceRaised,
-            borderRadius: radius,
+    return ShimmerLoading(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: size,
+            height: size,
+            decoration: BoxDecoration(
+              color: AppColors.surfaceRaised,
+              borderRadius: radius,
+            ),
           ),
-        ),
-        SizedBox(height: gap),
-        Container(
-          width: 38,
-          height: 7,
-          decoration: BoxDecoration(
-            color: AppColors.surfaceRaised,
-            borderRadius: BorderRadius.circular(4),
+          SizedBox(height: gap),
+          Container(
+            width: (size * 0.75).clamp(32.0, 48.0),
+            height: 8,
+            decoration: BoxDecoration(
+              color: AppColors.surfaceRaised,
+              borderRadius: BorderRadius.circular(4),
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

@@ -16,7 +16,6 @@ import 'package:zteel_user/screens/NotificationScreen.dart';
 import 'package:zteel_user/screens/OfferExplanationScreen.dart';
 import 'package:zteel_user/screens/RestaurantListScreen.dart';
 import 'package:zteel_user/screens/RestuarantMenuScreen.dart';
-import 'package:zteel_user/screens/SearchScreen.dart';
 import 'package:zteel_user/screens/home_discovery_view.dart';
 import 'package:zteel_user/services/food_tag_service.dart';
 import 'package:zteel_user/widgets/bottom_nav_bar.dart';
@@ -409,7 +408,7 @@ void main() {
         );
       }
 
-      expect(await destination('home-search'), isA<SearchScreen>());
+      expect(await destination('home-search'), isA<FoodTypeShopsScreen>());
       expect(
         await destination('home-notifications'),
         isA<NotificationsScreen>(),

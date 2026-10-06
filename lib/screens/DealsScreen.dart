@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import '../config/api_config.dart';
 import '../services/offer_service.dart';
 import '../services/restaurant_service.dart';
+import '../widgets/app_top_bar.dart';
 import '../widgets/discovery_search_bar.dart';
 import 'RestuarantMenuScreen.dart';
 
@@ -204,7 +205,9 @@ List<Deal> dashboardDeals(List<Deal> liveDeals) {
 /// Main DealsScreen Page
 /// ---------------------------------------------------------------------
 class DealsScreen extends StatefulWidget {
-  const DealsScreen({super.key});
+  final VoidCallback? onOpenCart;
+
+  const DealsScreen({super.key, this.onOpenCart});
 
   @override
   State<DealsScreen> createState() => _DealsScreenState();
@@ -332,12 +335,17 @@ class _DealsScreenState extends State<DealsScreen> {
             onRefresh: _loadDeals,
             child: CustomScrollView(
               slivers: [
-                // Sticky App Header
+                // Top Bar (Location, Notifications, Cart)
+                SliverToBoxAdapter(
+                  child: AppTopBar(
+                    onOpenCart: widget.onOpenCart,
+                  ),
+                ),
+
+                // Deals Header (Explore Top Deals)
                 SliverToBoxAdapter(
                   child: _DealsHeader(
                     isDark: isDark,
-                    dealCount: _allDeals.length,
-                    onRefresh: _loadDeals,
                   ),
                 ),
 
@@ -511,13 +519,9 @@ class _DealsScreenState extends State<DealsScreen> {
 /// ---------------------------------------------------------------------
 class _DealsHeader extends StatelessWidget {
   final bool isDark;
-  final int dealCount;
-  final VoidCallback onRefresh;
 
   const _DealsHeader({
     required this.isDark,
-    required this.dealCount,
-    required this.onRefresh,
   });
 
   @override
@@ -526,85 +530,26 @@ class _DealsHeader extends StatelessWidget {
     final textMuted = isDark ? AppColors.textMutedDark : AppColors.toneFF8E8E93;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.bolt_rounded, size: 14, color: AppColors.primary),
-                        const SizedBox(width: 4),
-                        Text(
-                          '$dealCount LIVE OFFERS',
-                          style: const TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 0.5,
-                            color: AppColors.primary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 6),
-              Text(
-                'Explore Top Deals',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: -0.5,
-                  color: textPrimary,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                'Automatic discounts • No promo codes required',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: textMuted,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
+          Text(
+            'Explore Top Deals',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.w900,
+              letterSpacing: -0.5,
+              color: textPrimary,
+            ),
           ),
-          GestureDetector(
-            onTap: onRefresh,
-            child: Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: isDark ? AppColors.cardDark : AppColors.white,
-                border: Border.all(
-                  color: isDark ? AppColors.borderDark : AppColors.borderLight,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.black.withValues(alpha: 0.04),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: const Icon(
-                Icons.refresh_rounded,
-                color: AppColors.primary,
-                size: 20,
-              ),
+          const SizedBox(height: 3),
+          Text(
+            'Automatic discounts • No promo codes required',
+            style: TextStyle(
+              fontSize: 12.5,
+              color: textMuted,
+              fontWeight: FontWeight.w500,
             ),
           ),
         ],
