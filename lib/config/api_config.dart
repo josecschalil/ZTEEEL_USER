@@ -7,6 +7,7 @@ class ApiConfig {
   static String get sendOtpUrl => '$baseUrl/api/v1/auth/send-otp/';
   static String get customerVerifyOtpUrl =>
       '$baseUrl/api/v1/auth/customer/verify-otp/';
+  static String get logoutUrl => '$baseUrl/api/v1/auth/logout/';
   static String get tokenRefreshUrl => '$baseUrl/api/v1/auth/refresh/';
   static String get meUrl => '$baseUrl/api/v1/auth/me/';
   static String get offerFeedUrl => '$baseUrl/api/v1/offers/feed/';

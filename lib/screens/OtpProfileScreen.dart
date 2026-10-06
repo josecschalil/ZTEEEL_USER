@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'dashboard.dart';
 import '../app_colors.dart';
 import '../services/auth_service.dart';
+import '../services/cart_service.dart';
 
 // ── Tokens (same as login) ─────────────────────
 
@@ -156,6 +157,12 @@ class _OtpScreenState extends State<OtpScreen> with TickerProviderStateMixin {
       rawPhone: widget.phone,
       otp: _code,
     );
+    if (result['success'] == true) {
+      // A new token can represent a different customer. Reset first, then
+      // hydrate only that customer's server-side cart.
+      CartService.resetLocalState();
+      await CartService.fetchCart();
+    }
     if (!mounted) return;
     setState(() => _isLoading = false);
     if (result['success'] == true) {

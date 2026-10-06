@@ -4,6 +4,8 @@ import 'SavedShopScreen.dart';
 import 'PhoneAuthScreen.dart';
 import 'RecentOrderScreen.dart';
 import 'HelpSupportScreen.dart';
+import '../services/auth_service.dart';
+import '../services/cart_service.dart';
 
 class ProfileColors {
   static const primary = Color(0xFFEE5B2B);
@@ -394,7 +396,20 @@ class _MenuRow extends StatelessWidget {
         ? ProfileColors.cardBorder
         : ProfileColors.borderLight;
 
-    void navigateToPage() {
+    Future<void> navigateToPage() async {
+      if (item.menupage == 'LoginScreen') {
+        // A cart is account-scoped. Clear local state before replacing tokens
+        // so it cannot be shown to whoever signs in next.
+        CartService.resetLocalState();
+        await AuthService.logout();
+        if (!context.mounted) return;
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
+          (_) => false,
+        );
+        return;
+      }
+
       Widget? targetPage;
       switch (item.menupage) {
         case 'WishlistScreen()':
@@ -405,9 +420,6 @@ class _MenuRow extends StatelessWidget {
           break;
         case 'OrderScreen':
           targetPage = const OrdersScreen();
-          break;
-        case 'LoginScreen':
-          targetPage = const LoginScreen();
           break;
         case 'HelpScreen':
           targetPage = const HelpSupportScreen();

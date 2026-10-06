@@ -409,6 +409,11 @@ class CartData {
 class CartService {
   CartService._();
 
+  // Every account transition advances this value.  Responses from requests
+  // started for an earlier account must never repopulate the new account's
+  // in-memory cart.
+  static int _stateGeneration = 0;
+
   /// Map of vendorId -> CartData representing individual shop baskets
   static final ValueNotifier<Map<String, CartData>> basketsNotifier =
       ValueNotifier<Map<String, CartData>>({});
@@ -455,12 +460,37 @@ class CartService {
     cartNotifier.value = map[vendorId] ?? (map.isNotEmpty ? map.values.first : null);
   }
 
-  /// Fetches the user's active cart from backend and merges into basketsNotifier
+  /// Discards only process-local cart state.
+  ///
+  /// Call this whenever authentication changes. It deliberately does not make
+  /// a DELETE request, because the cart belongs to the account currently held
+  /// by the backend, not to the device session being closed.
+  static void resetLocalState() {
+    _stateGeneration++;
+    basketsNotifier.value = {};
+    cartNotifier.value = null;
+  }
+
+  static void _replaceFromServer(CartData data) {
+    final vendorId = data.vendor?.id ?? '';
+    if (vendorId.isEmpty || data.isEmpty) {
+      basketsNotifier.value = {};
+      cartNotifier.value = null;
+      return;
+    }
+    basketsNotifier.value = {vendorId: data};
+    cartNotifier.value = data;
+  }
+
+  /// Fetches the user's active cart from backend and replaces local state.
   static Future<CartData?> fetchCart() async {
+    final requestGeneration = _stateGeneration;
     try {
       final headers = await _headers();
+      if (requestGeneration != _stateGeneration) return null;
       if (!headers.containsKey('Authorization')) {
-        return currentCart ?? const CartData();
+        if (requestGeneration == _stateGeneration) resetLocalState();
+        return const CartData();
       }
 
       final response = await http.get(
@@ -472,11 +502,8 @@ class CartService {
         final decoded = jsonDecode(response.body);
         if (decoded is Map<String, dynamic>) {
           final data = CartData.fromJson(decoded);
-          if (data.vendor?.id.isNotEmpty == true) {
-            _updateBasket(data.vendor!.id, data);
-          } else if (data.isNotEmpty) {
-            cartNotifier.value = data;
-          }
+          if (requestGeneration != _stateGeneration) return null;
+          _replaceFromServer(data);
           return data;
         }
       }
@@ -809,8 +836,7 @@ class CartService {
 
   /// Clears all baskets
   static Future<bool> clearCart() async {
-    basketsNotifier.value = {};
-    cartNotifier.value = const CartData();
+    resetLocalState();
 
     try {
       final headers = await _headers();

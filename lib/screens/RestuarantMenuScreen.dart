@@ -650,7 +650,7 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
       setState(() {
         _cart = updatedCart;
       });
-    } else if (current != null && current.vendor != null && current.vendor?.id != currentVendorId) {
+    } else {
       if (_cart.isNotEmpty) {
         setState(() {
           _cart = {};
