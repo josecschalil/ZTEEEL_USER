@@ -7,6 +7,7 @@ class ApiConfig {
   static String get sendOtpUrl => '$baseUrl/api/v1/auth/send-otp/';
   static String get customerVerifyOtpUrl =>
       '$baseUrl/api/v1/auth/customer/verify-otp/';
+  static String get logoutUrl => '$baseUrl/api/v1/auth/logout/';
   static String get tokenRefreshUrl => '$baseUrl/api/v1/auth/refresh/';
   static String get meUrl => '$baseUrl/api/v1/auth/me/';
   static String get customerProfileUrl => '$baseUrl/api/v1/profile/';
@@ -28,6 +29,8 @@ class ApiConfig {
       '$baseUrl/api/v1/vendor/$vendorId/menu/';
   static String vendorOffersUrl(String vendorId) =>
       '$baseUrl/api/v1/vendor/$vendorId/offers/';
+  static String vendorReviewsUrl(String vendorId) =>
+      '$baseUrl/api/v1/vendor/$vendorId/reviews/';
 
   static String get cartUrl => '$baseUrl/api/v1/cart/';
   static String get cartItemsUrl => '$baseUrl/api/v1/cart/items/';

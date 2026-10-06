@@ -7,6 +7,15 @@ import '../config/api_config.dart';
 import '../services/cart_service.dart';
 import '../services/restaurant_service.dart';
 
+abstract final class MenuColors {
+  static const Color primary = AppColors.primary;
+  static const Color primarySoft = AppColors.primarySoft;
+  static const Color primaryDeep = AppColors.primaryDeep;
+  static const Color cardDark = AppColors.cardDark;
+  static const Color textMutedDark = AppColors.textMutedDark;
+  static const Color borderDark = AppColors.borderDark;
+}
+
 
 /// ---------------------------------------------------------------------
 /// Data models
@@ -497,6 +506,8 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
   List<MenuCategory> _menuCategories = [];
   List<OfferCard> _vendorOffers = [];
   VendorDetailData? _vendorDetail;
+  Map<String, dynamic>? _reviewsSummary;
+  bool _isLoadingReviews = false;
 
   @override
   void initState() {
@@ -533,6 +544,40 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
     }
   }
 
+  Future<void> _loadReviews() async {
+    final vendorId = widget.vendorId;
+    if (vendorId == null || vendorId.isEmpty) return;
+    setState(() => _isLoadingReviews = true);
+    final summary = await RestaurantService.fetchVendorReviews(vendorId);
+    if (!mounted) return;
+    setState(() {
+      _reviewsSummary = summary;
+      _isLoadingReviews = false;
+      if (summary != null && _vendorDetail != null) {
+        final rawRating = summary['rating'];
+        final r = rawRating is num ? rawRating.toDouble() : double.tryParse(rawRating?.toString() ?? '');
+        final rawCount = summary['review_count'];
+        final c = rawCount is num ? rawCount.toInt() : int.tryParse(rawCount?.toString() ?? '');
+        if (r != null && c != null) {
+          _vendorDetail = VendorDetailData(
+            id: _vendorDetail!.id,
+            name: _vendorDetail!.name,
+            address: _vendorDetail!.address,
+            phone: _vendorDetail!.phone,
+            description: _vendorDetail!.description,
+            imageUrl: _vendorDetail!.imageUrl,
+            isOpen: _vendorDetail!.isOpen,
+            openingHours: _vendorDetail!.openingHours,
+            tags: _vendorDetail!.tags,
+            rating: r > 0 ? r : _vendorDetail!.rating,
+            reviewCount: c,
+            distance: _vendorDetail!.distance,
+          );
+        }
+      }
+    });
+  }
+
   void _applyVendorDetail(Map<String, dynamic> vendorData, List<MenuCategory> categories) {
     final businessName = vendorData['business_name']?.toString() ?? widget.restaurantName ?? 'Restaurant';
     final address = vendorData['address']?.toString() ?? '';
@@ -541,6 +586,11 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
     final coverImg = _resolveImageUrl(vendorData['cover_image']?.toString() ?? vendorData['icon_image']?.toString() ?? '');
     final isOpen = vendorData['is_open_now'] as bool? ?? widget.isOpen ?? true;
     final hoursStr = _formatBusinessHours(vendorData['business_hours'] as List<dynamic>?, isOpen);
+
+    final rawRating = vendorData['rating'];
+    final ratingVal = rawRating is num ? rawRating.toDouble() : double.tryParse(rawRating?.toString() ?? '') ?? 4.8;
+    final rawCount = vendorData['review_count'];
+    final reviewCountVal = rawCount is num ? rawCount.toInt() : int.tryParse(rawCount?.toString() ?? '') ?? 0;
 
     final featureList = <String>[];
     if (widget.cuisine?.isNotEmpty == true) featureList.add(widget.cuisine!);
@@ -559,8 +609,8 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
       isOpen: isOpen,
       openingHours: hoursStr,
       tags: featureList,
-      rating: 4.8,
-      reviewCount: 156,
+      rating: ratingVal > 0 ? ratingVal : 4.8,
+      reviewCount: reviewCountVal,
       distance: '1.8 km',
     );
   }
@@ -593,7 +643,7 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
       setState(() {
         _cart = updatedCart;
       });
-    } else if (current != null && current.vendor != null && current.vendor?.id != currentVendorId) {
+    } else {
       if (_cart.isNotEmpty) {
         setState(() {
           _cart = {};
@@ -635,6 +685,7 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
         RestaurantService.fetchVendorMenu(vendorId, forceRefresh: true),
         RestaurantService.fetchVendorOffers(vendorId, forceRefresh: true),
         RestaurantService.fetchVendor(vendorId, forceRefresh: true),
+        RestaurantService.fetchVendorReviews(vendorId),
       ]);
 
       if (!mounted) return;
@@ -642,6 +693,7 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
       final menuData = results[0] as List<Map<String, dynamic>>;
       final offersData = results[1] as List<Map<String, dynamic>>;
       final vendorData = results[2] as Map<String, dynamic>?;
+      final reviewsData = results[3] as Map<String, dynamic>?;
 
       final parsedCategories = _mapCategories(menuData, offersData);
       final parsedOffers = _mapOffers(offersData, parsedCategories);
@@ -650,9 +702,33 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
         _applyVendorDetail(vendorData, parsedCategories);
       }
 
+      if (reviewsData != null && _vendorDetail != null) {
+        final rawRating = reviewsData['rating'];
+        final r = rawRating is num ? rawRating.toDouble() : double.tryParse(rawRating?.toString() ?? '');
+        final rawCount = reviewsData['review_count'];
+        final c = rawCount is num ? rawCount.toInt() : int.tryParse(rawCount?.toString() ?? '');
+        if (r != null && c != null && r > 0) {
+          _vendorDetail = VendorDetailData(
+            id: _vendorDetail!.id,
+            name: _vendorDetail!.name,
+            address: _vendorDetail!.address,
+            phone: _vendorDetail!.phone,
+            description: _vendorDetail!.description,
+            imageUrl: _vendorDetail!.imageUrl,
+            isOpen: _vendorDetail!.isOpen,
+            openingHours: _vendorDetail!.openingHours,
+            tags: _vendorDetail!.tags,
+            rating: r,
+            reviewCount: c,
+            distance: _vendorDetail!.distance,
+          );
+        }
+      }
+
       setState(() {
         _menuCategories = parsedCategories;
         _vendorOffers = parsedOffers;
+        _reviewsSummary = reviewsData;
         _isLoading = false;
       });
       _syncFromGlobalCart();
@@ -916,10 +992,14 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
                     onRemove: _removeItem,
                   ),
                   _ReviewsView(
+                    vendorId: vendor.id,
                     vendorName: vendor.name,
                     rating: vendor.rating,
                     reviewCount: vendor.reviewCount,
                     isDark: isDark,
+                    reviewsSummary: _reviewsSummary,
+                    isLoading: _isLoadingReviews,
+                    onRefresh: _loadReviews,
                   ),
                   _InfoView(
                     vendor: vendor,
@@ -2551,17 +2631,325 @@ class _OffersView extends StatelessWidget {
 }
 
 class _ReviewsView extends StatelessWidget {
+  final String vendorId;
   final String vendorName;
   final double rating;
   final int reviewCount;
   final bool isDark;
+  final Map<String, dynamic>? reviewsSummary;
+  final bool isLoading;
+  final Future<void> Function() onRefresh;
 
   const _ReviewsView({
+    required this.vendorId,
     required this.vendorName,
     required this.rating,
     required this.reviewCount,
     required this.isDark,
+    this.reviewsSummary,
+    this.isLoading = false,
+    required this.onRefresh,
   });
+
+  void _openReviewBottomSheet(BuildContext context, {Map<String, dynamic>? initialReview}) {
+    final bool isEditing = initialReview != null;
+    int selectedRating = (initialReview?['rating'] as num?)?.toInt() ?? 5;
+    final nameController = TextEditingController(text: initialReview?['user_name']?.toString() ?? '');
+    final commentController = TextEditingController(text: initialReview?['comment']?.toString() ?? '');
+    bool isSubmitting = false;
+
+    final cardBg = isDark ? MenuColors.cardDark : Colors.white;
+    final textColor = isDark ? Colors.white : const Color(0xFF1D1E20);
+    final subColor = isDark ? MenuColors.textMutedDark : Colors.grey[600]!;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (bottomSheetContext) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+
+            final ratingLabels = {
+              5: '⭐⭐⭐⭐⭐ Outstanding! Loved it',
+              4: '⭐⭐⭐⭐ Very Good, would order again',
+              3: '⭐⭐⭐ Average experience',
+              2: '⭐⭐ Below expectations',
+              1: '⭐ Terrible / Poor food quality',
+            };
+
+            return Container(
+              padding: EdgeInsets.fromLTRB(24, 16, 24, bottomInset + 24),
+              decoration: BoxDecoration(
+                color: cardBg,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Colors.black26,
+                    blurRadius: 20,
+                    offset: Offset(0, -4),
+                  ),
+                ],
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 44,
+                        height: 5,
+                        decoration: BoxDecoration(
+                          color: isDark ? Colors.white24 : Colors.grey[300],
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                isEditing ? 'Edit Your Review' : 'Rate & Review',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: textColor,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                vendorName,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: MenuColors.primary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: Icon(Icons.close_rounded, color: subColor),
+                          onPressed: () => Navigator.pop(bottomSheetContext),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    Center(
+                      child: Column(
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: List.generate(5, (index) {
+                              final starNum = index + 1;
+                              final isSelected = starNum <= selectedRating;
+                              return GestureDetector(
+                                onTap: isSubmitting
+                                    ? null
+                                    : () {
+                                        setSheetState(() {
+                                          selectedRating = starNum;
+                                        });
+                                      },
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                                  child: Icon(
+                                    isSelected
+                                        ? Icons.star_rounded
+                                        : Icons.star_outline_rounded,
+                                    color: isSelected
+                                        ? Colors.amber
+                                        : (isDark ? Colors.white30 : Colors.grey[400]),
+                                    size: 40,
+                                  ),
+                                ),
+                              );
+                            }),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            ratingLabels[selectedRating] ?? '',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: isDark ? Colors.amber[200] : const Color(0xFFD97706),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Text(
+                      'Your Name (Optional)',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: textColor,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: nameController,
+                      enabled: !isSubmitting,
+                      style: TextStyle(color: textColor, fontSize: 14),
+                      decoration: InputDecoration(
+                        hintText: 'e.g. Alex M.',
+                        hintStyle: TextStyle(color: subColor, fontSize: 14),
+                        filled: true,
+                        fillColor: isDark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF8F9FA),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: isDark ? MenuColors.borderDark : const Color(0xFFE2E8F0),
+                          ),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: isDark ? MenuColors.borderDark : const Color(0xFFE2E8F0),
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: MenuColors.primary),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Feedback & Comments',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: textColor,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: commentController,
+                      enabled: !isSubmitting,
+                      minLines: 3,
+                      maxLines: 5,
+                      style: TextStyle(color: textColor, fontSize: 14),
+                      decoration: InputDecoration(
+                        hintText: 'How was the food quality, taste, packing, and speed?',
+                        hintStyle: TextStyle(color: subColor, fontSize: 14),
+                        filled: true,
+                        fillColor: isDark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF8F9FA),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: isDark ? MenuColors.borderDark : const Color(0xFFE2E8F0),
+                          ),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: isDark ? MenuColors.borderDark : const Color(0xFFE2E8F0),
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: MenuColors.primary),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: MenuColors.primary,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        onPressed: isSubmitting
+                            ? null
+                            : () async {
+                                setSheetState(() => isSubmitting = true);
+                                final result = await RestaurantService.submitVendorReview(
+                                  vendorId: vendorId,
+                                  rating: selectedRating,
+                                  comment: commentController.text.trim(),
+                                  userName: nameController.text.trim(),
+                                );
+                                setSheetState(() => isSubmitting = false);
+
+                                if (result['success'] == true) {
+                                  if (bottomSheetContext.mounted) {
+                                    Navigator.pop(bottomSheetContext);
+                                  }
+                                  await onRefresh();
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          isEditing
+                                              ? 'Your review has been updated successfully!'
+                                              : 'Thank you! Your review has been submitted.',
+                                          style: const TextStyle(fontWeight: FontWeight.w600),
+                                        ),
+                                        backgroundColor: const Color(0xFF10B981),
+                                        behavior: SnackBarBehavior.floating,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(10),
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                } else {
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          result['error']?.toString() ?? 'Failed to submit review.',
+                                        ),
+                                        backgroundColor: Colors.redAccent,
+                                        behavior: SnackBarBehavior.floating,
+                                      ),
+                                    );
+                                  }
+                                }
+                              },
+                        child: isSubmitting
+                            ? const SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.5,
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                ),
+                              )
+                            : Text(
+                                isEditing ? 'Update Review' : 'Submit Review',
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -2570,9 +2958,31 @@ class _ReviewsView extends StatelessWidget {
     final textColor = isDark ? AppColors.white : AppColors.textPrimary;
     final subColor = isDark ? AppColors.textMutedDark : AppColors.materialGrey[600]!;
 
+    final rawRating = reviewsSummary?['rating'];
+    final double displayRating = rawRating is num
+        ? rawRating.toDouble()
+        : (double.tryParse(rawRating?.toString() ?? '') ?? (rating > 0 ? rating : 4.8));
+
+    final rawCount = reviewsSummary?['review_count'];
+    final int displayCount = rawCount is num
+        ? rawCount.toInt()
+        : (int.tryParse(rawCount?.toString() ?? '') ?? reviewCount);
+
+    final rawPercentages = reviewsSummary?['percentages'] as Map<String, dynamic>?;
+    final p5 = (rawPercentages?['5'] as num?)?.toDouble() ?? (displayCount > 0 ? 0.88 : 0.0);
+    final p4 = (rawPercentages?['4'] as num?)?.toDouble() ?? (displayCount > 0 ? 0.09 : 0.0);
+    final p3 = (rawPercentages?['3'] as num?)?.toDouble() ?? (displayCount > 0 ? 0.02 : 0.0);
+    final p2 = (rawPercentages?['2'] as num?)?.toDouble() ?? 0.0;
+    final p1 = (rawPercentages?['1'] as num?)?.toDouble() ?? 0.0;
+
+    final reviewsList = (reviewsSummary?['reviews'] as List<dynamic>?) ?? [];
+    final userReview = reviewsSummary?['user_review'] as Map<String, dynamic>?;
+    final String? userReviewId = userReview?['id']?.toString();
+
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 120),
       children: [
+        // Overall Rating Summary Card
         Container(
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
@@ -2585,29 +2995,28 @@ class _ReviewsView extends StatelessWidget {
               Column(
                 children: [
                   Text(
-                    rating.toStringAsFixed(1),
+                    displayRating > 0 ? displayRating.toStringAsFixed(1) : '4.8',
                     style: TextStyle(
                       fontSize: 36,
                       fontWeight: FontWeight.bold,
                       color: textColor,
                     ),
                   ),
-                  const Row(
-                    children: [
-                      Icon(Icons.star_rounded, color: AppColors.materialAmber, size: 18),
-                      Icon(Icons.star_rounded, color: AppColors.materialAmber, size: 18),
-                      Icon(Icons.star_rounded, color: AppColors.materialAmber, size: 18),
-                      Icon(Icons.star_rounded, color: AppColors.materialAmber, size: 18),
-                      Icon(
-                        Icons.star_half_rounded,
-                        color: AppColors.materialAmber,
-                        size: 18,
-                      ),
-                    ],
+                  Row(
+                    children: List.generate(5, (i) {
+                      final starVal = i + 1;
+                      if (displayRating >= starVal) {
+                        return const Icon(Icons.star_rounded, color: AppColors.materialAmber, size: 18);
+                      } else if (displayRating >= starVal - 0.5) {
+                        return const Icon(Icons.star_half_rounded, color: AppColors.materialAmber, size: 18);
+                      } else {
+                        return Icon(Icons.star_outline_rounded, color: AppColors.materialGrey[400], size: 18);
+                      }
+                    }),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '$reviewCount verified ratings',
+                    '$displayCount verified ratings',
                     style: TextStyle(fontSize: 12, color: subColor),
                   ),
                 ],
@@ -2616,18 +3025,204 @@ class _ReviewsView extends StatelessWidget {
               Expanded(
                 child: Column(
                   children: [
-                    _RatingBar(stars: '5 ★', percent: 0.88, isDark: isDark),
-                    _RatingBar(stars: '4 ★', percent: 0.09, isDark: isDark),
-                    _RatingBar(stars: '3 ★', percent: 0.02, isDark: isDark),
-                    _RatingBar(stars: '2 ★', percent: 0.005, isDark: isDark),
-                    _RatingBar(stars: '1 ★', percent: 0.005, isDark: isDark),
+                    _RatingBar(stars: '5 ★', percent: p5, isDark: isDark),
+                    _RatingBar(stars: '4 ★', percent: p4, isDark: isDark),
+                    _RatingBar(stars: '3 ★', percent: p3, isDark: isDark),
+                    _RatingBar(stars: '2 ★', percent: p2, isDark: isDark),
+                    _RatingBar(stars: '1 ★', percent: p1, isDark: isDark),
                   ],
                 ),
               ),
             ],
           ),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 16),
+
+        // If user already reviewed, show "Your Review" with Edit option; otherwise show "Write a Review" CTA
+        if (userReview != null)
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: cardBg,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: MenuColors.primary.withValues(alpha: isDark ? 0.45 : 0.35),
+                width: 1.5,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: MenuColors.primary.withValues(alpha: 0.06),
+                  blurRadius: 10,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: MenuColors.primary.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.person_rounded, size: 14, color: MenuColors.primary),
+                              SizedBox(width: 4),
+                              Text(
+                                'Your Review',
+                                style: TextStyle(
+                                  color: MenuColors.primary,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (userReview['created_at_formatted'] != null &&
+                            userReview['created_at_formatted'].toString().isNotEmpty) ...[
+                          const SizedBox(width: 8),
+                          Text(
+                            userReview['created_at_formatted'].toString(),
+                            style: TextStyle(fontSize: 11, color: subColor),
+                          ),
+                        ],
+                      ],
+                    ),
+                    OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: MenuColors.primary,
+                        side: const BorderSide(color: MenuColors.primary),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      onPressed: () => _openReviewBottomSheet(context, initialReview: userReview),
+                      icon: const Icon(Icons.edit_outlined, size: 14),
+                      label: const Text('Edit Review', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: List.generate(5, (i) {
+                    final uRating = (userReview['rating'] as num?)?.toInt() ?? 5;
+                    return Icon(
+                      i < uRating ? Icons.star_rounded : Icons.star_outline_rounded,
+                      color: i < uRating ? Colors.amber : Colors.grey[300],
+                      size: 18,
+                    );
+                  }),
+                ),
+                if ((userReview['comment']?.toString() ?? '').isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    userReview['comment'].toString(),
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: textColor.withValues(alpha: 0.95),
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          )
+        else
+          // Write a Review CTA Card
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: isDark
+                    ? [
+                        MenuColors.primary.withValues(alpha: 0.18),
+                        MenuColors.cardDark,
+                      ]
+                    : [
+                        MenuColors.primary.withValues(alpha: 0.08),
+                        Colors.white,
+                      ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: MenuColors.primary.withValues(alpha: isDark ? 0.3 : 0.2),
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: MenuColors.primary.withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.rate_review_rounded,
+                    color: MenuColors.primary,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Rate & Review Food',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: textColor,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Share your experience with other diners',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: subColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: MenuColors.primary,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  onPressed: () => _openReviewBottomSheet(context),
+                  icon: const Icon(Icons.edit_outlined, size: 16),
+                  label: const Text(
+                    'Review',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        const SizedBox(height: 22),
+
+        // Section Title
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -2639,62 +3234,229 @@ class _ReviewsView extends StatelessWidget {
                 color: textColor,
               ),
             ),
-            Text(
-              'Verified Orders',
-              style: TextStyle(fontSize: 12, color: subColor),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: isDark ? Colors.white10 : Colors.grey[200],
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                '${reviewsList.length} Reviews',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: subColor,
+                ),
+              ),
             ),
           ],
         ),
         const SizedBox(height: 12),
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: cardBg,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: cardBorder),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.12),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.recommend_rounded,
-                      color: AppColors.primary,
-                      size: 20,
+
+
+        // Loading or Reviews List
+        if (isLoading)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 36),
+            child: Center(
+              child: CircularProgressIndicator(color: MenuColors.primary),
+            ),
+          )
+        else if (reviewsList.isEmpty)
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 20),
+            decoration: BoxDecoration(
+              color: cardBg,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: cardBorder),
+            ),
+            child: Column(
+              children: [
+                Icon(
+                  Icons.chat_bubble_outline_rounded,
+                  size: 44,
+                  color: isDark ? Colors.white24 : Colors.grey[400],
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'No reviews yet',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: textColor,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Be the first to order and review $vendorName!',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 13, color: subColor),
+                ),
+                const SizedBox(height: 16),
+                OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: MenuColors.primary,
+                    side: const BorderSide(color: MenuColors.primary),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Highly Rated by Diners',
-                          style: TextStyle(
-                            fontSize: 14,
+                  onPressed: () => _openReviewBottomSheet(context),
+                  icon: const Icon(Icons.star_outline_rounded, size: 18),
+                  label: const Text('Write First Review'),
+                ),
+              ],
+            ),
+          )
+        else
+          ...reviewsList.map((reviewMap) {
+            final Map review = reviewMap is Map ? reviewMap : {};
+            final bool isCurrentUserReview = userReviewId != null &&
+                review['id']?.toString() == userReviewId;
+            final String uName = isCurrentUserReview
+                ? '${(review['user_name']?.toString() ?? '').trim().isNotEmpty ? review['user_name'] : 'You'} (You)'
+                : ((review['user_name']?.toString() ?? '').trim().isNotEmpty
+                    ? review['user_name'].toString()
+                    : 'Verified Diner');
+            final int rScore = (review['rating'] as num?)?.toInt() ?? 5;
+            final String comment = review['comment']?.toString() ?? '';
+            final String dateStr = review['created_at_formatted']?.toString() ?? '';
+            final bool isVerified = review['is_verified'] as bool? ?? true;
+
+            return Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: cardBg,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: isCurrentUserReview
+                      ? MenuColors.primary.withValues(alpha: 0.4)
+                      : cardBorder,
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 18,
+                        backgroundColor: MenuColors.primary.withValues(alpha: 0.15),
+                        child: Text(
+                          uName.isNotEmpty ? uName[0].toUpperCase() : 'D',
+                          style: const TextStyle(
+                            color: MenuColors.primary,
                             fontWeight: FontWeight.bold,
-                            color: textColor,
+                            fontSize: 14,
                           ),
                         ),
-                        Text(
-                          '94% of customers rated $vendorName 4 stars or higher for taste and quick preparation.',
-                          style: TextStyle(fontSize: 12, color: subColor, height: 1.4),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    uName,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                      color: isCurrentUserReview ? MenuColors.primary : textColor,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                if (isCurrentUserReview) ...[
+                                  const SizedBox(width: 6),
+                                  InkWell(
+                                    onTap: () => _openReviewBottomSheet(context, initialReview: userReview),
+                                    child: const Icon(
+                                      Icons.edit_note_rounded,
+                                      size: 18,
+                                      color: MenuColors.primary,
+                                    ),
+                                  ),
+                                ],
+                                if (isVerified) ...[
+                                  const SizedBox(width: 6),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: const Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.check_circle_rounded,
+                                          color: Color(0xFF10B981),
+                                          size: 11,
+                                        ),
+                                        SizedBox(width: 2),
+                                        Text(
+                                          'Verified',
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w600,
+                                            color: Color(0xFF10B981),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                            if (dateStr.isNotEmpty) ...[
+                              const SizedBox(height: 2),
+                              Text(
+                                dateStr,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: subColor,
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
-                      ],
-                    ),
+                      ),
+                      Row(
+                        children: List.generate(5, (i) {
+                          return Icon(
+                            i < rScore
+                                ? Icons.star_rounded
+                                : Icons.star_outline_rounded,
+                            color: i < rScore ? Colors.amber : Colors.grey[300],
+                            size: 16,
+                          );
+                        }),
+                      ),
+                    ],
                   ),
+                  if (comment.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Text(
+                      comment,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: textColor.withValues(alpha: 0.9),
+                        height: 1.45,
+                      ),
+                    ),
+                  ],
                 ],
               ),
-            ],
-          ),
-        ),
+            );
+          }),
       ],
     );
   }
@@ -2731,7 +3493,7 @@ class _RatingBar extends StatelessWidget {
             child: ClipRRect(
               borderRadius: BorderRadius.circular(4),
               child: LinearProgressIndicator(
-                value: percent,
+                value: percent.clamp(0.0, 1.0),
                 minHeight: 6,
                 backgroundColor: isDark ? AppColors.white10 : AppColors.materialGrey[200],
                 valueColor: const AlwaysStoppedAnimation<Color>(AppColors.materialAmber),

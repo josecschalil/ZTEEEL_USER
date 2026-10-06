@@ -288,7 +288,20 @@ class RedemptionService {
         body: jsonEncode(body),
       );
 
-      final decoded = jsonDecode(response.body);
+      dynamic decoded;
+      try {
+        decoded = jsonDecode(response.body);
+      } catch (_) {
+        // Reverse proxies and Django's DEBUG page return HTML for a 5xx. Do
+        // not disguise that as a client-network failure; it is actionable for
+        // support and points to the backend logs.
+        return {
+          'success': false,
+          'error': response.statusCode >= 500
+              ? 'Order service is temporarily unavailable (server error ${response.statusCode}). Please try again shortly.'
+              : 'Order request failed (HTTP ${response.statusCode}).',
+        };
+      }
       if (response.statusCode >= 200 && response.statusCode < 300) {
         if (decoded is Map<String, dynamic>) {
           final session = RedemptionSessionData.fromJson(decoded);
@@ -310,7 +323,10 @@ class RedemptionService {
       return {'success': false, 'error': msg.toString()};
     } catch (e) {
       debugPrint('RedemptionService generateRedemption error: $e');
-      return {'success': false, 'error': 'Network error. Please try again.'};
+      return {
+        'success': false,
+        'error': 'Unable to reach the order service. Check your connection and try again.',
+      };
     }
   }
 

@@ -255,4 +255,62 @@ class RestaurantService {
       }
     }
   }
+
+  static Future<Map<String, dynamic>?> fetchVendorReviews(
+    String vendorId,
+  ) async {
+    try {
+      final headers = await AuthService.getAuthHeaders();
+      final response = await http.get(
+        Uri.parse(ApiConfig.vendorReviewsUrl(vendorId)),
+        headers: headers,
+      );
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(response.body);
+        if (decoded is Map<String, dynamic>) {
+          return decoded;
+        }
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  static Future<Map<String, dynamic>> submitVendorReview({
+    required String vendorId,
+    required int rating,
+    required String comment,
+    String? userName,
+  }) async {
+    try {
+      final headers = await AuthService.getAuthHeaders();
+      final fullHeaders = {
+        ...headers,
+        'Content-Type': 'application/json',
+      };
+      final body = jsonEncode({
+        'rating': rating,
+        'comment': comment,
+        if (userName != null && userName.isNotEmpty) 'user_name': userName,
+      });
+
+      final response = await http.post(
+        Uri.parse(ApiConfig.vendorReviewsUrl(vendorId)),
+        headers: fullHeaders,
+        body: body,
+      );
+      final decoded = jsonDecode(response.body);
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return {'success': true, 'data': decoded};
+      }
+      return {
+        'success': false,
+        'error': decoded is Map
+            ? (decoded['detail'] ?? decoded['message'] ?? 'Failed to submit review')
+            : 'Failed to submit review',
+      };
+    } catch (e) {
+      return {'success': false, 'error': 'Network error: $e'};
+    }
+  }
 }
+

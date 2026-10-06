@@ -170,6 +170,36 @@ class AuthService {
         (prefs.getString(_accessKey)?.isNotEmpty ?? false);
   }
 
+  /// Revokes the refresh token when possible and always removes this device's
+  /// local session. Local removal is intentional even if the network call
+  /// fails, so a user can reliably switch accounts while offline.
+  static Future<void> logout() async {
+    final prefs = await SharedPreferences.getInstance();
+    final refresh = prefs.getString(_refreshKey);
+    final access = prefs.getString(_accessKey);
+
+    if (refresh != null && refresh.isNotEmpty) {
+      try {
+        await http.post(
+          Uri.parse(ApiConfig.logoutUrl),
+          headers: {
+            'Content-Type': 'application/json',
+            if (access != null && access.isNotEmpty) 'Authorization': 'Bearer $access',
+          },
+          body: jsonEncode({'refresh': refresh}),
+        );
+      } catch (_) {
+        // Local sign-out still succeeds; the refresh token will naturally
+        // expire if it could not be blacklisted right now.
+      }
+    }
+
+    await prefs.remove(_accessKey);
+    await prefs.remove(_refreshKey);
+    await prefs.remove(_phoneKey);
+    await prefs.setBool(_loggedInKey, false);
+  }
+
   static Future<void> _saveSession({
     required String access,
     required String refresh,
