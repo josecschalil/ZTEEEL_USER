@@ -5,6 +5,7 @@ import '../config/api_config.dart';
 import '../services/restaurant_service.dart';
 import '../widgets/discovery_search_bar.dart';
 import '../widgets/restaurant_card.dart';
+import '../widgets/shimmer_loading.dart';
 import 'RestuarantMenuScreen.dart';
 
 export '../widgets/restaurant_card.dart';
@@ -404,9 +405,7 @@ class _NearbyRestaurantsScreenState extends State<NearbyRestaurantsScreen> {
             ),
             Expanded(
               child: _isLoading
-                  ? const Center(
-                      child: CircularProgressIndicator(color: AppColors.orange),
-                    )
+                  ? const _RestaurantListLoadingSkeleton()
                   : results.isEmpty
                   ? const _EmptyState()
                   : ListView(
@@ -984,6 +983,143 @@ class _EmptyState extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _RestaurantListLoadingSkeleton extends StatelessWidget {
+  const _RestaurantListLoadingSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.only(bottom: 32),
+      children: [
+        const _ClosestRailSkeleton(),
+        const SizedBox(height: 6),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+          child: Row(
+            children: [
+              ShimmerLoading(
+                child: Container(
+                  width: 140,
+                  height: 18,
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceRaised,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              ),
+              const Spacer(),
+              ShimmerLoading(
+                child: Container(
+                  width: 60,
+                  height: 14,
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceRaised,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        for (int i = 0; i < 3; i++) ...[
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16),
+            child: RestaurantCardSkeleton(),
+          ),
+          const SizedBox(height: 14),
+        ],
+      ],
+    );
+  }
+}
+
+class _ClosestRailSkeleton extends StatelessWidget {
+  const _ClosestRailSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 17, 16, 11),
+          child: ShimmerLoading(
+            child: Container(
+              width: 120,
+              height: 16,
+              decoration: BoxDecoration(
+                color: AppColors.surfaceRaised,
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+          ),
+        ),
+        SizedBox(
+          height: 126.0 + (MediaQuery.textScalerOf(context).scale(12.0) - 12.0) * 4,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: 5,
+            separatorBuilder: (_, __) => const SizedBox(width: 11),
+            itemBuilder: (context, index) {
+              return ShimmerLoading(
+                child: Container(
+                  width: 92,
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(18),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.black.withValues(alpha: 0.04),
+                        blurRadius: 16,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  padding: const EdgeInsets.fromLTRB(7, 7, 7, 8),
+                  child: Column(
+                    children: [
+                      Container(
+                        width: 78,
+                        height: 70,
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceRaised,
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        width: 65,
+                        height: 10,
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceRaised,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Container(
+                        width: 45,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceRaised,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }

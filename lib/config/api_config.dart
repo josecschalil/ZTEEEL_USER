@@ -18,7 +18,8 @@ class ApiConfig {
       '$baseUrl/api/v1/food-tags/$tagId/offers/';
   static String vendorFoodTagItemsUrl(String vendorId, String tagId) =>
       '$baseUrl/api/v1/vendors/$vendorId/food-tags/$tagId/';
-  static String get vendorsListUrl => '$baseUrl/api/v1/vendors/';
+  static String vendorsListUrl({bool? openNow}) =>
+      openNow == true ? '$baseUrl/api/v1/vendors/?open_now=true' : '$baseUrl/api/v1/vendors/';
   static String get vendorAltListUrl => '$baseUrl/api/v1/vendor/list/';
   static String get searchVendorsUrl => '$baseUrl/api/v1/search/?q=a&filter=vendors';
   static String vendorDetailUrl(String vendorId) =>

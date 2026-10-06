@@ -122,6 +122,7 @@ class OfferRail extends StatelessWidget {
                   ? const _OfferSkeletonCard()
                   : OfferCard(
                       key: ValueKey(offers[index].id),
+                      heroTag: 'offer-card-${offers[index].id}',
                       offer: offers[index],
                       fontFamily: fontFamily,
                       onTap: onOfferTap == null
@@ -164,24 +165,27 @@ double _requiredHeight(BuildContext context, OfferCardData offer,
   final displaySubtitle = offer.subtitle.trim().isNotEmpty
       ? offer.subtitle.trim()
       : 'Special discount on select orders';
+  final contentWidth = width * 0.58;
   final titleHeight = _textHeight(context, displayTitle,
-      _titleStyle(ts, Colors.black, family, offer.option), width * 0.55, 1);
+      _titleStyle(ts, Colors.black, family, offer.option), contentWidth, 1);
   final subtitleHeight = 3 * s + _textHeight(
       context, displaySubtitle,
       TextStyle(fontFamily: family, fontSize: 11.0 * ts, height: 1.25, fontWeight: FontWeight.w400),
-      width * 0.55, 2);
+      contentWidth, 2);
   final middleHeight = titleHeight + subtitleHeight;
   final nameHeight = _textHeight(context, offer.restaurant,
-      TextStyle(fontFamily: family, fontSize: 11.0 * ts, height: 1.2),
-      width * 0.55 - 24 * s, 1);
-  final metaHeight = offer.distance.isEmpty && offer.category.isEmpty ? 0.0
-      : _textHeight(context, '1.2 km · Restaurant',
-          TextStyle(fontFamily: family, fontSize: 9.0 * ts, height: 1.25),
-          width * 0.55 - 24 * s, 1) + 2 * s;
-  final restaurantHeight = math.max(22 * s, nameHeight + metaHeight);
-  final buttonHeight = 25 * s;
-  final bottomSectionHeight = restaurantHeight + 4 * s + buttonHeight + 12 * s;
-  final baseGap = 12 * s;
+      TextStyle(fontFamily: family, fontSize: 11.5 * ts, height: 1.2, fontWeight: FontWeight.w700),
+      contentWidth - 25 * s, 1);
+  final metadata = [offer.distance, offer.category]
+      .where((value) => value.trim().isNotEmpty).join(' · ');
+  final metaHeight = metadata.isEmpty ? 0.0
+      : _textHeight(context, metadata,
+          TextStyle(fontFamily: family, fontSize: 9.5 * ts, height: 1.25, fontWeight: FontWeight.w400),
+          contentWidth - 37 * s, 1) + 2 * s;
+  final restaurantHeight = math.max(26 * s, nameHeight + metaHeight + 4 * s);
+  final buttonHeight = 28 * s;
+  final bottomSectionHeight = restaurantHeight + 8 * s + buttonHeight + 12 * s;
+  final baseGap = 10 * s;
   return math.max(188 * s, (44 * s) + baseGap + middleHeight + baseGap + bottomSectionHeight);
 }
 
@@ -191,12 +195,19 @@ class OfferCard extends StatelessWidget {
   final OfferCardData offer;
   final VoidCallback? onTap;
   final String? fontFamily;
+  final Object? heroTag;
 
-  const OfferCard({super.key, required this.offer, this.onTap, this.fontFamily});
+  const OfferCard({
+    super.key,
+    required this.offer,
+    this.onTap,
+    this.fontFamily,
+    this.heroTag,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return MediaQuery(
+    Widget card = MediaQuery(
       data: MediaQuery.of(context).copyWith(
         textScaler: MediaQuery.textScalerOf(context)
             .clamp(minScaleFactor: 0.85, maxScaleFactor: 1.05),
@@ -209,18 +220,19 @@ class OfferCard extends StatelessWidget {
         final ts = math.min(s, 1.0);
         final p = _Palette.forOption(offer.option);
         final radius = BorderRadius.circular(22 * s);
+        final contentWidth = width * 0.58;
         final metadata = [offer.distance, offer.category]
             .where((value) => value.trim().isNotEmpty).join(' · ');
         final nameHeight = _textHeight(context, offer.restaurant,
-            TextStyle(fontFamily: fontFamily, fontSize: 11.0 * ts, height: 1.2),
-            width * 0.55 - 24 * s, 1);
+            TextStyle(fontFamily: fontFamily, fontSize: 11.5 * ts, height: 1.2, fontWeight: FontWeight.w700),
+            contentWidth - 25 * s, 1);
         final metaHeight = metadata.isEmpty ? 0.0 : _textHeight(context, metadata,
-            TextStyle(fontFamily: fontFamily, fontSize: 9.0 * ts, height: 1.25),
-            width * 0.55 - 24 * s, 1) + 2 * s;
-        final restaurantHeight = math.max(22 * s, nameHeight + metaHeight);
-        final buttonHeight = 25 * s;
+            TextStyle(fontFamily: fontFamily, fontSize: 9.5 * ts, height: 1.25, fontWeight: FontWeight.w400),
+            contentWidth - 37 * s, 1) + 2 * s;
+        final restaurantHeight = math.max(26 * s, nameHeight + metaHeight + 4 * s);
+        final buttonHeight = 28 * s;
         final buttonBottom = 12 * s;
-        final restaurantBottom = buttonBottom + buttonHeight + 4 * s;
+        final restaurantBottom = buttonBottom + buttonHeight + 8 * s;
         final bottomSectionTop = height - (restaurantBottom + restaurantHeight);
         final headerBottom = 44 * s;
 
@@ -230,11 +242,11 @@ class OfferCard extends StatelessWidget {
             ? offer.subtitle.trim()
             : 'Special discount on select orders';
         final titleHeight = _textHeight(context, displayTitle,
-            _titleStyle(ts, p.foreground, fontFamily, offer.option), width * 0.55, 1);
+            _titleStyle(ts, p.foreground, fontFamily, offer.option), contentWidth, 1);
         final subtitleHeight = 3 * s + _textHeight(
             context, displaySubtitle,
             TextStyle(fontFamily: fontFamily, fontSize: 11.0 * ts, height: 1.25, fontWeight: FontWeight.w400),
-            width * 0.55, 2);
+            contentWidth, 2);
         final middleHeight = titleHeight + subtitleHeight;
 
         final availableSpace = math.max(0.0, bottomSectionTop - headerBottom);
@@ -288,7 +300,7 @@ class OfferCard extends StatelessWidget {
                       Positioned(
                         top: middleTop,
                         left: 18 * s,
-                        width: width * 0.55,
+                        width: contentWidth,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,
@@ -309,44 +321,46 @@ class OfferCard extends StatelessWidget {
                         ),
                       ),
                       Positioned(left: 18 * s, bottom: restaurantBottom,
-                        width: width * 0.55, height: restaurantHeight,
-                        child: Row(children: [
-                          Icon(Icons.storefront_rounded,
-                              size: 20 * s, color: p.foreground),
-                          SizedBox(width: 6 * s),
-                          Expanded(child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(offer.restaurant, maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(fontFamily: fontFamily,
-                                  color: p.foreground, fontSize: 11.0 * ts,
-                                  fontWeight: FontWeight.w700, height: 1.2,
-                                  letterSpacing: -0.2 * ts)),
-                              if (metadata.isNotEmpty) ...[
-                                SizedBox(height: 2 * s),
-                                Row(children: [
-                                  if (offer.distance.isNotEmpty) ...[
-                                    Icon(Icons.location_on_rounded,
-                                        size: 10 * s, color: p.secondary),
-                                    SizedBox(width: 2 * s),
-                                  ],
-                                  Expanded(child: Text(metadata, maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(fontFamily: fontFamily,
-                                      color: p.secondary, fontSize: 9.0 * ts,
-                                      fontWeight: FontWeight.w400, height: 1.25))),
-                                ]),
+                        width: contentWidth,
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Icon(Icons.storefront_rounded,
+                                size: 19 * s, color: p.foreground),
+                            SizedBox(width: 6 * s),
+                            Expanded(child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(offer.restaurant, maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(fontFamily: fontFamily,
+                                    color: p.foreground, fontSize: 11.5 * ts,
+                                    fontWeight: FontWeight.w700, height: 1.2,
+                                    letterSpacing: -0.2 * ts)),
+                                if (metadata.isNotEmpty) ...[
+                                  SizedBox(height: 2 * s),
+                                  Row(children: [
+                                    if (offer.distance.isNotEmpty) ...[
+                                      Icon(Icons.location_on_rounded,
+                                          size: 10 * s, color: p.secondary),
+                                      SizedBox(width: 2 * s),
+                                    ],
+                                    Expanded(child: Text(metadata, maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(fontFamily: fontFamily,
+                                        color: p.secondary, fontSize: 9.5 * ts,
+                                        fontWeight: FontWeight.w400, height: 1.25))),
+                                  ]),
+                                ],
                               ],
-                            ],
-                          )),
-                        ]),
+                            )),
+                          ],
+                        ),
                       ),
                       Positioned(
                         left: 15 * s,
                         bottom: buttonBottom,
-                        height: buttonHeight,
                         child: DecoratedBox(
                           decoration: BoxDecoration(
                             color: p.ctaBackground,
@@ -355,19 +369,29 @@ class OfferCard extends StatelessWidget {
                             border: Border.all(color: p.ctaBorder, width: 0.7 * s),
                           ),
                           child: Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 10 * s),
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 12 * s,
+                              vertical: 5 * s,
+                            ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Text(
-                                  offer.savings.isEmpty ? 'View offer' : offer.savings,
-                                  style: TextStyle(
-                                    fontFamily: fontFamily,
-                                    color: p.ctaText,
-                                    fontSize: 10.5 * ts,
-                                    fontWeight: FontWeight.w700,
-                                    height: 1.15,
-                                    letterSpacing: -0.25 * ts,
+                                ConstrainedBox(
+                                  constraints: BoxConstraints(
+                                    maxWidth: contentWidth - 30 * s,
+                                  ),
+                                  child: Text(
+                                    offer.savings.isEmpty ? 'View offer' : offer.savings,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontFamily: fontFamily,
+                                      color: p.ctaText,
+                                      fontSize: 11.0 * ts,
+                                      fontWeight: FontWeight.w700,
+                                      height: 1.15,
+                                      letterSpacing: -0.25 * ts,
+                                    ),
                                   ),
                                 ),
                                 SizedBox(width: 4 * s),
@@ -392,6 +416,30 @@ class OfferCard extends StatelessWidget {
         );
       }),
     );
+
+    if (heroTag != null) {
+      return Hero(
+        tag: heroTag!,
+        flightShuttleBuilder: (
+          flightContext,
+          animation,
+          flightDirection,
+          fromHeroContext,
+          toHeroContext,
+        ) {
+          final toHero = toHeroContext.widget as Hero;
+          return Material(
+            type: MaterialType.transparency,
+            child: toHero.child,
+          );
+        },
+        child: Material(
+          type: MaterialType.transparency,
+          child: card,
+        ),
+      );
+    }
+    return card;
   }
 }
 

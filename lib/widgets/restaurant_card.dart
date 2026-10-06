@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../app_colors.dart';
 import '../screens/RestaurantListScreen.dart' show RestaurantListing;
+import 'shimmer_loading.dart';
 
 /// The standard restaurant card used across the app (Home feed, search, nearby, etc.)
 class RestaurantCard extends StatelessWidget {
@@ -375,3 +376,163 @@ class _RatingBadge extends StatelessWidget {
     );
   }
 }
+
+/// Shimmer wireframe skeleton for RestaurantCard.
+class RestaurantCardSkeleton extends StatelessWidget {
+  const RestaurantCardSkeleton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    const cardRadius = BorderRadius.all(Radius.circular(28));
+
+    return ExcludeSemantics(
+      child: ShimmerLoading(
+        child: Container(
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: cardRadius,
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.black.withValues(alpha: 0.05),
+                blurRadius: 16,
+                offset: const Offset(0, 5),
+              ),
+              BoxShadow(
+                color: AppColors.black.withValues(alpha: 0.02),
+                blurRadius: 4,
+                offset: const Offset(0, 1),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: cardRadius,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Photo wireframe (height: 180)
+                SizedBox(
+                  height: 180,
+                  width: double.infinity,
+                  child: Stack(
+                    children: [
+                      Container(color: AppColors.surfaceRaised),
+                      // Top left badge placeholder
+                      Positioned(
+                        left: 12,
+                        top: 12,
+                        child: Container(
+                          width: 88,
+                          height: 24,
+                          decoration: BoxDecoration(
+                            color: AppColors.white.withValues(alpha: 0.85),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                        ),
+                      ),
+                      // Bottom right open status badge placeholder
+                      Positioned(
+                        right: 12,
+                        bottom: 12,
+                        child: Container(
+                          width: 74,
+                          height: 24,
+                          decoration: BoxDecoration(
+                            color: AppColors.white.withValues(alpha: 0.90),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Card details area
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Title bar
+                                Container(
+                                  width: 170,
+                                  height: 16,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.surfaceRaised,
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                // Cuisine bar
+                                Container(
+                                  width: 220,
+                                  height: 12,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.surfaceRaised,
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          // Rating badge placeholder
+                          Container(
+                            width: 46,
+                            height: 22,
+                            decoration: BoxDecoration(
+                              color: AppColors.surfaceRaised,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      // Distance and ETA row
+                      Row(
+                        children: [
+                          Container(
+                            width: 44,
+                            height: 11,
+                            decoration: BoxDecoration(
+                              color: AppColors.surfaceRaised,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            width: 4,
+                            height: 4,
+                            decoration: const BoxDecoration(
+                              color: AppColors.textMuted,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            width: 54,
+                            height: 11,
+                            decoration: BoxDecoration(
+                              color: AppColors.surfaceRaised,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+

@@ -26,8 +26,14 @@ class RestaurantService {
 
   static Future<List<Map<String, dynamic>>> fetchRestaurants({
     bool forceRefresh = false,
+    bool? openNow,
   }) async {
     if (!forceRefresh && _cachedRestaurants.isNotEmpty) {
+      if (openNow == true) {
+        return _cachedRestaurants
+            .where((v) => v['is_open_now'] == true)
+            .toList();
+      }
       return _cachedRestaurants;
     }
 
@@ -36,7 +42,7 @@ class RestaurantService {
     // 1. Try public vendor list endpoint (/api/v1/vendors/)
     try {
       final response = await http.get(
-        Uri.parse(ApiConfig.vendorsListUrl),
+        Uri.parse(ApiConfig.vendorsListUrl(openNow: openNow)),
         headers: headers,
       );
       if (response.statusCode == 200) {
@@ -49,7 +55,9 @@ class RestaurantService {
               .whereType<Map>()
               .map((v) => Map<String, dynamic>.from(v))
               .toList();
-          _cacheAll(list);
+          if (openNow != true) {
+            _cacheAll(list);
+          }
           return list;
         }
       }

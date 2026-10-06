@@ -33,6 +33,7 @@ import 'RestuarantMenuScreen.dart';
 import '../services/location_service.dart';
 import '../widgets/category_row.dart';
 import '../widgets/discovery_search_bar.dart';
+import '../widgets/shimmer_loading.dart';
 
 /// ---------------------------------------------------------------------
 /// Colors are supplied by the shared app palette.
@@ -492,7 +493,7 @@ class _FoodTypeShopsScreenState extends State<FoodTypeShopsScreen> {
             const Divider(height: 1, thickness: 1, color: Color(0xFFEEEEF0)),
             Expanded(
               child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
+                  ? const _FoodTypeShopLoadingSkeleton()
                   : ListView(
                       padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
                       children: [
@@ -747,7 +748,7 @@ class _FoodTagVendorItemsScreenState extends State<FoodTagVendorItemsScreen> {
         ),
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const _FoodTagVendorItemsLoadingSkeleton()
           : _items.isEmpty
           ? const _EmptyState()
           : ListView.separated(
@@ -888,42 +889,57 @@ class _Header extends StatelessWidget {
         children: [
           // ── top row: back ← | address | notif + cart ──
           Padding(
-            padding: const EdgeInsets.fromLTRB(4, 0, 4, 10),
+            padding: const EdgeInsets.fromLTRB(6, 4, 6, 12),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 IconButton(
                   onPressed: onBack,
+                  constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                  padding: EdgeInsets.zero,
                   icon: const Icon(
-                    Icons.arrow_back_ios_new,
+                    Icons.arrow_back_ios_new_rounded,
                     size: 18,
                     color: AppColors.textPrimary,
                   ),
                 ),
+                const SizedBox(width: 4),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text(
-                        'Searching in',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.textPrimary,
-                          height: 1.2,
-                          letterSpacing: 0.1,
-                        ),
+                      const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.location_on_rounded,
+                            size: 13,
+                            color: AppColors.orange,
+                          ),
+                          SizedBox(width: 3),
+                          Text(
+                            'Searching in',
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.1,
+                              color: AppColors.textPrimary,
+                              height: 1.3,
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 3),
+                      const SizedBox(height: 2),
                       Text(
                         address,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                          fontSize: 13,
-                          color: AppColors.textSecondary,
-                          height: 1.2,
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textPrimary,
+                          letterSpacing: -0.2,
                         ),
                       ),
                     ],
@@ -932,6 +948,7 @@ class _Header extends StatelessWidget {
                 IconButton(
                   tooltip: 'Notifications',
                   constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                  padding: EdgeInsets.zero,
                   icon: const Icon(
                     Icons.notifications_none_rounded,
                     size: 22,
@@ -939,7 +956,7 @@ class _Header extends StatelessWidget {
                   ),
                   onPressed: () => Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (_) => NotificationsScreen(),
+                      builder: (_) => const NotificationsScreen(),
                     ),
                   ),
                 ),
@@ -948,9 +965,10 @@ class _Header extends StatelessWidget {
                   child: IconButton(
                     tooltip: 'Cart',
                     constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                    padding: EdgeInsets.zero,
                     onPressed: () => Navigator.of(context).push(
                       MaterialPageRoute(
-                        builder: (_) => MainCartScreenPage(),
+                        builder: (_) => const MainCartScreenPage(),
                       ),
                     ),
                     icon: Badge(
@@ -1887,4 +1905,247 @@ List<ShopFoodListing> _sampleListingsFor(String foodType) {
       isVeg: false,
     ),
   ];
+}
+
+class _FoodTypeShopLoadingSkeleton extends StatelessWidget {
+  const _FoodTypeShopLoadingSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: ShimmerLoading(
+            child: Container(
+              width: 140,
+              height: 18,
+              decoration: BoxDecoration(
+                color: AppColors.surfaceRaised,
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+          ),
+        ),
+        for (int i = 0; i < 4; i++) ...[
+          const _ShopListingCardSkeleton(),
+          const SizedBox(height: 12),
+        ],
+      ],
+    );
+  }
+}
+
+class _ShopListingCardSkeleton extends StatelessWidget {
+  const _ShopListingCardSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return ExcludeSemantics(
+      child: ShimmerLoading(
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: AppColors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.black.withValues(alpha: 0.04),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 84,
+                height: 84,
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceRaised,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 140,
+                      height: 15,
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceRaised,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Container(
+                      width: 100,
+                      height: 12,
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceRaised,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Container(
+                          width: 36,
+                          height: 18,
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceRaised,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          width: 50,
+                          height: 12,
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceRaised,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          width: 42,
+                          height: 12,
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceRaised,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Container(
+                          width: 75,
+                          height: 13,
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceRaised,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          width: 60,
+                          height: 16,
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceRaised,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _FoodTagVendorItemsLoadingSkeleton extends StatelessWidget {
+  const _FoodTagVendorItemsLoadingSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.separated(
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.all(16),
+      itemCount: 4,
+      separatorBuilder: (_, _) => const SizedBox(height: 12),
+      itemBuilder: (context, index) => const _FoodTagMenuItemCardSkeleton(),
+    );
+  }
+}
+
+class _FoodTagMenuItemCardSkeleton extends StatelessWidget {
+  const _FoodTagMenuItemCardSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return ExcludeSemantics(
+      child: ShimmerLoading(
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: AppColors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.borderLight),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 84,
+                height: 84,
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceRaised,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 130,
+                      height: 15,
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceRaised,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Container(
+                      width: 180,
+                      height: 12,
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceRaised,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Container(
+                          width: 50,
+                          height: 14,
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceRaised,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          width: 60,
+                          height: 16,
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceRaised,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }

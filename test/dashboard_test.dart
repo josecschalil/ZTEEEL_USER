@@ -15,6 +15,7 @@ import 'package:zteel_user/screens/home_discovery_view.dart';
 import 'package:zteel_user/services/cart_service.dart';
 import 'package:zteel_user/services/food_tag_service.dart';
 import 'package:zteel_user/widgets/bottom_nav_bar.dart';
+import 'package:zteel_user/widgets/shimmer_loading.dart';
 
 // Only images use this client; backend requests use MockClient below.
 class _ImageOverrides extends HttpOverrides {
@@ -364,7 +365,7 @@ void main() {
             ),
           ),
         );
-        expect(find.byType(CircularProgressIndicator), findsOneWidget);
+        expect(find.byType(ShimmerLoading), findsWidgets);
         await tester.pumpAndSettle();
         expect(find.text('Pizza offers'), findsOneWidget);
         // Two backend item rows share one offer, so the offer rail has one card.

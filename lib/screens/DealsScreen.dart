@@ -26,6 +26,8 @@ class Deal {
   final String discount;
   final double discountPercent;
   final String scopeType;
+  final List<String> itemIds;
+  final List<String> categoryIds;
   final String timeLeft;
   final String imageUrl;
   final bool isFlash;
@@ -46,6 +48,8 @@ class Deal {
     required this.discount,
     this.discountPercent = 0.0,
     this.scopeType = 'all_menu',
+    this.itemIds = const [],
+    this.categoryIds = const [],
     required this.timeLeft,
     required this.imageUrl,
     this.isFlash = false,
@@ -64,6 +68,33 @@ class Deal {
     final desc = offer['description']?.toString().trim() ?? '';
     final discountPct = double.tryParse(offer['discount_percentage']?.toString() ?? '') ?? 0.0;
     final scopeType = offer['scope_type']?.toString() ?? 'all_menu';
+
+    final itemIds = <String>[];
+    final categoryIds = <String>[];
+
+    if (offer['targets'] is Map) {
+      final targets = offer['targets'] as Map;
+      if (targets['item_ids'] is List) {
+        for (final x in targets['item_ids'] as List) {
+          if (x != null && x.toString().isNotEmpty) itemIds.add(x.toString());
+        }
+      }
+      if (targets['category_ids'] is List) {
+        for (final x in targets['category_ids'] as List) {
+          if (x != null && x.toString().isNotEmpty) categoryIds.add(x.toString());
+        }
+      }
+    }
+    if (offer['item_ids'] is List) {
+      for (final x in offer['item_ids'] as List) {
+        if (x != null && x.toString().isNotEmpty) itemIds.add(x.toString());
+      }
+    }
+    if (offer['category_ids'] is List) {
+      for (final x in offer['category_ids'] as List) {
+        if (x != null && x.toString().isNotEmpty) categoryIds.add(x.toString());
+      }
+    }
 
     final vName = vendor?['business_name']?.toString().trim() ?? 'Restaurant Partner';
     final vImg = _resolveImageUrl(vendor?['cover_image']?.toString() ?? vendor?['icon_image']?.toString() ?? '');
@@ -123,6 +154,8 @@ class Deal {
       discount: discountLabel,
       discountPercent: discountPct,
       scopeType: scopeType,
+      itemIds: itemIds,
+      categoryIds: categoryIds,
       timeLeft: timeLeft,
       imageUrl: img,
       isFlash: discountPct >= 30 || timeLeft.contains('m left') || timeLeft.contains('h left'),
@@ -873,25 +906,31 @@ class _SpotlightCard extends StatelessWidget {
                           const SizedBox(height: 4),
                           Row(
                             children: [
-                              Text(
-                                deal.restaurant,
-                                style: const TextStyle(
-                                  color: AppColors.white,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w700,
+                              Flexible(
+                                child: Text(
+                                  deal.restaurant,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    color: AppColors.white,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                  ),
                                 ),
                               ),
-                              const SizedBox(width: 6),
-                              const Text('•', style: TextStyle(color: AppColors.white60)),
-                              const SizedBox(width: 6),
-                              Text(
-                                deal.distance,
-                                style: const TextStyle(
-                                  color: AppColors.white70,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
+                              if (deal.distance.isNotEmpty) ...[
+                                const SizedBox(width: 6),
+                                const Text('•', style: TextStyle(color: AppColors.white60)),
+                                const SizedBox(width: 6),
+                                Text(
+                                  deal.distance,
+                                  style: const TextStyle(
+                                    color: AppColors.white70,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                  ),
                                 ),
-                              ),
+                              ],
                             ],
                           ),
                         ],

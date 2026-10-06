@@ -7,15 +7,13 @@ import '../services/location_service.dart';
 import '../widgets/category_row.dart';
 import '../widgets/discovery_search_bar.dart';
 import '../widgets/offer_widgets.dart';
-import '../widgets/restaurant_card.dart';
-import '../widgets/shimmer_loading.dart';
 import 'DealsScreen.dart';
 import 'FoodTypeShopScreen.dart';
 import 'LocationPageScreen.dart';
 import 'NotificationScreen.dart';
 import 'OfferExplanationScreen.dart';
-import 'RestuarantMenuScreen.dart';
 import 'RestaurantListScreen.dart';
+import 'RestuarantMenuScreen.dart';
 import 'SearchScreen.dart';
 
 class HomeRestaurant {
@@ -146,9 +144,9 @@ class _HomeDiscoveryViewState extends State<HomeDiscoveryView> {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => NearbyRestaurantsScreen(
-          restaurants: widget.restaurants.isEmpty
-              ? null
-              : widget.restaurants.map((r) => r.toRestaurantListing()).toList(),
+          restaurants: widget.restaurants
+              .map((r) => r.toRestaurantListing())
+              .toList(),
           preset: preset,
         ),
       ),
@@ -208,6 +206,7 @@ class _HomeDiscoveryViewState extends State<HomeDiscoveryView> {
   }
 
   void _openDeal(Deal deal) {
+    final cardData = _dealToOfferCardData(deal);
     final subtitle = deal.description.isNotEmpty
         ? deal.description
         : [
@@ -216,12 +215,19 @@ class _HomeDiscoveryViewState extends State<HomeDiscoveryView> {
           ].where((value) => value.isNotEmpty).join(' · ');
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => OfferExplanationScreen(
+        builder: (context) => OfferExplanationScreen(
           title: deal.title,
           subtitle: subtitle.isEmpty ? 'On selected items' : subtitle,
           badge: deal.discount,
           expiry: deal.timeLeft.isEmpty ? 'Limited time' : deal.timeLeft,
           restaurantName: deal.restaurant,
+          offerCardData: cardData,
+          vendorId: deal.vendorId,
+          dealId: deal.id ?? deal.title,
+          discountPercent: deal.discountPercent,
+          scopeType: deal.scopeType,
+          itemIds: deal.itemIds,
+          categoryIds: deal.categoryIds,
         ),
       ),
     );
@@ -244,13 +250,24 @@ class _HomeDiscoveryViewState extends State<HomeDiscoveryView> {
       ),
       child: Material(
         color: AppColors.white,
-        child: CustomScrollView(
-          key: const PageStorageKey('home-discovery-feed'),
-          physics: const BouncingScrollPhysics(),
-          slivers: [
-            SliverToBoxAdapter(
-              child: Container(
-                color: AppColors.white,
+        child: DecoratedBox(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topRight,
+              end: Alignment.bottomLeft,
+              colors: [
+                Color(0xFFFFF0EA),
+                Color(0xFFFFF7F4),
+                AppColors.white,
+              ],
+              stops: [0.0, 0.28, 0.70],
+            ),
+          ),
+          child: CustomScrollView(
+            key: const PageStorageKey('home-discovery-feed'),
+            physics: const BouncingScrollPhysics(),
+            slivers: [
+              SliverToBoxAdapter(
                 child: SafeArea(
                   bottom: false,
                   child: Column(
@@ -337,7 +354,6 @@ class _HomeDiscoveryViewState extends State<HomeDiscoveryView> {
                   ),
                 ),
               ),
-            ),
             SliverToBoxAdapter(
               child: _HomeSectionHeader(
                 title: 'Restaurants near you',
@@ -388,6 +404,7 @@ class _HomeDiscoveryViewState extends State<HomeDiscoveryView> {
           ],
         ),
       ),
+    ),
     );
   }
 }
@@ -589,165 +606,7 @@ class _RestaurantFeedSkeleton extends StatelessWidget {
           child: Semantics(
             label: 'Loading restaurants',
             container: true,
-            child: const _RestaurantCardSkeleton(),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _RestaurantCardSkeleton extends StatelessWidget {
-  const _RestaurantCardSkeleton();
-
-  @override
-  Widget build(BuildContext context) {
-    const cardRadius = BorderRadius.all(Radius.circular(28));
-
-    return ExcludeSemantics(
-      child: ShimmerLoading(
-        child: Container(
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: cardRadius,
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.black.withValues(alpha: 0.05),
-                blurRadius: 16,
-                offset: const Offset(0, 5),
-              ),
-              BoxShadow(
-                color: AppColors.black.withValues(alpha: 0.02),
-                blurRadius: 4,
-                offset: const Offset(0, 1),
-              ),
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: cardRadius,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Photo wireframe (height: 180)
-                SizedBox(
-                  height: 180,
-                  width: double.infinity,
-                  child: Stack(
-                    children: [
-                      Container(color: AppColors.surfaceRaised),
-                      // Top left badge placeholder
-                      Positioned(
-                        left: 12,
-                        top: 12,
-                        child: Container(
-                          width: 88,
-                          height: 24,
-                          decoration: BoxDecoration(
-                            color: AppColors.white.withValues(alpha: 0.85),
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                        ),
-                      ),
-                      // Bottom right open status badge placeholder
-                      Positioned(
-                        right: 12,
-                        bottom: 12,
-                        child: Container(
-                          width: 74,
-                          height: 24,
-                          decoration: BoxDecoration(
-                            color: AppColors.white.withValues(alpha: 0.90),
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                // Card details area
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // Title bar
-                                Container(
-                                  width: 170,
-                                  height: 16,
-                                  decoration: BoxDecoration(
-                                    color: AppColors.surfaceRaised,
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                ),
-                                const SizedBox(height: 6),
-                                // Cuisine bar
-                                Container(
-                                  width: 220,
-                                  height: 12,
-                                  decoration: BoxDecoration(
-                                    color: AppColors.surfaceRaised,
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          // Rating badge placeholder
-                          Container(
-                            width: 46,
-                            height: 22,
-                            decoration: BoxDecoration(
-                              color: AppColors.surfaceRaised,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      // Distance and ETA row
-                      Row(
-                        children: [
-                          Container(
-                            width: 44,
-                            height: 11,
-                            decoration: BoxDecoration(
-                              color: AppColors.surfaceRaised,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Container(
-                            width: 4,
-                            height: 4,
-                            decoration: const BoxDecoration(
-                              color: AppColors.textMuted,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Container(
-                            width: 54,
-                            height: 11,
-                            decoration: BoxDecoration(
-                              color: AppColors.surfaceRaised,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+            child: const RestaurantCardSkeleton(),
           ),
         ),
       ),

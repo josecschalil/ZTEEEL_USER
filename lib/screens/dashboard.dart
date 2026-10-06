@@ -109,6 +109,7 @@ class _HomeDiscoveryScreenState extends State<HomeDiscoveryScreen> {
     if (RestaurantService.cachedRestaurants.isNotEmpty) {
       _liveRestaurants = RestaurantService.cachedRestaurants
           .map((v) => _homeRestaurantFromVendor(v))
+          .where((r) => r.isOpen)
           .toList();
       _isLoadingRestaurants = false;
     }
@@ -140,6 +141,7 @@ class _HomeDiscoveryScreenState extends State<HomeDiscoveryScreen> {
     setState(() {
       _liveRestaurants = vendors
           .map((v) => _homeRestaurantFromVendor(v))
+          .where((r) => r.isOpen)
           .toList();
       _isLoadingRestaurants = false;
     });
