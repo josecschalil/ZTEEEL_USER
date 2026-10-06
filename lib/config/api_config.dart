@@ -19,6 +19,8 @@ class ApiConfig {
       '$baseUrl/api/v1/vendor/$vendorId/menu/';
   static String vendorOffersUrl(String vendorId) =>
       '$baseUrl/api/v1/vendor/$vendorId/offers/';
+  static String vendorReviewsUrl(String vendorId) =>
+      '$baseUrl/api/v1/vendor/$vendorId/reviews/';
 
   static String get cartUrl => '$baseUrl/api/v1/cart/';
   static String get cartItemsUrl => '$baseUrl/api/v1/cart/items/';
