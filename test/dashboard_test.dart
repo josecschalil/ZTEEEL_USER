@@ -257,7 +257,7 @@ void main() {
         expect(home.foodTags.map((tag) => tag.name), ['Pizza', 'Momos']);
         expect(
           home.foodTags.first.imageUrl,
-          'http://68.233.116.23:8000/media/food_tags/pizza.jpg',
+          'https://api.zteel.in/media/food_tags/pizza.jpg',
         );
         expect(home.deals, hasLength(5));
         expect(

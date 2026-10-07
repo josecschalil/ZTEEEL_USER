@@ -312,21 +312,19 @@ class _DealsScreenState extends State<DealsScreen> {
     setState(() => _isLoading = true);
     try {
       final rawOffers = await OfferService.fetchOffers(forceRefresh: true);
-      if (rawOffers.isNotEmpty) {
-        final parsed = await dealsFromOffers(rawOffers);
-        if (mounted) {
-          setState(() {
-            _allDeals = parsed;
-            _isLoading = false;
-          });
-          return;
-        }
+      final parsed = await dealsFromOffers(rawOffers);
+      if (mounted) {
+        setState(() {
+          _allDeals = parsed;
+          _isLoading = false;
+        });
+        return;
       }
     } catch (_) {}
 
     if (mounted) {
       setState(() {
-        _allDeals = deals;
+        _allDeals = const [];
         _isLoading = false;
       });
     }
@@ -780,7 +778,7 @@ class _DealsScreenState extends State<DealsScreen> {
                     const SliverToBoxAdapter(child: SizedBox(height: 12)),
                     SliverToBoxAdapter(
                       child: _SpotlightCarousel(
-                        deals: spotlightDeals.isNotEmpty ? spotlightDeals : deals,
+                        deals: spotlightDeals,
                         onDealTap: _openDeal,
                         isDark: isDark,
                       ),

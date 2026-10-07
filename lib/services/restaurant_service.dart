@@ -102,7 +102,7 @@ class RestaurantService {
         final results = decoded is Map<String, dynamic>
             ? (decoded['results'] ?? decoded['data'])
             : decoded;
-        if (results is List && results.isNotEmpty) {
+        if (results is List) {
           final list = results
               .whereType<Map>()
               .map((v) => Map<String, dynamic>.from(v))
@@ -115,31 +115,7 @@ class RestaurantService {
       }
     } catch (_) {}
 
-    // 2. Try alternate vendor list endpoint (/api/v1/vendor/list/)
-    try {
-      final response = await http
-          .get(
-            Uri.parse(ApiConfig.vendorAltListUrl),
-            headers: headers,
-          )
-          .timeout(_kTimeout);
-      if (response.statusCode == 200) {
-        final decoded = jsonDecode(response.body);
-        final results = decoded is Map<String, dynamic>
-            ? (decoded['results'] ?? decoded['data'])
-            : decoded;
-        if (results is List && results.isNotEmpty) {
-          final list = results
-              .whereType<Map>()
-              .map((v) => Map<String, dynamic>.from(v))
-              .toList();
-          _cacheAll(list, persist: true);
-          return list;
-        }
-      }
-    } catch (_) {}
-
-    // 3. Try offer feed to discover vendors in parallel
+    // 2. Try offer feed to discover vendors in parallel
     try {
       final response = await http
           .get(

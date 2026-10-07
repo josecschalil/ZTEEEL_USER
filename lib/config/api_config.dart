@@ -4,7 +4,7 @@ import '../services/discovery_preferences_service.dart';
 class ApiConfig {
   ApiConfig._();
 
-  static const String baseUrl = 'http://68.233.116.23:8000';
+  static const String baseUrl = 'https://api.zteel.in';
 
   /// Default search radius in kilometers for restaurants and deal feeds.
   static double get defaultSearchRadiusKm =>
@@ -64,7 +64,6 @@ class ApiConfig {
     final query = params.isNotEmpty ? '?${params.join('&')}' : '';
     return '$baseUrl/api/v1/vendors/$query';
   }
-  static String get vendorAltListUrl => '$baseUrl/api/v1/vendor/list/';
   static String searchVendorsUrl({
     String query = 'a',
     String filter = 'vendors',

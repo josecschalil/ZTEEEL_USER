@@ -293,7 +293,7 @@ class _NearbyRestaurantsScreenState extends State<NearbyRestaurantsScreen> {
   @override
   void didUpdateWidget(covariant NearbyRestaurantsScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.restaurants != null && widget.restaurants!.isNotEmpty) {
+    if (widget.restaurants != null) {
       setState(() {
         _all = List.from(widget.restaurants!);
         _isLoading = false;
@@ -327,9 +327,7 @@ class _NearbyRestaurantsScreenState extends State<NearbyRestaurantsScreen> {
     );
     if (!mounted) return;
     setState(() {
-      if (vendors.isNotEmpty) {
-        _all = vendors.map(restaurantListingFromVendor).toList();
-      }
+      _all = vendors.map(restaurantListingFromVendor).toList();
       _isLoading = false;
     });
   }

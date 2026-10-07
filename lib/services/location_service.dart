@@ -86,33 +86,32 @@ class LocationService {
   }
 
   /// Ensures a valid location coordinate is available.
-  /// 1. Reads existing saved coordinates.
-  /// 2. If null, attempts GPS detection.
-  /// 3. If GPS is unavailable, saves and returns defaultFallbackLocation.
+  /// 1. Reads existing saved coordinates from storage.
+  /// 2. If null, attempts GPS detection (allowing user time to respond to permission dialog).
+  /// 3. If GPS is unavailable/denied, returns defaultFallbackLocation without saving it to disk.
   static Future<SavedLocationCoordinates> ensureLocation() async {
     final existing = await load();
     if (existing != null) return existing;
 
     try {
       if (!kIsWeb && Platform.environment.containsKey('FLUTTER_TEST')) {
-        await save(defaultFallbackLocation);
+        locationNotifier.value = defaultFallbackLocation;
         return defaultFallbackLocation;
       }
       final serviceEnabled = await Geolocator.isLocationServiceEnabled()
-          .timeout(const Duration(milliseconds: 500));
+          .timeout(const Duration(seconds: 2), onTimeout: () => false);
       if (serviceEnabled) {
         var permission = await Geolocator.checkPermission()
-            .timeout(const Duration(milliseconds: 500));
+            .timeout(const Duration(seconds: 2), onTimeout: () => LocationPermission.denied);
         if (permission == LocationPermission.denied) {
-          permission = await Geolocator.requestPermission()
-              .timeout(const Duration(milliseconds: 1500));
+          permission = await Geolocator.requestPermission();
         }
         if (permission == LocationPermission.always ||
             permission == LocationPermission.whileInUse) {
           final position = await Geolocator.getCurrentPosition(
             locationSettings: const LocationSettings(
               accuracy: LocationAccuracy.medium,
-              timeLimit: Duration(seconds: 2),
+              timeLimit: Duration(seconds: 6),
             ),
           );
           final detected = SavedLocationCoordinates(
@@ -127,7 +126,15 @@ class LocationService {
       }
     } catch (_) {}
 
-    await save(defaultFallbackLocation);
+    // When GPS is unavailable or permission is skipped, set in-memory fallback
+    // without polluting SharedPreferences so future detection attempts remain possible.
+    if (locationNotifier.value == null) {
+      locationNotifier.value = defaultFallbackLocation;
+    }
+    if (addressNotifier.value == 'Choose your location') {
+      addressNotifier.value = defaultFallbackLocation.address;
+    }
     return defaultFallbackLocation;
   }
 }
+

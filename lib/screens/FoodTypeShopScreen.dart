@@ -207,6 +207,7 @@ class _FoodTypeShopsScreenState extends State<FoodTypeShopsScreen> {
     final live = LocationService.addressNotifier.value;
     if (_address != live) {
       setState(() => _address = live);
+      _refreshData();
     }
   }
 
@@ -231,6 +232,7 @@ class _FoodTypeShopsScreenState extends State<FoodTypeShopsScreen> {
     final address = result.address.isEmpty ? 'Selected location' : result.address;
     LocationService.addressNotifier.value = address;
     setState(() => _address = address);
+    _refreshData();
   }
 
   Future<void> _refreshData() async {
