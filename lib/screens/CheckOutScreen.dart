@@ -5,15 +5,33 @@ import 'RecentOrderScreen.dart';
 import '../services/cart_service.dart';
 import '../services/redemption_service.dart';
 
+/// A line from an expired order which could not be put back in the cart.
+/// It remains visible during checkout so the customer can explicitly remove it
+/// before creating a new redemption QR.
+class UnavailableReorderItem {
+  final String name;
+  final int quantity;
+  final String? imageUrl;
+  final String reason;
+
+  const UnavailableReorderItem({
+    required this.name,
+    required this.quantity,
+    this.imageUrl,
+    this.reason = 'No longer available',
+  });
+}
 
 class CheckoutScreen extends StatefulWidget {
   final String? vendorId;
   final bool checkoutAll;
+  final List<UnavailableReorderItem> unavailableReorderItems;
 
   const CheckoutScreen({
     super.key,
     this.vendorId,
     this.checkoutAll = false,
+    this.unavailableReorderItems = const [],
   });
 
   @override
@@ -24,10 +42,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   bool _isLoading = false;
   bool _isGeneratingQr = false;
   String? _selectedRewardOptionId;
+  late List<UnavailableReorderItem> _unavailableReorderItems;
 
   @override
   void initState() {
     super.initState();
+    _unavailableReorderItems = List.of(widget.unavailableReorderItems);
     _loadCart();
     CartService.cartNotifier.addListener(_onCartChanged);
     CartService.basketsNotifier.addListener(_onCartChanged);
@@ -84,6 +104,15 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   }
 
   Future<void> _onGenerateQr() async {
+    if (_unavailableReorderItems.isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Remove unavailable items before completing this reorder.'),
+          backgroundColor: AppColors.primary,
+        ),
+      );
+      return;
+    }
     if (widget.checkoutAll) {
       final baskets = CartService.allBaskets;
       if (baskets.isEmpty) {
@@ -238,7 +267,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   child: CircularProgressIndicator(color: AppColors.primary),
                 ),
               )
-            else if (cart.isEmpty)
+            else if (cart.isEmpty && _unavailableReorderItems.isEmpty)
               _buildEmptyView(isDark)
             else
               Expanded(
@@ -248,6 +277,16 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     vertical: 24,
                   ),
                   children: [
+                    if (_unavailableReorderItems.isNotEmpty) ...[
+                      _UnavailableReorderNotice(
+                        isDark: isDark,
+                        items: _unavailableReorderItems,
+                        onRemove: (item) => setState(
+                          () => _unavailableReorderItems.remove(item),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
                     for (final item in cart.items)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 16),
@@ -434,6 +473,91 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// ---------------------------------------------------------------------
+/// Reorder availability review
+/// ---------------------------------------------------------------------
+class _UnavailableReorderNotice extends StatelessWidget {
+  final bool isDark;
+  final List<UnavailableReorderItem> items;
+  final ValueChanged<UnavailableReorderItem> onRemove;
+
+  const _UnavailableReorderNotice({
+    required this.isDark,
+    required this.items,
+    required this.onRemove,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final background = isDark
+        ? AppColors.materialRed.withValues(alpha: 0.16)
+        : AppColors.materialRed.shade50;
+    final foreground = isDark
+        ? AppColors.materialRed.shade200
+        : AppColors.materialRed.shade800;
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.materialRed.withValues(alpha: 0.45)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.error_outline_rounded, color: foreground, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Some items are unavailable',
+                  style: TextStyle(
+                    color: foreground,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 5),
+          Text(
+            'Remove these items to continue with the available items.',
+            style: TextStyle(color: foreground, fontSize: 12),
+          ),
+          const SizedBox(height: 8),
+          for (final item in items)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      '${item.name} × ${item.quantity} — ${item.reason}',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: foreground,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => onRemove(item),
+                    child: const Text('Remove'),
+                  ),
+                ],
+              ),
+            ),
+        ],
       ),
     );
   }

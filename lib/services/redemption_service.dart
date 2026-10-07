@@ -191,6 +191,7 @@ class RedemptionSessionData {
   }
 
   bool get isCancelled => status.toLowerCase() == 'cancelled';
+  bool get isRejected => status.toLowerCase() == 'rejected';
 
   factory RedemptionSessionData.fromJson(Map<String, dynamic> json) {
     CartVendor? vendor;

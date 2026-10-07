@@ -405,7 +405,8 @@ class _QrCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isConfirmed = status == 'confirmed' || status == 'completed';
-    final isExpired = status == 'expired' || status == 'cancelled';
+    final isRejected = status == 'rejected';
+    final isExpired = status == 'expired' || status == 'cancelled' || isRejected;
 
     return Container(
       padding: const EdgeInsets.all(24),
@@ -512,7 +513,7 @@ class _QrCard extends StatelessWidget {
                 border: Border.all(color: AppColors.materialRed),
               ),
               child: Text(
-                status.toUpperCase(),
+                isRejected ? 'REJECTED BY RESTAURANT' : status.toUpperCase(),
                 style: const TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
@@ -531,7 +532,9 @@ class _QrCard extends StatelessWidget {
           Text(
             isConfirmed
                 ? 'Your order has been verified by the restaurant counter.'
-                : 'Show this QR code to the cashier at the counter to verify and redeem your deal.',
+                : (isRejected
+                    ? 'The restaurant could not accept this order. Please place a new order when ready.'
+                    : 'Show this QR code to the cashier at the counter to verify and redeem your deal.'),
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 13,

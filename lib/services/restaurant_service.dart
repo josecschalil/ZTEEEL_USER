@@ -294,6 +294,34 @@ class RestaurantService {
     }
   }
 
+  /// Fetches a menu that is safe to use for a time-sensitive availability
+  /// decision. Unlike [fetchVendorMenu], this never falls back to cached data.
+  static Future<List<Map<String, dynamic>>?> fetchLiveVendorMenu(
+    String vendorId,
+  ) async {
+    try {
+      final headers = await AuthService.getAuthHeaders();
+      final response = await http.get(
+        Uri.parse(ApiConfig.vendorMenuUrl(vendorId)),
+        headers: headers,
+      );
+      if (response.statusCode != 200) return null;
+      final decoded = jsonDecode(response.body);
+      final results = decoded is Map<String, dynamic>
+          ? (decoded['results'] ?? decoded['data'])
+          : decoded;
+      if (results is! List) return null;
+      final menu = results
+          .whereType<Map>()
+          .map((category) => Map<String, dynamic>.from(category))
+          .toList();
+      _menuCache[vendorId] = menu;
+      return menu;
+    } catch (_) {
+      return null;
+    }
+  }
+
   static Future<List<Map<String, dynamic>>> fetchVendorOffers(
     String vendorId, {
     bool forceRefresh = false,
