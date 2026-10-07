@@ -15,6 +15,7 @@ class DiscoverySearchBar extends StatelessWidget {
   final VoidCallback? onClear;
   final VoidCallback? onFilterTap;
   final bool isDark;
+  final Color? backgroundColor;
   final Key? shellKey;
   final Key? searchKey;
   final Key? filterKey;
@@ -37,6 +38,7 @@ class DiscoverySearchBar extends StatelessWidget {
     required this.onSearchTap,
     this.onFilterTap,
     this.isDark = false,
+    this.backgroundColor,
     this.shellKey,
     this.searchKey,
     this.filterKey,
@@ -58,6 +60,7 @@ class DiscoverySearchBar extends StatelessWidget {
     this.onClear,
     this.onFilterTap,
     this.isDark = false,
+    this.backgroundColor,
     this.shellKey,
     this.searchKey,
     this.filterKey,
@@ -72,7 +75,7 @@ class DiscoverySearchBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final surface = isDark ? AppColors.cardDark : AppColors.surface;
+    final surface = backgroundColor ?? (isDark ? AppColors.cardDark : AppColors.surface);
     final foreground = isDark ? AppColors.white : AppColors.textPrimary;
     final hint = isDark ? AppColors.textMutedDark : AppColors.textMuted;
     final radius = BorderRadius.circular(28);
@@ -86,7 +89,7 @@ class DiscoverySearchBar extends StatelessWidget {
           color: surface,
           borderRadius: radius,
           border: isDark ? Border.all(color: AppColors.borderDark) : null,
-          boxShadow: isDark
+          boxShadow: (isDark || backgroundColor != null)
               ? null
               : [
                   BoxShadow(

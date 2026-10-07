@@ -1,11 +1,16 @@
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:zteel_user/config/api_config.dart';
 import 'package:zteel_user/services/auth_service.dart';
+import 'package:zteel_user/services/location_service.dart';
 
 class RestaurantService {
   RestaurantService._();
+
+  static const String _kRestaurantsCacheKey = 'cached_restaurants_v1';
+  static const Duration _kTimeout = Duration(seconds: 4);
 
   static List<Map<String, dynamic>> _cachedRestaurants = [];
   static final Map<String, Map<String, dynamic>> _vendorCache = {};
@@ -24,6 +29,30 @@ class RestaurantService {
   static Map<String, dynamic>? getCachedVendor(String vendorId) =>
       _vendorCache[vendorId];
 
+  /// Loads cached restaurants from local storage for instant cold-boot startup.
+  static Future<List<Map<String, dynamic>>> loadCachedRestaurants() async {
+    if (_cachedRestaurants.isNotEmpty) {
+      return _cachedRestaurants;
+    }
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_kRestaurantsCacheKey);
+      if (raw != null && raw.isNotEmpty) {
+        final decoded = jsonDecode(raw);
+        if (decoded is List) {
+          final list = decoded
+              .whereType<Map>()
+              .map((item) => Map<String, dynamic>.from(item))
+              .toList();
+          if (list.isNotEmpty) {
+            _cacheAll(list, persist: false);
+          }
+        }
+      }
+    } catch (_) {}
+    return _cachedRestaurants;
+  }
+
   static Future<List<Map<String, dynamic>>> fetchRestaurants({
     bool forceRefresh = false,
     bool? openNow,
@@ -31,20 +60,33 @@ class RestaurantService {
     if (!forceRefresh && _cachedRestaurants.isNotEmpty) {
       if (openNow == true) {
         return _cachedRestaurants
-            .where((v) => v['is_open_now'] == true)
+            .where((v) =>
+                v['is_open_now'] == true ||
+                v['is_open'] == true ||
+                v['isOpen'] == true ||
+                v['open_now'] == true)
             .toList();
       }
       return _cachedRestaurants;
     }
 
     final headers = await AuthService.getAuthHeaders();
+    final location = await LocationService.load();
 
     // 1. Try public vendor list endpoint (/api/v1/vendors/)
     try {
-      final response = await http.get(
-        Uri.parse(ApiConfig.vendorsListUrl(openNow: openNow)),
-        headers: headers,
-      );
+      final response = await http
+          .get(
+            Uri.parse(
+              ApiConfig.vendorsListUrl(
+                openNow: openNow,
+                latitude: location?.latitude,
+                longitude: location?.longitude,
+              ),
+            ),
+            headers: headers,
+          )
+          .timeout(_kTimeout);
       if (response.statusCode == 200) {
         final decoded = jsonDecode(response.body);
         final results = decoded is Map<String, dynamic>
@@ -56,7 +98,7 @@ class RestaurantService {
               .map((v) => Map<String, dynamic>.from(v))
               .toList();
           if (openNow != true) {
-            _cacheAll(list);
+            _cacheAll(list, persist: true);
           }
           return list;
         }
@@ -65,10 +107,12 @@ class RestaurantService {
 
     // 2. Try alternate vendor list endpoint (/api/v1/vendor/list/)
     try {
-      final response = await http.get(
-        Uri.parse(ApiConfig.vendorAltListUrl),
-        headers: headers,
-      );
+      final response = await http
+          .get(
+            Uri.parse(ApiConfig.vendorAltListUrl),
+            headers: headers,
+          )
+          .timeout(_kTimeout);
       if (response.statusCode == 200) {
         final decoded = jsonDecode(response.body);
         final results = decoded is Map<String, dynamic>
@@ -79,18 +123,20 @@ class RestaurantService {
               .whereType<Map>()
               .map((v) => Map<String, dynamic>.from(v))
               .toList();
-          _cacheAll(list);
+          _cacheAll(list, persist: true);
           return list;
         }
       }
     } catch (_) {}
 
-    // 3. Try offer feed to discover vendors
+    // 3. Try offer feed to discover vendors in parallel
     try {
-      final response = await http.get(
-        Uri.parse(ApiConfig.offerFeedUrl),
-        headers: headers,
-      );
+      final response = await http
+          .get(
+            Uri.parse(ApiConfig.offerFeedUrl()),
+            headers: headers,
+          )
+          .timeout(_kTimeout);
       if (response.statusCode == 200) {
         final decoded = jsonDecode(response.body);
         final results = decoded is Map<String, dynamic>
@@ -118,10 +164,13 @@ class RestaurantService {
           }
 
           if (vendorIds.isNotEmpty) {
+            final vendorResults = await Future.wait(
+              vendorIds.map((id) => fetchVendor(id)),
+            );
             final vendors = <Map<String, dynamic>>[];
-            for (final id in vendorIds) {
-              final v = await fetchVendor(id);
+            for (final v in vendorResults) {
               if (v != null) {
+                final id = v['id']?.toString() ?? '';
                 if (v['best_offer'] == null && offersByVendor.containsKey(id)) {
                   v['best_offer'] = offersByVendor[id];
                 }
@@ -129,7 +178,7 @@ class RestaurantService {
               }
             }
             if (vendors.isNotEmpty) {
-              _cacheAll(vendors);
+              _cacheAll(vendors, persist: true);
               return vendors;
             }
           }
@@ -139,10 +188,12 @@ class RestaurantService {
 
     // 4. Try search endpoint
     try {
-      final response = await http.get(
-        Uri.parse(ApiConfig.searchVendorsUrl),
-        headers: headers,
-      );
+      final response = await http
+          .get(
+            Uri.parse(ApiConfig.searchVendorsUrl),
+            headers: headers,
+          )
+          .timeout(_kTimeout);
       if (response.statusCode == 200) {
         final decoded = jsonDecode(response.body);
         final results = decoded is Map<String, dynamic>
@@ -153,12 +204,15 @@ class RestaurantService {
               .whereType<Map>()
               .map((v) => Map<String, dynamic>.from(v))
               .toList();
-          _cacheAll(list);
+          _cacheAll(list, persist: true);
           return list;
         }
       }
     } catch (_) {}
 
+    if (_cachedRestaurants.isEmpty) {
+      await loadCachedRestaurants();
+    }
     return _cachedRestaurants;
   }
 
@@ -171,10 +225,12 @@ class RestaurantService {
     }
     try {
       final headers = await AuthService.getAuthHeaders();
-      final response = await http.get(
-        Uri.parse(ApiConfig.vendorDetailUrl(vendorId)),
-        headers: headers,
-      );
+      final response = await http
+          .get(
+            Uri.parse(ApiConfig.vendorDetailUrl(vendorId)),
+            headers: headers,
+          )
+          .timeout(_kTimeout);
       if (response.statusCode == 200) {
         final decoded = jsonDecode(response.body);
         if (decoded is Map<String, dynamic>) {
@@ -195,10 +251,12 @@ class RestaurantService {
     }
     try {
       final headers = await AuthService.getAuthHeaders();
-      final response = await http.get(
-        Uri.parse(ApiConfig.vendorMenuUrl(vendorId)),
-        headers: headers,
-      );
+      final response = await http
+          .get(
+            Uri.parse(ApiConfig.vendorMenuUrl(vendorId)),
+            headers: headers,
+          )
+          .timeout(_kTimeout);
       if (response.statusCode != 200) return _menuCache[vendorId] ?? const [];
       final decoded = jsonDecode(response.body);
       final results = decoded is Map<String, dynamic>
@@ -225,10 +283,12 @@ class RestaurantService {
     }
     try {
       final headers = await AuthService.getAuthHeaders();
-      final response = await http.get(
-        Uri.parse(ApiConfig.vendorOffersUrl(vendorId)),
-        headers: headers,
-      );
+      final response = await http
+          .get(
+            Uri.parse(ApiConfig.vendorOffersUrl(vendorId)),
+            headers: headers,
+          )
+          .timeout(_kTimeout);
       if (response.statusCode != 200) return _offersCache[vendorId] ?? const [];
       final decoded = jsonDecode(response.body);
       final results = decoded is Map<String, dynamic>
@@ -246,13 +306,18 @@ class RestaurantService {
     }
   }
 
-  static void _cacheAll(List<Map<String, dynamic>> list) {
+  static void _cacheAll(List<Map<String, dynamic>> list, {bool persist = false}) {
     _cachedRestaurants = list;
     for (final v in list) {
       final id = v['id']?.toString();
       if (id != null && id.isNotEmpty) {
         _vendorCache[id] = v;
       }
+    }
+    if (persist && list.isNotEmpty) {
+      SharedPreferences.getInstance().then((prefs) {
+        prefs.setString(_kRestaurantsCacheKey, jsonEncode(list));
+      }).catchError((_) {});
     }
   }
 
@@ -261,10 +326,12 @@ class RestaurantService {
   ) async {
     try {
       final headers = await AuthService.getAuthHeaders();
-      final response = await http.get(
-        Uri.parse(ApiConfig.vendorReviewsUrl(vendorId)),
-        headers: headers,
-      );
+      final response = await http
+          .get(
+            Uri.parse(ApiConfig.vendorReviewsUrl(vendorId)),
+            headers: headers,
+          )
+          .timeout(_kTimeout);
       if (response.statusCode == 200) {
         final decoded = jsonDecode(response.body);
         if (decoded is Map<String, dynamic>) {
@@ -293,11 +360,13 @@ class RestaurantService {
         if (userName != null && userName.isNotEmpty) 'user_name': userName,
       });
 
-      final response = await http.post(
-        Uri.parse(ApiConfig.vendorReviewsUrl(vendorId)),
-        headers: fullHeaders,
-        body: body,
-      );
+      final response = await http
+          .post(
+            Uri.parse(ApiConfig.vendorReviewsUrl(vendorId)),
+            headers: fullHeaders,
+            body: body,
+          )
+          .timeout(_kTimeout);
       final decoded = jsonDecode(response.body);
       if (response.statusCode >= 200 && response.statusCode < 300) {
         return {'success': true, 'data': decoded};

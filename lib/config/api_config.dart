@@ -4,6 +4,9 @@ class ApiConfig {
 
   static const String baseUrl = 'http://68.233.116.23:8000';
 
+  /// Default search radius in kilometers for restaurants and deal feeds.
+  static const double defaultSearchRadiusKm = 15.0;
+
   static String get sendOtpUrl => '$baseUrl/api/v1/auth/send-otp/';
   static String get customerVerifyOtpUrl =>
       '$baseUrl/api/v1/auth/customer/verify-otp/';
@@ -11,16 +14,53 @@ class ApiConfig {
   static String get tokenRefreshUrl => '$baseUrl/api/v1/auth/refresh/';
   static String get meUrl => '$baseUrl/api/v1/auth/me/';
   static String get customerProfileUrl => '$baseUrl/api/v1/profile/';
-  static String get offerFeedUrl => '$baseUrl/api/v1/offers/feed/';
+  static String offerFeedUrl({double? latitude, double? longitude, double? radiusKm}) {
+    final params = <String>[];
+    if (latitude != null && longitude != null) {
+      params.add('latitude=$latitude&longitude=$longitude');
+      final radius = radiusKm ?? defaultSearchRadiusKm;
+      params.add('radius_km=$radius');
+    }
+    final query = params.isNotEmpty ? '?${params.join('&')}' : '';
+    return '$baseUrl/api/v1/offers/feed/$query';
+  }
   static String get foodTagsUrl => '$baseUrl/api/v1/food-tags/';
-  static String foodTagVendorsUrl(String tagId) =>
-      '$baseUrl/api/v1/food-tags/$tagId/vendors/';
-  static String foodTagOffersUrl(String tagId) =>
-      '$baseUrl/api/v1/food-tags/$tagId/offers/';
+  static String foodTagVendorsUrl(String tagId, {double? latitude, double? longitude, double? radiusKm, bool? openNow, bool? offersOnly}) {
+    final params = <String>[];
+    if (latitude != null && longitude != null) {
+      params.add('latitude=$latitude&longitude=$longitude');
+      final radius = radiusKm ?? defaultSearchRadiusKm;
+      params.add('radius_km=$radius');
+    }
+    if (openNow == true) params.add('open_now=true');
+    if (offersOnly == true) params.add('offers_only=true');
+    final query = params.isNotEmpty ? '?${params.join('&')}' : '';
+    return '$baseUrl/api/v1/food-tags/$tagId/vendors/$query';
+  }
+  static String foodTagOffersUrl(String tagId, {double? latitude, double? longitude, double? radiusKm, bool? openNow}) {
+    final params = <String>[];
+    if (latitude != null && longitude != null) {
+      params.add('latitude=$latitude&longitude=$longitude');
+      final radius = radiusKm ?? defaultSearchRadiusKm;
+      params.add('radius_km=$radius');
+    }
+    if (openNow == true) params.add('open_now=true');
+    final query = params.isNotEmpty ? '?${params.join('&')}' : '';
+    return '$baseUrl/api/v1/food-tags/$tagId/offers/$query';
+  }
   static String vendorFoodTagItemsUrl(String vendorId, String tagId) =>
       '$baseUrl/api/v1/vendors/$vendorId/food-tags/$tagId/';
-  static String vendorsListUrl({bool? openNow}) =>
-      openNow == true ? '$baseUrl/api/v1/vendors/?open_now=true' : '$baseUrl/api/v1/vendors/';
+  static String vendorsListUrl({bool? openNow, double? latitude, double? longitude, double? radiusKm}) {
+    final params = <String>[];
+    if (openNow == true) params.add('open_now=true');
+    if (latitude != null && longitude != null) {
+      params.add('latitude=$latitude&longitude=$longitude');
+      final radius = radiusKm ?? defaultSearchRadiusKm;
+      params.add('radius_km=$radius');
+    }
+    final query = params.isNotEmpty ? '?${params.join('&')}' : '';
+    return '$baseUrl/api/v1/vendors/$query';
+  }
   static String get vendorAltListUrl => '$baseUrl/api/v1/vendor/list/';
   static String get searchVendorsUrl => '$baseUrl/api/v1/search/?q=a&filter=vendors';
   static String vendorDetailUrl(String vendorId) =>
@@ -42,4 +82,15 @@ class ApiConfig {
   static String get customerRedemptionsUrl => '$baseUrl/api/v1/redemptions/';
   static String redemptionDetailUrl(String qrCode) => '$baseUrl/api/v1/redemptions/$qrCode/';
   static String cancelRedemptionUrl(String qrCode) => '$baseUrl/api/v1/redemptions/$qrCode/cancel/';
+
+  static String get customerSavedUrl => '$baseUrl/api/v1/profile/saved/';
+  static String customerSavedItemUrl(String kind, String targetId) =>
+      '$baseUrl/api/v1/profile/saved/$kind/$targetId/';
+  static String get customerSavedCollectionsUrl =>
+      '$baseUrl/api/v1/profile/saved/collections/';
+  static String customerSavedCollectionDetailUrl(String id) =>
+      '$baseUrl/api/v1/profile/saved/collections/$id/';
+  static String customerSavedCollectionVendorUrl(
+          String collectionId, String vendorId) =>
+      '$baseUrl/api/v1/profile/saved/collections/$collectionId/vendors/$vendorId/';
 }

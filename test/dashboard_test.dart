@@ -12,6 +12,9 @@ import 'package:zteel_user/app_typography.dart';
 import 'package:zteel_user/screens/FoodTypeShopScreen.dart';
 import 'package:zteel_user/screens/dashboard.dart';
 import 'package:zteel_user/screens/home_discovery_view.dart';
+import 'package:zteel_user/screens/MainCartScreen.dart';
+import 'package:zteel_user/screens/RecentOrderScreen.dart';
+import 'package:zteel_user/screens/RestaurantListScreen.dart';
 import 'package:zteel_user/services/cart_service.dart';
 import 'package:zteel_user/services/food_tag_service.dart';
 import 'package:zteel_user/widgets/bottom_nav_bar.dart';
@@ -268,24 +271,19 @@ void main() {
           ),
           isTrue,
         );
-        expect(find.text('There are 5 food offers near you.'), findsOneWidget);
+        
 
         CartService.basketsNotifier.value = {'live-vendor': _basket(3)};
         await tester.pump();
         expect(
           tester
-              .widget<HomeDiscoveryView>(find.byType(HomeDiscoveryView))
-              .cartItemCount,
-          3,
+              .widget<Badge>(find.byKey(const ValueKey('app-top-bar-cart-badge')))
+              .isLabelVisible,
+          isTrue,
         );
-        await tester.tap(find.byKey(const ValueKey('home-cart')));
+        await tester.tap(find.byKey(const ValueKey('bottom-nav-2')));
         await tester.pumpAndSettle();
-        expect(
-          tester
-              .widget<AppBottomNavBar>(find.byType(AppBottomNavBar))
-              .currentIndex,
-          3,
-        );
+        expect(find.byType(NearbyRestaurantsScreen), findsOneWidget);
         await tester.tap(find.byKey(const ValueKey('bottom-nav-0')));
         await tester.pumpAndSettle();
 
@@ -300,6 +298,10 @@ void main() {
             .position
             .pixels;
         expect(before, greaterThan(0));
+        await tester.tap(find.byKey(const ValueKey('bottom-nav-3')));
+        await tester.pumpAndSettle();
+        expect(find.byType(OrdersScreen), findsOneWidget);
+        expect(find.byIcon(Icons.arrow_back_rounded), findsNothing);
         await tester.tap(find.byKey(const ValueKey('bottom-nav-1')));
         await tester.pumpAndSettle();
         await tester.tap(find.byKey(const ValueKey('bottom-nav-0')));
@@ -316,9 +318,9 @@ void main() {
         );
         expect(
           tester
-              .widget<HomeDiscoveryView>(find.byType(HomeDiscoveryView))
-              .cartItemCount,
-          4,
+              .widget<Badge>(find.byKey(const ValueKey('app-top-bar-cart-badge')))
+              .isLabelVisible,
+          isTrue,
         );
         expect(tester.takeException(), isNull);
         await tester.pumpWidget(const SizedBox());
@@ -326,6 +328,69 @@ void main() {
       }, () => _backend(response.future));
     },
   );
+
+  testWidgets('Floating dock overlays the full feed and clears its last card', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.padding = const FakeViewPadding(bottom: 34);
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() {
+      tester.view.resetPadding();
+      tester.view.resetDevicePixelRatio();
+      tester.binding.setSurfaceSize(null);
+    });
+
+    await http.runWithClient(() async {
+      await tester.pumpWidget(_dashboard());
+      await tester.pumpAndSettle();
+
+      final feed = find.byKey(const PageStorageKey('home-discovery-feed'));
+      final dock = find.descendant(
+        of: find.byType(AppBottomNavBar),
+        matching: find.byType(Material),
+      ).first;
+      final dockTop = tester.getTopLeft(dock).dy;
+      expect(tester.getBottomLeft(feed).dy, 844);
+      expect(dockTop, lessThan(844));
+      expect(tester.getBottomLeft(dock).dy, closeTo(844 - 34 - 4, 1));
+
+      final scrollable = find.descendant(
+        of: feed,
+        matching: find.byType(Scrollable),
+      ).first;
+      final position = tester.state<ScrollableState>(scrollable).position;
+      position.jumpTo(position.maxScrollExtent);
+      await tester.pump();
+      final lastCard = find.byKey(
+        const ValueKey('home-restaurant-live-vendor'),
+      );
+      expect(lastCard, findsOneWidget);
+      expect(tester.getBottomLeft(lastCard).dy, lessThan(dockTop - 8));
+
+      final homeOffset = position.pixels;
+      await tester.tap(find.byKey(const ValueKey('bottom-nav-3')));
+      await tester.pumpAndSettle();
+      expect(find.byType(OrdersScreen), findsOneWidget);
+      expect(find.byIcon(Icons.arrow_back_rounded), findsNothing);
+      await tester.tap(find.byKey(const ValueKey('bottom-nav-0')));
+      await tester.pumpAndSettle();
+      expect(position.pixels, homeOffset);
+
+      position.jumpTo(0);
+      await tester.pump();
+      await tester.tap(find.byKey(const ValueKey('bottom-nav-2')));
+      await tester.pumpAndSettle();
+      expect(find.byType(NearbyRestaurantsScreen), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('bottom-nav-0')));
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<AppBottomNavBar>(find.byType(AppBottomNavBar)).currentIndex,
+        0,
+      );
+      expect(tester.takeException(), isNull);
+    }, () => _backend(Future.value(_json({'results': []}))));
+  });
 
   test('FoodTagService fetches only the selected tag vendors', () async {
     await http.runWithClient(() async {
@@ -394,7 +459,7 @@ void main() {
         );
         expect(home.isLoadingDeals, isFalse);
         expect(home.deals, isEmpty);
-        expect(find.text('Discover your next favorite meal.'), findsOneWidget);
+        
         expect(tester.takeException(), isNull);
         await tester.pumpWidget(const SizedBox());
         await tester.pump();

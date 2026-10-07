@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../app_colors.dart';
 import '../screens/RestaurantListScreen.dart' show RestaurantListing;
+import '../services/saved_restaurant_service.dart';
+import 'save_to_collection_sheet.dart';
 import 'shimmer_loading.dart';
 
 /// The standard restaurant card used across the app (Home feed, search, nearby, etc.)
@@ -49,12 +51,54 @@ class RestaurantCard extends StatelessWidget {
               // IMAGE (Full-bleed, rounded top, no side borders/padding)
               // ─────────────────────────────────────────────
               SizedBox(
-                height: 180,
+                height: 154,
                 width: double.infinity,
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
                     RestaurantImage(restaurant: restaurant),
+
+                    // BOOKMARK / SAVE BUTTON
+                    Positioned(
+                      top: 10,
+                      right: 10,
+                      child: ValueListenableBuilder<Set<String>>(
+                        valueListenable:
+                            SavedRestaurantService.savedVendorIdsNotifier,
+                        builder: (context, savedIds, _) {
+                          final isSaved = savedIds.contains(restaurant.id);
+                          return Material(
+                            color: AppColors.black.withValues(alpha: 0.35),
+                            shape: const CircleBorder(),
+                            child: InkWell(
+                              customBorder: const CircleBorder(),
+                              onTap: () {
+                                SaveToCollectionSheet.show(
+                                  context,
+                                  vendorId: restaurant.id,
+                                  restaurantName: restaurant.name,
+                                  imageUrl: restaurant.imageUrl,
+                                );
+                              },
+                              child: Container(
+                                width: 34,
+                                height: 34,
+                                alignment: Alignment.center,
+                                child: Icon(
+                                  isSaved
+                                      ? Icons.bookmark_rounded
+                                      : Icons.bookmark_border_rounded,
+                                  color: isSaved
+                                      ? AppColors.primary
+                                      : AppColors.white,
+                                  size: 19,
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
 
                     // PROMOTED / FREE DELIVERY / OFFER BADGES
                     Positioned(
@@ -100,7 +144,7 @@ class RestaurantCard extends StatelessWidget {
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          color: AppColors.white.withValues(alpha: 0.92),
+                          color: AppColors.white,
                           borderRadius: BorderRadius.circular(999),
                           boxShadow: [
                             BoxShadow(
@@ -117,9 +161,7 @@ class RestaurantCard extends StatelessWidget {
                               width: 7,
                               height: 7,
                               decoration: BoxDecoration(
-                                color: restaurant.isOpenNow
-                                    ? AppColors.green
-                                    : AppColors.orangeLight,
+                                color: AppColors.orange,
                                 shape: BoxShape.circle,
                               ),
                             ),
@@ -130,9 +172,7 @@ class RestaurantCard extends StatelessWidget {
                                 fontSize: 10.5,
                                 height: 1,
                                 fontWeight: FontWeight.w700,
-                                color: restaurant.isOpenNow
-                                    ? AppColors.supportGreen
-                                    : AppColors.primaryDeep,
+                                color: AppColors.orange,
                               ),
                             ),
                           ],
@@ -409,9 +449,9 @@ class RestaurantCardSkeleton extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Photo wireframe (height: 180)
+                // Photo wireframe (height: 154)
                 SizedBox(
-                  height: 180,
+                  height: 154,
                   width: double.infinity,
                   child: Stack(
                     children: [
@@ -535,4 +575,3 @@ class RestaurantCardSkeleton extends StatelessWidget {
     );
   }
 }
-

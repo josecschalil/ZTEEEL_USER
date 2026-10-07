@@ -2,18 +2,30 @@ import 'package:flutter/material.dart';
 
 import '../app_colors.dart';
 import '../screens/LocationPageScreen.dart';
+import '../screens/MainCartScreen.dart';
 import '../screens/NotificationScreen.dart';
 import '../services/cart_service.dart';
 import '../services/location_service.dart';
+import 'exploring_location.dart';
 
 class AppTopBar extends StatefulWidget {
+  final bool showBackButton;
+  final VoidCallback? onBack;
   final VoidCallback? onOpenCart;
   final EdgeInsetsGeometry padding;
+  final Key? locationKey;
+  final Key? notificationsKey;
+  final Key? cartKey;
 
   const AppTopBar({
     super.key,
+    this.showBackButton = false,
+    this.onBack,
     this.onOpenCart,
-    this.padding = const EdgeInsets.fromLTRB(16, 8, 10, 4),
+    this.padding = const EdgeInsets.fromLTRB(16, 8, 14, 4),
+    this.locationKey,
+    this.notificationsKey,
+    this.cartKey,
   });
 
   @override
@@ -26,14 +38,31 @@ class _AppTopBarState extends State<AppTopBar> {
   @override
   void initState() {
     super.initState();
+    LocationService.addressNotifier.addListener(_onAddressChanged);
     _restoreLocation();
+  }
+
+  @override
+  void dispose() {
+    LocationService.addressNotifier.removeListener(_onAddressChanged);
+    super.dispose();
+  }
+
+  void _onAddressChanged() {
+    if (!mounted) return;
+    final live = LocationService.addressNotifier.value;
+    if (_address != live) {
+      setState(() => _address = live);
+    }
   }
 
   Future<void> _restoreLocation() async {
     final saved = await LocationService.load();
     if (!mounted || saved == null) return;
+    final newAddress = saved.address.isEmpty ? 'Selected location' : saved.address;
+    LocationService.addressNotifier.value = newAddress;
     setState(() {
-      _address = saved.address.isEmpty ? 'Selected location' : saved.address;
+      _address = newAddress;
     });
   }
 
@@ -42,83 +71,101 @@ class _AppTopBarState extends State<AppTopBar> {
       MaterialPageRoute(builder: (_) => const LocationPickerScreen()),
     );
     if (!mounted || result == null) return;
+    final newAddress = result.address.isEmpty ? 'Selected location' : result.address;
+    LocationService.addressNotifier.value = newAddress;
     setState(() {
-      _address = result.address.isEmpty ? 'Selected location' : result.address;
+      _address = newAddress;
     });
+  }
+
+  void _handleCartTap() {
+    if (widget.onOpenCart != null) {
+      widget.onOpenCart!();
+    } else {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => const MainCartScreenPage(showBottomNav: false),
+        ),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: widget.padding,
-      child: Row(
-        children: [
-          Expanded(
-            child: InkWell(
-              key: const ValueKey('app-top-bar-location'),
-              onTap: _openLocationPicker,
-              borderRadius: BorderRadius.circular(12),
-              child: SizedBox(
-                height: 44,
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.location_on_rounded,
-                      color: AppColors.orange,
-                      size: 16,
-                    ),
-                    const SizedBox(width: 5),
-                    Flexible(
-                      child: Text(
-                        _address,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: AppColors.textPrimary,
-                            ),
-                      ),
-                    ),
-                    const SizedBox(width: 3),
-                    const Icon(Icons.keyboard_arrow_down_rounded, size: 16),
-                  ],
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 48),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            if (widget.showBackButton) ...[
+              IconButton(
+                key: const ValueKey('app-top-bar-back'),
+                tooltip: 'Back',
+                constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                padding: EdgeInsets.zero,
+                icon: const Icon(
+                  Icons.arrow_back_ios_new_rounded,
+                  size: 18,
+                  color: AppColors.textPrimary,
                 ),
+                onPressed: widget.onBack ?? () => Navigator.of(context).maybePop(),
+              ),
+              const SizedBox(width: 4),
+            ],
+            Expanded(
+              child: ExploringLocation(
+                key: widget.locationKey ?? const ValueKey('app-top-bar-location'),
+                address: _address,
+                onTap: _openLocationPicker,
               ),
             ),
-          ),
-          IconButton(
-            key: const ValueKey('app-top-bar-notifications'),
-            tooltip: 'Notifications',
-            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
-            icon: const Icon(Icons.notifications_none_rounded, size: 22),
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+            IconButton(
+              key: widget.notificationsKey ?? const ValueKey('app-top-bar-notifications'),
+              tooltip: 'Notifications',
+              constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+              icon: const Icon(
+                Icons.notifications_none_rounded,
+                size: 22,
+                color: AppColors.textPrimary,
+              ),
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+              ),
             ),
-          ),
-          ValueListenableBuilder<Map<String, CartData>>(
-            valueListenable: CartService.basketsNotifier,
-            builder: (context, baskets, child) {
-              final cartItemCount = CartService.grandTotalItemCount;
-              return Semantics(
-                label: 'Cart, $cartItemCount items',
-                child: IconButton(
-                  key: const ValueKey('app-top-bar-cart'),
+            ValueListenableBuilder<Map<String, CartData>>(
+              valueListenable: CartService.basketsNotifier,
+              builder: (context, baskets, _) {
+                final count = CartService.grandTotalItemCount;
+                return IconButton(
+                  key: widget.cartKey ?? const ValueKey('app-top-bar-cart'),
                   tooltip: 'Cart',
-                  constraints:
-                      const BoxConstraints(minWidth: 44, minHeight: 44),
-                  onPressed: widget.onOpenCart,
+                  constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
                   icon: Badge(
                     key: const ValueKey('app-top-bar-cart-badge'),
-                    isLabelVisible: cartItemCount > 0,
+                    isLabelVisible: count > 0,
                     backgroundColor: AppColors.orange,
                     textColor: AppColors.textOnAccent,
-                    label: Text(cartItemCount > 99 ? '99+' : '$cartItemCount'),
-                    child: const Icon(Icons.shopping_cart_outlined, size: 22),
+                    label: Text(
+                      count > 99 ? '99+' : '$count',
+                      style: const TextStyle(
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    child: const Icon(
+                      Icons.shopping_bag_outlined,
+                      size: 22,
+                      color: AppColors.textPrimary,
+                    ),
                   ),
-                ),
-              );
-            },
-          ),
-        ],
+                  onPressed: _handleCartTap,
+                );
+              },
+            ),
+          ],
+        ),
       ),
     );
   }

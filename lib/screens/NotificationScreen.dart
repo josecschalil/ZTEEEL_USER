@@ -150,6 +150,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     setState(() => item.read = true);
   }
 
+  Future<void> _refreshNotifications() async {
+    await Future.delayed(const Duration(milliseconds: 600));
+    if (mounted) setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -167,21 +172,36 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               onMarkAllRead: _markAllRead,
             ),
             Expanded(
-              child: hasAny
-                  ? ListView(
-                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-                      children: [
-                        for (final section in _sections)
-                          if (section.items.isNotEmpty)
-                            _NotifSectionWidget(
-                              isDark: isDark,
-                              section: section,
-                              onDismiss: (item) => _dismiss(section, item),
-                              onTap: _toggleRead,
-                            ),
-                      ],
-                    )
-                  : _EmptyState(isDark: isDark),
+              child: RefreshIndicator(
+                color: AppColors.primary,
+                backgroundColor: isDark ? AppColors.cardDark : AppColors.white,
+                onRefresh: _refreshNotifications,
+                child: hasAny
+                    ? ListView(
+                        physics: const AlwaysScrollableScrollPhysics(
+                          parent: BouncingScrollPhysics(),
+                        ),
+                        padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                        children: [
+                          for (final section in _sections)
+                            if (section.items.isNotEmpty)
+                              _NotifSectionWidget(
+                                isDark: isDark,
+                                section: section,
+                                onDismiss: (item) => _dismiss(section, item),
+                                onTap: _toggleRead,
+                              ),
+                        ],
+                      )
+                    : ListView(
+                        physics: const AlwaysScrollableScrollPhysics(
+                          parent: BouncingScrollPhysics(),
+                        ),
+                        children: [
+                          _EmptyState(isDark: isDark),
+                        ],
+                      ),
+              ),
             ),
           ],
         ),

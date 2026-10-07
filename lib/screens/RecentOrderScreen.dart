@@ -10,7 +10,13 @@ import '../widgets/app_top_bar.dart';
 class OrdersScreen extends StatefulWidget {
   final int initialTabIndex;
   final VoidCallback? onOpenCart;
-  const OrdersScreen({super.key, this.initialTabIndex = 0, this.onOpenCart});
+  final double bottomOverlayPadding;
+  const OrdersScreen({
+    super.key,
+    this.initialTabIndex = 0,
+    this.onOpenCart,
+    this.bottomOverlayPadding = 0,
+  });
 
   @override
   State<OrdersScreen> createState() => _OrdersScreenState();
@@ -115,13 +121,14 @@ class _OrdersScreenState extends State<OrdersScreen>
     final expired = _allOrders.where((o) => o.isExpired).toList();
 
     return Scaffold(
-      backgroundColor: isDark ? AppColors.bgDark : AppColors.bgLight,
+      backgroundColor: isDark ? AppColors.bgDark : AppColors.white,
       body: AnnotatedRegion<SystemUiOverlayStyle>(
         value: SystemUiOverlayStyle.dark.copyWith(
           statusBarColor: AppColors.transparent,
           systemStatusBarContrastEnforced: false,
         ),
         child: SafeArea(
+          bottom: false,
           child: Column(
           children: [
             // ── Sticky header (location, notifications, cart + title + tab bar) ──
@@ -132,21 +139,13 @@ class _OrdersScreenState extends State<OrdersScreen>
                 children: [
                   AppTopBar(
                     onOpenCart: widget.onOpenCart,
-                    padding: const EdgeInsets.fromLTRB(16, 8, 10, 4),
                   ),
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SizedBox(height: 12),
-                        _buildPageHeader(),
-                        const SizedBox(height: 16),
-                        _buildTabBar(),
-                        const SizedBox(height: 16),
-                      ],
-                    ),
+                    padding: const EdgeInsets.fromLTRB(16, 6, 16, 14),
+                    child: _buildPageHeader(isDark),
                   ),
+                  _buildTabBar(isDark),
+                  const SizedBox(height: 10),
                 ],
               ),
             ),
@@ -183,7 +182,7 @@ class _OrdersScreenState extends State<OrdersScreen>
       onRefresh: () => _loadOrders(silent: true),
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+        padding: EdgeInsets.fromLTRB(16, 6, 16, 20 + widget.bottomOverlayPadding),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: children,
@@ -207,84 +206,90 @@ class _OrdersScreenState extends State<OrdersScreen>
     return list;
   }
 
-  Widget _buildPageHeader() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      crossAxisAlignment: CrossAxisAlignment.end,
+  Widget _buildPageHeader(bool isDark) {
+    final textPrimary = isDark ? AppColors.white : AppColors.textPrimary;
+    final textSecondary = isDark ? AppColors.textMutedDark : AppColors.textSecondary;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Your Orders',
-                style: TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 28,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.5,
-                ),
-              ),
-              SizedBox(height: 4),
-              Text(
-                'Track your active redemptions and dining vouchers.',
-                style: TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w400,
-                ),
-              ),
-            ],
+        Text(
+          'Your Orders',
+          style: TextStyle(
+            fontSize: 21,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.65,
+            color: textPrimary,
           ),
         ),
-
+        const SizedBox(height: 2),
+        Text(
+          'Track your active redemptions and dining vouchers',
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: textSecondary,
+          ),
+        ),
       ],
     );
   }
 
-  Widget _buildTabBar() {
+  Widget _buildTabBar(bool isDark) {
     const tabs = ['Pending', 'Completed', 'Expired'];
-    return Container(
-      height: 48,
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(30),
-      ),
-      child: Row(
-        children: List.generate(tabs.length, (i) {
-          final selected = _selectedTab == i;
-          return Expanded(
-            child: GestureDetector(
-              onTap: () {
-                _pageController.animateToPage(
-                  i,
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeInOut,
-                );
-                setState(() => _selectedTab = i);
-              },
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                decoration: BoxDecoration(
-                  color: selected ? AppColors.primary : AppColors.transparent,
-                  borderRadius: BorderRadius.circular(26),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: SizedBox(
+        height: 38,
+        child: Row(
+          children: List.generate(tabs.length, (i) {
+            final selected = _selectedTab == i;
+            return Expanded(
+              child: Padding(
+                padding: EdgeInsets.only(
+                  left: i == 0 ? 0 : 4,
+                  right: i == tabs.length - 1 ? 0 : 4,
                 ),
-                alignment: Alignment.center,
-                child: Text(
-                  tabs[i],
-                  style: TextStyle(
-                    color: selected
-                        ? AppColors.nearWhite
-                        : AppColors.textSecondary,
-                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                    fontSize: 12,
+                child: Material(
+                  color: selected
+                      ? AppColors.primary
+                      : (isDark ? AppColors.cardDark : AppColors.white),
+                  shape: StadiumBorder(
+                    side: BorderSide(
+                      color: selected
+                          ? AppColors.primary
+                          : (isDark ? AppColors.borderDark : const Color(0xFFE5E7EB)),
+                      width: 1,
+                    ),
+                  ),
+                  child: InkWell(
+                    customBorder: const StadiumBorder(),
+                    onTap: () {
+                      _pageController.animateToPage(
+                        i,
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut,
+                      );
+                      setState(() => _selectedTab = i);
+                    },
+                    child: Center(
+                      child: Text(
+                        tabs[i],
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                          color: selected
+                              ? AppColors.white
+                              : (isDark ? AppColors.white70 : AppColors.textSecondary),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ),
-            ),
-          );
-        }),
+            );
+          }),
+        ),
       ),
     );
   }

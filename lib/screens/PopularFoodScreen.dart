@@ -23,6 +23,7 @@ import '../app_colors.dart';
 // ---------------------------------------------------------------------
 
 import 'package:flutter/material.dart';
+import '../services/food_tag_service.dart';
 import 'FoodTypeShopScreen.dart';
 
 /// ---------------------------------------------------------------------
@@ -87,13 +88,36 @@ class PopularFoodItemsScreen extends StatefulWidget {
 typedef PopularFoodScreen = PopularFoodItemsScreen;
 
 class _PopularFoodItemsScreenState extends State<PopularFoodItemsScreen> {
-  late final List<PopularFoodItem> _all;
+  late List<PopularFoodItem> _all;
   _QuickFilter _filter = _QuickFilter.all;
 
   @override
   void initState() {
     super.initState();
     _all = widget.items ?? _sampleItems();
+  }
+
+  Future<void> _refreshData() async {
+    final tags = await FoodTagService.fetchFoodTags(forceRefresh: true);
+    if (!mounted) return;
+    if (tags.isNotEmpty) {
+      final updated = tags
+          .map(
+            (t) => PopularFoodItem(
+              id: t.id,
+              name: t.name,
+              imageUrl: t.imageUrl,
+              fallbackIcon: Icons.restaurant_menu_rounded,
+              rating: 4.8,
+              orderCountLabel:
+                  '${t.matchingVendorCount > 0 ? t.matchingVendorCount * 12 : 50}+',
+            ),
+          )
+          .toList();
+      setState(() {
+        _all = updated;
+      });
+    }
   }
 
   List<PopularFoodItem> get _filtered {
@@ -126,50 +150,63 @@ class _PopularFoodItemsScreenState extends State<PopularFoodItemsScreen> {
               onSelected: (f) => setState(() => _filter = f),
             ),
             Expanded(
-              child: results.isEmpty
-                  ? const _EmptyState()
-                  : SingleChildScrollView(
-                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 28),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (featured != null) ...[
-                            _FeaturedTile(
-                              item: featured,
-                              rank: 1,
-                              onTap: () {
-                                widget.onItemSelected?.call(featured);
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => FoodTypeShopsScreen(
-                                      foodType: featured.name,
+              child: RefreshIndicator(
+                color: AppColors.primary,
+                backgroundColor: AppColors.white,
+                onRefresh: _refreshData,
+                child: results.isEmpty
+                    ? ListView(
+                        physics: const AlwaysScrollableScrollPhysics(
+                          parent: BouncingScrollPhysics(),
+                        ),
+                        children: const [_EmptyState()],
+                      )
+                    : SingleChildScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(
+                          parent: BouncingScrollPhysics(),
+                        ),
+                        padding: const EdgeInsets.fromLTRB(16, 4, 16, 28),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (featured != null) ...[
+                              _FeaturedTile(
+                                item: featured,
+                                rank: 1,
+                                onTap: () {
+                                  widget.onItemSelected?.call(featured);
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => FoodTypeShopsScreen(
+                                        foodType: featured.name,
+                                      ),
                                     ),
-                                  ),
-                                );
-                              },
-                            ),
-                            const SizedBox(height: 16),
+                                  );
+                                },
+                              ),
+                              const SizedBox(height: 16),
+                            ],
+                            if (rest.isNotEmpty)
+                              _MasonryGrid(
+                                items: rest,
+                                rankOffset: 2,
+                                onTapItem: (item) {
+                                  widget.onItemSelected?.call(item);
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => FoodTypeShopsScreen(
+                                        foodType: item.name,
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
                           ],
-                          if (rest.isNotEmpty)
-                            _MasonryGrid(
-                              items: rest,
-                              rankOffset: 2,
-                              onTapItem: (item) {
-                                widget.onItemSelected?.call(item);
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => FoodTypeShopsScreen(
-                                      foodType: item.name,
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                        ],
+                        ),
                       ),
-                    ),
+              ),
             ),
           ],
         ),

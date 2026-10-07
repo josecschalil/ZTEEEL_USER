@@ -234,7 +234,6 @@ void main() {
         _home(insets: const EdgeInsets.only(top: 44, bottom: 34)),
       );
       await tester.pumpAndSettle();
-      final greeting = tester.getTopLeft(find.text('Hello!')).dy;
       final search = tester
           .getTopLeft(find.byKey(const ValueKey('home-search')))
           .dy;
@@ -246,7 +245,7 @@ void main() {
           .getTopLeft(find.byKey(const ValueKey('home-deal-lunch')))
           .dy;
       final nav = tester.getTopLeft(find.byType(AppBottomNavBar)).dy;
-      expect(greeting, lessThan(search));
+      expect(find.text('Hello!'), findsNothing);
       expect(search, lessThan(categories));
       expect(categories, lessThan(offer));
       expect(
@@ -254,7 +253,6 @@ void main() {
         lessThan(popular),
       );
       expect(popular, lessThan(nav));
-      expect(find.text('There is 1 food offer near you.'), findsOneWidget);
       expect(find.text("Deals for You 🔥"), findsOneWidget);
       final offerSize =
           tester.getSize(find.byKey(const ValueKey('home-deal-lunch')));
@@ -287,9 +285,9 @@ void main() {
           ),
         ),
       );
-      expect(find.text('There are 5 food offers near you.'), findsOneWidget);
+      
       await tester.pumpWidget(_home(deals: const [], restaurants: const []));
-      expect(find.text('Discover your next favorite meal.'), findsOneWidget);
+      
       expect(
         find.text('No offers available right now. Check back soon.'),
         findsOneWidget,
@@ -341,25 +339,20 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('Cart action and badge update without losing Home state', (
+  testWidgets('Notifications action retains route', (
     tester,
   ) async {
-    var openedCart = false;
-    await tester.pumpWidget(_home(onCart: () => openedCart = true));
+    final observer = _DestinationObserver();
+    await tester.pumpWidget(_home(observer: observer));
+    expect(find.byKey(const ValueKey('home-notifications')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('home-notifications')));
+    await tester.pumpAndSettle();
     expect(
-      tester
-          .widget<Badge>(find.byKey(const ValueKey('home-cart-badge')))
-          .isLabelVisible,
-      isFalse,
+      observer.destination!.builder(
+        tester.element(find.byType(HomeDiscoveryView)),
+      ),
+      isA<NotificationsScreen>(),
     );
-    await tester.pumpWidget(
-      _home(cartItemCount: 7, onCart: () => openedCart = true),
-    );
-    expect(find.text('7'), findsOneWidget);
-    await tester.tap(find.byKey(const ValueKey('home-cart')));
-    expect(openedCart, isTrue);
-    await tester.pumpWidget(_home(cartItemCount: 101));
-    expect(find.text('99+'), findsOneWidget);
   });
 
   testWidgets('Both location actions restore and update the same address', (
@@ -380,7 +373,7 @@ void main() {
     await tester.pumpWidget(_home(observer: observer));
     await tester.pumpAndSettle();
     expect(find.textContaining('An exceptionally long'), findsOneWidget);
-    for (final key in ['home-location', 'home-map']) {
+    for (final key in ['home-location']) {
       await tester.tap(find.byKey(ValueKey(key)));
       await tester.pumpAndSettle();
       expect(
@@ -417,6 +410,10 @@ void main() {
           await destination('home-open-now') as NearbyRestaurantsScreen;
       expect(openNow.preset, RestaurantBrowsePreset.openNow);
       expect(openNow.restaurants!.map((r) => r.id), ['one', 'two', 'three']);
+      expect(
+        await destination('home-restaurants-btn'),
+        isA<NearbyRestaurantsScreen>(),
+      );
       expect(
         await destination('home-see-all-restaurants'),
         isA<NearbyRestaurantsScreen>(),
@@ -546,11 +543,10 @@ void main() {
         52,
       );
 
-      final closestCard = tester.widget<Container>(
-        find.byKey(const ValueKey('nearby-closest-one')),
+      expect(
+        find.byKey(const ValueKey('restaurant-item-one')),
+        findsOneWidget,
       );
-      final closestDecoration = closestCard.decoration! as BoxDecoration;
-      expect(closestDecoration.boxShadow, hasLength(2));
 
       await tester.enterText(
         find.byKey(const ValueKey('nearby-search')),

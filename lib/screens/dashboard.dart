@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../app_colors.dart';
 import '../config/api_config.dart';
-import '../services/cart_service.dart';
 import '../services/food_tag_service.dart';
 import '../services/offer_service.dart';
 import '../services/restaurant_service.dart';
@@ -12,6 +11,7 @@ import 'DealsScreen.dart';
 import 'MainCartScreen.dart';
 import 'ProfileScreen.dart';
 import 'RecentOrderScreen.dart';
+import 'RestaurantListScreen.dart';
 import 'home_discovery_view.dart';
 
 HomeRestaurant _homeRestaurantFromVendor(Map<String, dynamic> vendor) {
@@ -73,7 +73,13 @@ HomeRestaurant _homeRestaurantFromVendor(Map<String, dynamic> vendor) {
     eta: etaStr,
     isOpen: vendor['is_open_now'] is bool
         ? vendor['is_open_now'] as bool
-        : true,
+        : (vendor['is_open'] is bool
+            ? vendor['is_open'] as bool
+            : (vendor['isOpen'] is bool
+                ? vendor['isOpen'] as bool
+                : (vendor['open_now'] is bool
+                    ? vendor['open_now'] as bool
+                    : true))),
     imageUrl: imageUrl,
     offerLabel: offerLabel,
   );
@@ -106,20 +112,26 @@ class _HomeDiscoveryScreenState extends State<HomeDiscoveryScreen> {
   @override
   void initState() {
     super.initState();
+    // 1. Check in-memory caches for instant render
     if (RestaurantService.cachedRestaurants.isNotEmpty) {
       _liveRestaurants = RestaurantService.cachedRestaurants
           .map((v) => _homeRestaurantFromVendor(v))
-          .where((r) => r.isOpen)
           .toList();
       _isLoadingRestaurants = false;
+    }
+    if (OfferService.cachedOffers.isNotEmpty) {
+      _liveDeals = _buildDealsFromOffersAndVendors(
+        OfferService.cachedOffers,
+        RestaurantService.cachedRestaurants,
+      );
+      _isLoadingDeals = false;
     }
     if (FoodTagService.cachedFoodTags.isNotEmpty) {
       _foodTags = FoodTagService.cachedFoodTags;
       _isLoadingFoodTags = false;
     }
-    _loadRestaurants();
-    _loadDeals();
-    _loadFoodTags();
+
+    _loadDiscoveryData();
     _loadCustomerProfile();
   }
 
@@ -135,67 +147,89 @@ class _HomeDiscoveryScreenState extends State<HomeDiscoveryScreen> {
     });
   }
 
-  Future<void> _loadRestaurants() async {
-    final vendors = await RestaurantService.fetchRestaurants();
-    if (!mounted) return;
-    setState(() {
-      _liveRestaurants = vendors
-          .map((v) => _homeRestaurantFromVendor(v))
-          .where((r) => r.isOpen)
-          .toList();
-      _isLoadingRestaurants = false;
-    });
-  }
+  Future<void> _loadDiscoveryData() async {
+    // 1. Instant local disk cache load
+    final cachedDiskVendorsFuture = RestaurantService.loadCachedRestaurants();
+    final cachedDiskOffersFuture = OfferService.loadCachedOffers();
+    final cachedDiskTagsFuture = FoodTagService.loadCachedFoodTags();
 
-  Future<void> _loadDeals() async {
-    final offers = await OfferService.fetchOffers();
-    if (!mounted) return;
-    final hydrated = <Deal>[];
-    if (offers.isNotEmpty) {
-      final vendors = await RestaurantService.fetchRestaurants();
-      if (!mounted) return;
-      final vendorsById = {
-        for (final vendor in vendors) vendor['id']?.toString(): vendor,
-      };
-      for (final offer in offers) {
-        final vendorRef = offer['vendor'];
-        final vendorId = (vendorRef is Map ? vendorRef['id'] : vendorRef)
-            ?.toString();
-        hydrated.add(
-          Deal.fromBackend(
-            offer: {...offer, 'vendor': vendorId},
-            vendor:
-                vendorsById[vendorId] ??
-                (vendorRef is Map
-                    ? Map<String, dynamic>.from(vendorRef)
-                    : null),
-          ),
-        );
+    final diskResults = await Future.wait([
+      cachedDiskVendorsFuture,
+      cachedDiskOffersFuture,
+      cachedDiskTagsFuture,
+    ]);
+
+    final diskVendors = diskResults[0] as List<Map<String, dynamic>>;
+    final diskOffers = diskResults[1] as List<Map<String, dynamic>>;
+    final diskTags = diskResults[2] as List<FoodTag>;
+
+    if (mounted) {
+      setState(() {
+        if (_liveRestaurants.isEmpty && diskVendors.isNotEmpty) {
+          _liveRestaurants = diskVendors.map(_homeRestaurantFromVendor).toList();
+          _isLoadingRestaurants = false;
+        }
+        if (_liveDeals.isEmpty && diskOffers.isNotEmpty) {
+          _liveDeals = _buildDealsFromOffersAndVendors(diskOffers, diskVendors);
+          _isLoadingDeals = false;
+        }
+        if (_foodTags.isEmpty && diskTags.isNotEmpty) {
+          _foodTags = diskTags;
+          _isLoadingFoodTags = false;
+        }
+      });
+      if (diskTags.isNotEmpty) {
+        _precacheTagImages(diskTags);
       }
     }
-    if (!mounted) return;
-    setState(() {
-      _liveDeals = hydrated;
-      _isLoadingDeals = false;
-    });
-  }
 
-  Future<void> _loadFoodTags() async {
-    final cached = await FoodTagService.loadCachedFoodTags();
-    if (mounted && cached.isNotEmpty && _foodTags.isEmpty) {
-      setState(() {
-        _foodTags = cached;
-        _isLoadingFoodTags = false;
-      });
-      _precacheTagImages(cached);
-    }
-    final tags = await FoodTagService.fetchFoodTags();
+    // 2. Parallel network fetches in single round-trip
+    final networkResults = await Future.wait([
+      RestaurantService.fetchRestaurants(forceRefresh: true),
+      OfferService.fetchOffers(forceRefresh: true),
+      FoodTagService.fetchFoodTags(forceRefresh: true),
+    ]);
+
+    final freshVendors = networkResults[0] as List<Map<String, dynamic>>;
+    final freshOffers = networkResults[1] as List<Map<String, dynamic>>;
+    final freshTags = networkResults[2] as List<FoodTag>;
+
     if (!mounted) return;
     setState(() {
-      _foodTags = tags;
+      _liveRestaurants = freshVendors.map(_homeRestaurantFromVendor).toList();
+      _isLoadingRestaurants = false;
+      _liveDeals = _buildDealsFromOffersAndVendors(freshOffers, freshVendors);
+      _isLoadingDeals = false;
+      _foodTags = freshTags;
       _isLoadingFoodTags = false;
     });
-    _precacheTagImages(tags);
+    _precacheTagImages(freshTags);
+  }
+
+  List<Deal> _buildDealsFromOffersAndVendors(
+    List<Map<String, dynamic>> offers,
+    List<Map<String, dynamic>> vendors,
+  ) {
+    if (offers.isEmpty) return const [];
+    final vendorsById = {
+      for (final vendor in vendors) vendor['id']?.toString(): vendor,
+    };
+    final deals = <Deal>[];
+    for (final offer in offers) {
+      final vendorRef = offer['vendor'];
+      final vendorId =
+          (vendorRef is Map ? vendorRef['id'] : vendorRef)?.toString();
+      final vendorData =
+          vendorsById[vendorId] ??
+          (vendorRef is Map ? Map<String, dynamic>.from(vendorRef) : null);
+      deals.add(
+        Deal.fromBackend(
+          offer: {...offer, 'vendor': vendorId},
+          vendor: vendorData,
+        ),
+      );
+    }
+    return deals;
   }
 
   void _precacheTagImages(List<FoodTag> tags) {
@@ -207,40 +241,71 @@ class _HomeDiscoveryScreenState extends State<HomeDiscoveryScreen> {
     }
   }
 
+  void _openCart() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => const MainCartScreenPage(showBottomNav: false),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
+    final bottomOverlayPadding = keyboardOpen
+        ? 0.0
+        : AppBottomNavBar.overlayClearance(context);
     final pages = <Widget>[
-      ValueListenableBuilder<Map<String, CartData>>(
-        valueListenable: CartService.basketsNotifier,
-        builder: (context, baskets, child) => HomeDiscoveryView(
-          restaurants: _liveRestaurants,
-          deals: _liveDeals,
-          isLoadingRestaurants: _isLoadingRestaurants,
-          isLoadingDeals: _isLoadingDeals,
-          foodTags: _foodTags,
-          isLoadingFoodTags: _isLoadingFoodTags,
-          firstName: _firstName,
-          cartItemCount: CartService.grandTotalItemCount,
-          onSeeAllDeals: () => setState(() => _navIndex = 1),
-          onOpenCart: () => setState(() => _navIndex = 3),
-        ),
+      HomeDiscoveryView(
+        restaurants: _liveRestaurants,
+        deals: _liveDeals,
+        isLoadingRestaurants: _isLoadingRestaurants,
+        isLoadingDeals: _isLoadingDeals,
+        foodTags: _foodTags,
+        isLoadingFoodTags: _isLoadingFoodTags,
+        firstName: _firstName,
+        onSeeAllDeals: () => setState(() => _navIndex = 1),
+        onOpenCart: _openCart,
+        bottomOverlayPadding: bottomOverlayPadding,
+        onRefresh: _loadDiscoveryData,
       ),
-      DealsScreen(onOpenCart: () => setState(() => _navIndex = 3)),
-      const OrdersScreen(),
-      const MainCartScreenPage(showBottomNav: false),
+      DealsScreen(
+        onOpenCart: _openCart,
+        bottomOverlayPadding: bottomOverlayPadding,
+      ),
+      NearbyRestaurantsScreen(
+        showBackButton: false,
+        onOpenCart: _openCart,
+        bottomOverlayPadding: bottomOverlayPadding,
+        onRefresh: _loadDiscoveryData,
+      ),
+      OrdersScreen(
+        onOpenCart: _openCart,
+        bottomOverlayPadding: bottomOverlayPadding,
+      ),
       ProfileScreen(
         showBottomNav: false,
         onBack: () => setState(() => _navIndex = 0),
         fullName: _fullName,
         phoneNumber: _phoneNumber,
+        bottomOverlayPadding: bottomOverlayPadding,
+        onRefresh: _loadCustomerProfile,
       ),
     ];
     return Scaffold(
       backgroundColor: AppColors.bg,
-      body: IndexedStack(index: _navIndex, children: pages),
-      bottomNavigationBar: AppBottomNavBar(
-        currentIndex: _navIndex,
-        onTap: (index) => setState(() => _navIndex = index),
+      body: Stack(
+        children: [
+          Positioned.fill(child: IndexedStack(index: _navIndex, children: pages)),
+          if (!keyboardOpen)
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: AppBottomNavBar(
+                currentIndex: _navIndex,
+                onTap: (index) => setState(() => _navIndex = index),
+              ),
+            ),
+        ],
       ),
     );
   }

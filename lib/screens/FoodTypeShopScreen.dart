@@ -28,11 +28,13 @@ import 'package:flutter/material.dart';
 import '../config/api_config.dart';
 import '../services/food_tag_service.dart';
 import 'MainCartScreen.dart';
+import 'LocationPageScreen.dart';
 import 'NotificationScreen.dart';
 import 'RestuarantMenuScreen.dart';
 import '../services/location_service.dart';
 import '../widgets/category_row.dart';
 import '../widgets/discovery_search_bar.dart';
+import '../widgets/exploring_location.dart';
 import '../widgets/shimmer_loading.dart';
 
 /// ---------------------------------------------------------------------
@@ -221,8 +223,35 @@ class _FoodTypeShopsScreenState extends State<FoodTypeShopsScreen> {
     }
   }
 
-  Future<void> _loadFoodTags() async {
-    final tags = await FoodTagService.fetchFoodTags();
+  Future<void> _openLocationPicker() async {
+    final result = await Navigator.of(context).push<PickedLocation>(
+      MaterialPageRoute(builder: (_) => const LocationPickerScreen()),
+    );
+    if (!mounted || result == null) return;
+    final address = result.address.isEmpty ? 'Selected location' : result.address;
+    LocationService.addressNotifier.value = address;
+    setState(() => _address = address);
+  }
+
+  Future<void> _refreshData() async {
+    final foodTagsFuture = _loadFoodTags(forceRefresh: true);
+    if (_activeFoodTagId != null && _activeFoodTagId!.isNotEmpty) {
+      await Future.wait([
+        foodTagsFuture,
+        _loadFoodTagDiscovery(_activeFoodTagId!),
+      ]);
+    } else {
+      await foodTagsFuture;
+      if (mounted) {
+        setState(() {
+          _all = _sampleListingsFor(_activeFoodType);
+        });
+      }
+    }
+  }
+
+  Future<void> _loadFoodTags({bool forceRefresh = false}) async {
+    final tags = await FoodTagService.fetchFoodTags(forceRefresh: forceRefresh);
     if (!mounted) return;
     setState(() {
       _availableFoodTags = tags;
@@ -473,6 +502,7 @@ class _FoodTypeShopsScreenState extends State<FoodTypeShopsScreen> {
           children: [
             _Header(
               address: _address,
+              onLocationTap: _openLocationPicker,
               foodType: _activeFoodType,
               selectedTagId: _activeFoodTagId,
               foodTags: _availableFoodTags,
@@ -492,54 +522,62 @@ class _FoodTypeShopsScreenState extends State<FoodTypeShopsScreen> {
             ),
             const Divider(height: 1, thickness: 1, color: Color(0xFFEEEEF0)),
             Expanded(
-              child: _isLoading
-                  ? const _FoodTypeShopLoadingSkeleton()
-                  : ListView(
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-                      children: [
-                        if (_tagOffers.isNotEmpty) ...[
-                          _FoodTagOfferRail(
-                            foodTagName: _activeFoodType,
-                            offers: _tagOffers,
-                            onVendorTap: (vendor) => _openVendorItems(
-                              _listingFromFoodTagVendor(vendor),
+              child: RefreshIndicator(
+                color: AppColors.primary,
+                backgroundColor: AppColors.white,
+                onRefresh: _refreshData,
+                child: _isLoading
+                    ? const _FoodTypeShopLoadingSkeleton()
+                    : ListView(
+                        physics: const AlwaysScrollableScrollPhysics(
+                          parent: BouncingScrollPhysics(),
+                        ),
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                        children: [
+                          if (_tagOffers.isNotEmpty) ...[
+                            _FoodTagOfferRail(
+                              foodTagName: _activeFoodType,
+                              offers: _tagOffers,
+                              onVendorTap: (vendor) => _openVendorItems(
+                                _listingFromFoodTagVendor(vendor),
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 20),
-                        ],
-                        if (_activeFoodTagId != null) ...[
-                          Text(
-                            '$_activeFoodType shops',
-                            style: const TextStyle(
-                              fontSize: 17,
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.textPrimary,
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                        ] else ...[
-                          const Text(
-                            'Restaurant results',
-                            style: TextStyle(
-                              fontSize: 17,
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.textPrimary,
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                        ],
-                        if (results.isEmpty)
-                          const _EmptyState()
-                        else
-                          for (final listing in results) ...[
-                            _ShopListingCard(
-                              listing: listing,
-                              onTap: () => _openVendorItems(listing),
-                            ),
-                            const SizedBox(height: 12),
+                            const SizedBox(height: 20),
                           ],
-                      ],
-                    ),
+                          if (_activeFoodTagId != null) ...[
+                            Text(
+                              '$_activeFoodType shops',
+                              style: const TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                          ] else ...[
+                            const Text(
+                              'Restaurant results',
+                              style: TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                          ],
+                          if (results.isEmpty)
+                            const _EmptyState()
+                          else
+                            for (final listing in results) ...[
+                              _ShopListingCard(
+                                listing: listing,
+                                onTap: () => _openVendorItems(listing),
+                              ),
+                              const SizedBox(height: 12),
+                            ],
+                        ],
+                      ),
+              ),
             ),
           ],
         ),
@@ -747,17 +785,31 @@ class _FoodTagVendorItemsScreenState extends State<FoodTagVendorItemsScreen> {
           ],
         ),
       ),
-      body: _isLoading
-          ? const _FoodTagVendorItemsLoadingSkeleton()
-          : _items.isEmpty
-          ? const _EmptyState()
-          : ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: _items.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 12),
-              itemBuilder: (context, index) =>
-                  _FoodTagMenuItemCard(item: _items[index]),
-            ),
+      body: RefreshIndicator(
+        color: AppColors.primary,
+        backgroundColor: AppColors.white,
+        onRefresh: _loadItems,
+        child: _isLoading
+            ? const _FoodTagVendorItemsLoadingSkeleton()
+            : _items.isEmpty
+            ? ListView(
+                physics: const AlwaysScrollableScrollPhysics(
+                  parent: BouncingScrollPhysics(),
+                ),
+                padding: const EdgeInsets.all(16),
+                children: const [_EmptyState()],
+              )
+            : ListView.separated(
+                physics: const AlwaysScrollableScrollPhysics(
+                  parent: BouncingScrollPhysics(),
+                ),
+                padding: const EdgeInsets.all(16),
+                itemCount: _items.length,
+                separatorBuilder: (_, _) => const SizedBox(height: 12),
+                itemBuilder: (context, index) =>
+                    _FoodTagMenuItemCard(item: _items[index]),
+              ),
+      ),
     );
   }
 }
@@ -846,6 +898,7 @@ class _FoodTagMenuItemCard extends StatelessWidget {
 /// ---------------------------------------------------------------------
 class _Header extends StatelessWidget {
   final String address;
+  final VoidCallback onLocationTap;
   final String foodType;
   final String? selectedTagId;
   final List<FoodTag> foodTags;
@@ -863,6 +916,7 @@ class _Header extends StatelessWidget {
 
   const _Header({
     required this.address,
+    required this.onLocationTap,
     required this.foodType,
     required this.selectedTagId,
     required this.foodTags,
@@ -905,44 +959,10 @@ class _Header extends StatelessWidget {
                 ),
                 const SizedBox(width: 4),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.location_on_rounded,
-                            size: 13,
-                            color: AppColors.orange,
-                          ),
-                          SizedBox(width: 3),
-                          Text(
-                            'Searching in',
-                            style: TextStyle(
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 0.1,
-                              color: AppColors.textPrimary,
-                              height: 1.3,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        address,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.textPrimary,
-                          letterSpacing: -0.2,
-                        ),
-                      ),
-                    ],
+                  child: ExploringLocation(
+                    address: address,
+                    label: 'Searching in',
+                    onTap: onLocationTap,
                   ),
                 ),
                 IconButton(

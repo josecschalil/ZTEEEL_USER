@@ -6,6 +6,8 @@ import 'CheckOutScreen.dart';
 import '../config/api_config.dart';
 import '../services/cart_service.dart';
 import '../services/restaurant_service.dart';
+import '../services/saved_restaurant_service.dart';
+import '../widgets/save_to_collection_sheet.dart';
 
 abstract final class MenuColors {
   static const Color primary = AppColors.primary;
@@ -930,8 +932,12 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
         children: [
           RefreshIndicator(
             color: AppColors.primary,
+            backgroundColor: isDark ? AppColors.cardDark : AppColors.white,
             onRefresh: _loadData,
             child: NestedScrollView(
+              physics: const AlwaysScrollableScrollPhysics(
+                parent: BouncingScrollPhysics(),
+              ),
               headerSliverBuilder: (context, innerBoxIsScrolled) {
                 return [
                   SliverToBoxAdapter(
@@ -1014,7 +1020,12 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
             top: 0,
             left: 0,
             right: 0,
-            child: _TopActionBar(isDark: isDark),
+            child: _TopActionBar(
+              isDark: isDark,
+              vendorId: vendor.id,
+              restaurantName: vendor.name,
+              imageUrl: vendor.imageUrl,
+            ),
           ),
           // Floating "View Cart" button bar
           if (_cartCount > 0)
@@ -1035,11 +1046,20 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
 }
 
 /// ---------------------------------------------------------------------
-/// Fixed top bar: back / search / share
+/// Fixed top bar: back / search / bookmark / share
 /// ---------------------------------------------------------------------
 class _TopActionBar extends StatelessWidget {
   final bool isDark;
-  const _TopActionBar({required this.isDark});
+  final String vendorId;
+  final String restaurantName;
+  final String imageUrl;
+
+  const _TopActionBar({
+    required this.isDark,
+    required this.vendorId,
+    required this.restaurantName,
+    required this.imageUrl,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1070,6 +1090,26 @@ class _TopActionBar extends StatelessWidget {
             children: [
               _RoundIconButton(icon: Icons.search_rounded, isDark: isDark),
               const SizedBox(width: 10),
+              ValueListenableBuilder<Set<String>>(
+                valueListenable: SavedRestaurantService.savedVendorIdsNotifier,
+                builder: (context, savedIds, _) {
+                  final isSaved = savedIds.contains(vendorId);
+                  return _RoundIconButton(
+                    icon: isSaved ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
+                    iconColor: isSaved ? AppColors.primary : null,
+                    isDark: isDark,
+                    onTap: () {
+                      SaveToCollectionSheet.show(
+                        context,
+                        vendorId: vendorId,
+                        restaurantName: restaurantName,
+                        imageUrl: imageUrl,
+                      );
+                    },
+                  );
+                },
+              ),
+              const SizedBox(width: 10),
               _RoundIconButton(icon: Icons.share_rounded, isDark: isDark),
             ],
           ),
@@ -1083,12 +1123,14 @@ class _RoundIconButton extends StatelessWidget {
   final IconData icon;
   final double size;
   final bool isDark;
+  final Color? iconColor;
   final VoidCallback? onTap;
 
   const _RoundIconButton({
     required this.icon,
     required this.isDark,
     this.size = 16,
+    this.iconColor,
     this.onTap,
   });
 
@@ -1117,7 +1159,7 @@ class _RoundIconButton extends StatelessWidget {
         ),
         child: Icon(
           icon,
-          color: isDark ? AppColors.white : AppColors.textPrimary,
+          color: iconColor ?? (isDark ? AppColors.white : AppColors.textPrimary),
           size: size,
         ),
       ),

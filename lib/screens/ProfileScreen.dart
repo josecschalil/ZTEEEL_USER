@@ -79,6 +79,8 @@ class ProfileScreen extends StatefulWidget {
   final VoidCallback? onBack;
   final String fullName;
   final String phoneNumber;
+  final double bottomOverlayPadding;
+  final Future<void> Function()? onRefresh;
 
   const ProfileScreen({
     super.key,
@@ -86,6 +88,8 @@ class ProfileScreen extends StatefulWidget {
     this.onBack,
     this.fullName = '',
     this.phoneNumber = '',
+    this.bottomOverlayPadding = 0,
+    this.onRefresh,
   });
 
   @override
@@ -94,13 +98,49 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   int _navIndex = 4;
+  late String _fullName;
+  late String _phoneNumber;
+
+  @override
+  void initState() {
+    super.initState();
+    _fullName = widget.fullName;
+    _phoneNumber = widget.phoneNumber;
+  }
+
+  @override
+  void didUpdateWidget(covariant ProfileScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.fullName != oldWidget.fullName || widget.phoneNumber != oldWidget.phoneNumber) {
+      setState(() {
+        _fullName = widget.fullName;
+        _phoneNumber = widget.phoneNumber;
+      });
+    }
+  }
+
+  Future<void> _handleRefresh() async {
+    if (widget.onRefresh != null) {
+      await widget.onRefresh!();
+    }
+    final profile = await AuthService.getCustomerProfile();
+    if (mounted && profile != null) {
+      final firstName = profile['first_name']?.toString().trim() ?? '';
+      final lastName = profile['last_name']?.toString().trim() ?? '';
+      setState(() {
+        _fullName = [firstName, lastName].where((p) => p.isNotEmpty).join(' ');
+        _phoneNumber = profile['phone_number']?.toString().trim() ?? '';
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColor = isDark ? AppColors.bgDeep : AppColors.bgLight;
+    final bgColor = isDark ? AppColors.bgDeep : AppColors.white;
 
     final bodyContent = SafeArea(
+      bottom: widget.bottomOverlayPadding == 0,
       child: Column(
         children: [
           _TopBar(
@@ -108,28 +148,38 @@ class _ProfileScreenState extends State<ProfileScreen> {
             onBack: widget.onBack ?? () => Navigator.of(context).maybePop(),
           ),
           Expanded(
-            child: ListView(
-              padding: const EdgeInsets.only(bottom: 32),
-              children: [
-                const SizedBox(height: 8),
-                _ProfileHeader(
-                  isDark: isDark,
-                  fullName: widget.fullName,
-                  phoneNumber: widget.phoneNumber,
+            child: RefreshIndicator(
+              color: AppColors.primary,
+              backgroundColor: isDark ? AppColors.cardDark : AppColors.white,
+              onRefresh: _handleRefresh,
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(
+                  parent: BouncingScrollPhysics(),
                 ),
-                const SizedBox(height: 28),
-                _MenuSection(
-                  title: 'Account Overview',
-                  items: _accountItems,
-                  isDark: isDark,
+                padding: EdgeInsets.only(
+                  bottom: 32 + widget.bottomOverlayPadding,
                 ),
-                const SizedBox(height: 24),
-                _MenuSection(
-                  title: 'Support & Settings',
-                  items: _supportItems,
-                  isDark: isDark,
-                ),
-              ],
+                children: [
+                  const SizedBox(height: 8),
+                  _ProfileHeader(
+                    isDark: isDark,
+                    fullName: _fullName,
+                    phoneNumber: _phoneNumber,
+                  ),
+                  const SizedBox(height: 28),
+                  _MenuSection(
+                    title: 'Account Overview',
+                    items: _accountItems,
+                    isDark: isDark,
+                  ),
+                  const SizedBox(height: 24),
+                  _MenuSection(
+                    title: 'Support & Settings',
+                    items: _supportItems,
+                    isDark: isDark,
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -186,7 +236,7 @@ class _TopBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.fromLTRB(8, 12, 8, 8),
-      color: isDark ? AppColors.bgDeep : AppColors.bgLight,
+      color: isDark ? AppColors.bgDeep : AppColors.white,
       child: Row(
         children: [
           SizedBox(
@@ -207,8 +257,9 @@ class _TopBar extends StatelessWidget {
               'Profile',
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.5,
                 color: isDark ? AppColors.white : AppColors.textPrimary,
               ),
             ),
@@ -279,7 +330,7 @@ class _ProfileHeader extends StatelessWidget {
                   border: Border.all(
                     color: isDark
                         ? AppColors.bgDeep
-                        : AppColors.bgLight,
+                        : AppColors.white,
                     width: 2,
                   ),
                   boxShadow: const [
@@ -303,8 +354,8 @@ class _ProfileHeader extends StatelessWidget {
         Text(
           fullName.isEmpty ? 'Your profile' : fullName,
           style: TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.w700,
+            fontSize: 20,
+            fontWeight: FontWeight.w800,
             color: isDark ? AppColors.white : AppColors.textPrimary,
             letterSpacing: -0.3,
           ),
@@ -313,9 +364,9 @@ class _ProfileHeader extends StatelessWidget {
         Text(
           phoneNumber.isEmpty ? 'Phone number unavailable' : phoneNumber,
           style: TextStyle(
-            fontSize: 14,
+            fontSize: 13.5,
             fontWeight: FontWeight.w500,
-            color: isDark ? AppColors.textDescription : AppColors.materialGrey[600],
+            color: isDark ? AppColors.textDescription : AppColors.textSecondary,
           ),
         ),
         const SizedBox(height: 14),
@@ -353,12 +404,12 @@ class _MenuSection extends StatelessWidget {
                 child: Text(
                   title.toUpperCase(),
                   style: TextStyle(
-                    fontSize: 11,
+                    fontSize: 11.5,
                     fontWeight: FontWeight.w700,
                     color: isDark
                         ? AppColors.textDescription
-                        : AppColors.materialGrey[600],
-                    letterSpacing: 1.4,
+                        : AppColors.textSecondary,
+                    letterSpacing: 1.2,
                   ),
                 ),
               ),
@@ -386,7 +437,7 @@ class _MenuRow extends StatelessWidget {
     final cardBg = isDark ? AppColors.cardFill : AppColors.white;
     final cardBorderColor = isDark
         ? AppColors.cardBorder
-        : AppColors.borderLight;
+        : const Color(0xFFE5E7EB);
 
     Future<void> navigateToPage() async {
       if (item.menupage == 'LoginScreen') {
@@ -439,9 +490,9 @@ class _MenuRow extends StatelessWidget {
           BoxShadow(
             color: isDark
                 ? AppColors.black.withValues(alpha: 0.2)
-                : AppColors.black.withValues(alpha: 0.05),
-            blurRadius: 12,
-            offset: const Offset(0, 3),
+                : AppColors.black.withValues(alpha: 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
           ),
         ],
       ),

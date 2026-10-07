@@ -1,26 +1,10 @@
 import '../app_typography.dart';
 import '../app_colors.dart';
 import 'package:flutter/material.dart';
+import '../services/saved_restaurant_service.dart';
+import 'RestuarantMenuScreen.dart';
 
-/// ZTEEEL Saved Restaurants — light theme variant.
-/// Same structure/features as the dark version, recolored for a clean
-/// white background with the ZTEEEL primary orange as the accent.
-
-void main() => runApp(const ZteeelSavedRestaurantsApp());
-
-class ZteeelSavedRestaurantsApp extends StatelessWidget {
-  const ZteeelSavedRestaurantsApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'ZTEEEL Saved Restaurants',
-      debugShowCheckedModeBanner: false,
-      theme: AppTypography.lightTheme(),
-      home: const SavedRestaurantsScreen(),
-    );
-  }
-}
+export '../services/saved_restaurant_service.dart' show SavedRestaurant;
 
 /// ---------------------------------------------------------------------
 /// Light layout using the shared app palette.
@@ -28,122 +12,11 @@ class ZteeelSavedRestaurantsApp extends StatelessWidget {
 
 typedef SavedShopScreen = SavedRestaurantsScreen;
 
-/// ---------------------------------------------------------------------
-/// Data models
-/// ---------------------------------------------------------------------
-class SavedRestaurant {
-  final String id;
-  final String name;
-  final String cuisine;
-  final double rating;
-  final int reviewCount;
-  final int priceLevel; // 1..3 -> $ .. $$$
-  final double distanceKm;
-  final String imageUrl;
-  final bool isOpen;
-  final List<String> collections;
-  const SavedRestaurant({
-    required this.id,
-    required this.name,
-    required this.cuisine,
-    required this.rating,
-    required this.reviewCount,
-    required this.priceLevel,
-    required this.distanceKm,
-    required this.imageUrl,
-    required this.isOpen,
-    required this.collections,
-  });
-
-  String get priceTag => '\$' * priceLevel;
-}
-
 enum ViewMode { list, grid }
 
 enum SortMode { recent, ratingHighLow, distanceNearFar, nameAz }
 
 const _collections = ['Date Night', 'Quick Lunch', 'Family', 'Coffee & Brunch'];
-
-final List<SavedRestaurant> _seedRestaurants = [
-  SavedRestaurant(
-    id: 'r1',
-    name: 'The Golden Spoon',
-    cuisine: 'Italian, Pizza',
-    rating: 4.5,
-    reviewCount: 128,
-    priceLevel: 3,
-    distanceKm: 2.4,
-    isOpen: true,
-    collections: const ['Date Night'],
-    imageUrl:
-        'https://lh3.googleusercontent.com/aida-public/AB6AXuBC4rVbFwoGXjLht7kVnBqIRzwWvs4Zjs9MXRO9KcTo0jtfVSf_7cntQUcOWZMo9w16aPaHimQ761pXteNZ6bWmgD-Z9MhZGuIBDnB1i3QsScDX33zWUZClf1BWVGbLlBU8z2XBgGXGN6lFJ7gaJxCoQ3np7fwv88HuUnvC-khsITpGFIaTnWeiWUwdhVuaMheHbMtARJ5UW2ZFT1zRRFniyyZQhpVu3y8V4_c3tp18JfzXF_Bf5JCHU5HWwrbdb3lkL9ySfGgKfVc5',
-  ),
-  SavedRestaurant(
-    id: 'r2',
-    name: 'Urban Bites & Co.',
-    cuisine: 'American, Burgers',
-    rating: 4.2,
-    reviewCount: 96,
-    priceLevel: 2,
-    distanceKm: 0.8,
-    isOpen: true,
-    collections: const ['Quick Lunch', 'Family'],
-    imageUrl:
-        'https://lh3.googleusercontent.com/aida-public/AB6AXuDBn2CcBKm9v3EMYD765j4K_BUS5odWdUdF-SNaW7KJa4OoU0He3o-A1x90LLNn6hUurctOhgnx1OdWBvbV4rRjQk256pVUGKYSuijyu0-MgnQa1eC6jTpmSqdkHxu6fWoQmUggA6vv6A6klfgiWmUkYXRKX-UH8wyGFGf3jqIz8Z_DvCSvJdl353AOFcBpeyZ7V6gPKxhy36BLB805UKKTFq8igR8IqZfGog0lDqWE6myfkMFUyHKiXw1zHAb__pLHOIS4YA1LAD1z',
-  ),
-  SavedRestaurant(
-    id: 'r3',
-    name: 'The Salad Project',
-    cuisine: 'Healthy, Salads',
-    rating: 4.7,
-    reviewCount: 64,
-    priceLevel: 2,
-    distanceKm: 1.5,
-    isOpen: false,
-    collections: const ['Quick Lunch'],
-    imageUrl:
-        'https://lh3.googleusercontent.com/aida-public/AB6AXuDmClsr1hF4KsV4W4twDAfsFrWFXTZ31Bxa7mfVfdUCs0mpEoYIEGCv2siSmQFAA152guFfymwnrdoD73-596E3g5ET8A_s3XsiWekws1PKpXu_IHHvfZgnoUZ_4BTvWRzK67yL2dYdaMZb-6JBAwZ4C_T0P7igosFRYybg9KUw_ce7vp3t_CwCBvgpGrpxBt2Eo9OFJJhmApuotN-C6r7ROpiEJzn8l2rrqapZchT_5Az54C7O7VGBsJUSlbkVLlf5DZx_ThzSrlpa',
-  ),
-  SavedRestaurant(
-    id: 'r4',
-    name: 'The Smokehouse',
-    cuisine: 'American, BBQ, Grill',
-    rating: 4.9,
-    reviewCount: 212,
-    priceLevel: 3,
-    distanceKm: 3.0,
-    isOpen: true,
-    collections: const ['Date Night', 'Family'],
-    imageUrl:
-        'https://lh3.googleusercontent.com/aida-public/AB6AXuBYqdb8-9dmDhLNbRhUZwKxFHXjz7Y4vohYf_W8xFGxw9kTwBHveqIdCkrTHUQFaxTmEKqlWLgb-g07hckDwyvI3EPQVd3yfOyVhYftbNZTfrukzHIIF1mz8wheRiNmvKSKP5jfdisKF6Q9AqcHT4mQn639vumXdwgcHeA5Cwp-7jEXE5VN06kcFAgxiMEPHNL6fnBGJ-owFJCNfjFr7-zH4-urFCgqol1C4sA1vL_GrWomz0r_eUCrXltx83sxyhzUlNVuKq2S8fzN',
-  ),
-  SavedRestaurant(
-    id: 'r5',
-    name: 'Sushi Master',
-    cuisine: 'Japanese, Sushi',
-    rating: 4.5,
-    reviewCount: 87,
-    priceLevel: 3,
-    distanceKm: 2.5,
-    isOpen: false,
-    collections: const ['Date Night'],
-    imageUrl:
-        'https://lh3.googleusercontent.com/aida-public/AB6AXuAV4KaIk0LA9cH24ERImPnDkVz--7lPo2L7pPtM2ILiJhfh0K-ySZfynaoy-RmSiB3YFvtnAnPgcgPfxjk45wiAgrcxPmrls2BXXRcdQnbRRgFR7aO9gJoJkN__NYftVngo4SuuITMfTf85wsWZCjZcqAyWW-PyFiSMPAudLaT6684M6XG-yZXkly9UGMXJTmTNaiTlqXPlC1po5TviR3F0hRBE_griI99iN1Erc2ovBo4HTf-eA3ZswrpbBD4rOHvkOhMP92rss5OE',
-  ),
-  SavedRestaurant(
-    id: 'r6',
-    name: 'Grill House',
-    cuisine: 'Steakhouse',
-    rating: 4.6,
-    reviewCount: 143,
-    priceLevel: 3,
-    distanceKm: 4.1,
-    isOpen: true,
-    collections: const ['Date Night'],
-    imageUrl:
-        'https://lh3.googleusercontent.com/aida-public/AB6AXuDdkzjMAvBHCfwRW6c8Z0PRDiECvHocxOxi_c7mQzkbyM1Hp8Bjalia5vtRppGwuanih6Mc5VELW-QN9xOnl9iZI4lEsCix4MECxUPaxKGCLxtBTavse6JuRJKa2dL0FWuckkntr-4Con3ZglO0mYRyoULvbFYX9AN3pksQS9WQi0YOnB0mh2G5VSG9hAjK1dIw6l7qPd-LrAu7mouA66Egm5dgQ7dyc1rh4WwFdGfb3nbwpL-SxRZ-TQbyfd3IQwV-cSY5SbCWmz16',
-  ),
-];
 
 /// ---------------------------------------------------------------------
 /// Main screen
@@ -156,7 +29,8 @@ class SavedRestaurantsScreen extends StatefulWidget {
 }
 
 class _SavedRestaurantsScreenState extends State<SavedRestaurantsScreen> {
-  late List<SavedRestaurant> _restaurants;
+  List<SavedRestaurant> _restaurants = [];
+  bool _isLoading = true;
   final TextEditingController _searchController = TextEditingController();
   String _query = '';
   String? _selectedCollection; // null = All
@@ -166,9 +40,23 @@ class _SavedRestaurantsScreenState extends State<SavedRestaurantsScreen> {
   @override
   void initState() {
     super.initState();
-    _restaurants = List.of(_seedRestaurants);
     _searchController.addListener(() {
       setState(() => _query = _searchController.text.trim().toLowerCase());
+    });
+    _loadSaved();
+  }
+
+  Future<void> _loadSaved() async {
+    if (SavedRestaurantService.cachedSavedRestaurants.isNotEmpty) {
+      _restaurants = List.of(SavedRestaurantService.cachedSavedRestaurants);
+      _isLoading = false;
+      if (mounted) setState(() {});
+    }
+    final live = await SavedRestaurantService.fetchSavedRestaurants(forceRefresh: true);
+    if (!mounted) return;
+    setState(() {
+      _restaurants = live;
+      _isLoading = false;
     });
   }
 
@@ -208,6 +96,7 @@ class _SavedRestaurantsScreenState extends State<SavedRestaurantsScreen> {
 
   void _removeRestaurant(SavedRestaurant r) {
     setState(() => _restaurants.removeWhere((x) => x.id == r.id));
+    SavedRestaurantService.removeSavedRestaurant(r.id);
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -217,7 +106,10 @@ class _SavedRestaurantsScreenState extends State<SavedRestaurantsScreen> {
         action: SnackBarAction(
           label: 'UNDO',
           textColor: AppColors.primary,
-          onPressed: () => setState(() => _restaurants.add(r)),
+          onPressed: () {
+            setState(() => _restaurants.add(r));
+            SavedRestaurantService.saveRestaurant(r.id);
+          },
         ),
       ),
     );
@@ -226,7 +118,7 @@ class _SavedRestaurantsScreenState extends State<SavedRestaurantsScreen> {
   void _openSortSheet() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.cardLight,
+      backgroundColor: AppColors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -240,87 +132,150 @@ class _SavedRestaurantsScreenState extends State<SavedRestaurantsScreen> {
     );
   }
 
+  Future<void> _showCreateListDialog() async {
+    final controller = TextEditingController();
+    final listName = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Create New List'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(
+            hintText: 'List name (e.g. Date Night)',
+          ),
+          onSubmitted: (v) => Navigator.pop(ctx, v.trim()),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+            child: const Text('Create', style: TextStyle(color: AppColors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (listName != null && listName.isNotEmpty) {
+      final col = await SavedRestaurantService.createCollection(listName);
+      if (col != null && mounted) {
+        setState(() {
+          _selectedCollection = col.name;
+        });
+      }
+    }
+  }
+
+  void _openRestaurant(SavedRestaurant r) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => RestaurantMenuScreen(
+          vendorId: r.id,
+          restaurantName: r.name,
+          heroImageUrl: r.imageUrl,
+          cuisine: r.cuisine,
+          isOpen: r.isOpen,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final visible = _visible;
 
     return Scaffold(
-      backgroundColor: AppColors.bgLight,
+      backgroundColor: AppColors.white,
       body: SafeArea(
         child: Column(
           children: [
             _Header(count: _restaurants.length),
             Expanded(
-              child: CustomScrollView(
-                slivers: [
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _SearchRow(
-                            controller: _searchController,
-                            onFilterTap: _openSortSheet,
-                            viewMode: _viewMode,
-                            onViewModeChanged: (m) =>
-                                setState(() => _viewMode = m),
+              child: _isLoading && _restaurants.isEmpty
+                  ? const Center(
+                      child: CircularProgressIndicator(color: AppColors.primary),
+                    )
+                  : RefreshIndicator(
+                      color: AppColors.primary,
+                      onRefresh: () => _loadSaved(),
+                      child: CustomScrollView(
+                        slivers: [
+                          SliverToBoxAdapter(
+                            child: Padding(
+                              padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _SearchRow(
+                                    controller: _searchController,
+                                    onFilterTap: _openSortSheet,
+                                    viewMode: _viewMode,
+                                    onViewModeChanged: (m) =>
+                                        setState(() => _viewMode = m),
+                                  ),
+                                  const SizedBox(height: 18),
+                                  _CollectionsShelf(
+                                    restaurants: _restaurants,
+                                    selected: _selectedCollection,
+                                    onSelect: (c) =>
+                                        setState(() => _selectedCollection = c),
+                                    onAddCollection: _showCreateListDialog,
+                                  ),
+                                  const SizedBox(height: 18),
+                                ],
+                              ),
+                            ),
                           ),
-                          const SizedBox(height: 18),
-                          _CollectionsShelf(
-                            restaurants: _restaurants,
-                            selected: _selectedCollection,
-                            onSelect: (c) =>
-                                setState(() => _selectedCollection = c),
-                          ),
-                          const SizedBox(height: 18),
+                          if (visible.isEmpty)
+                            SliverFillRemaining(
+                              hasScrollBody: false,
+                              child: _EmptyState(hasQuery: _query.isNotEmpty),
+                            )
+                          else if (_viewMode == ViewMode.list)
+                            SliverPadding(
+                              padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                              sliver: SliverList(
+                                delegate: SliverChildBuilderDelegate(
+                                  (context, i) => Padding(
+                                    padding: const EdgeInsets.only(bottom: 16),
+                                    child: _RestaurantListCard(
+                                      restaurant: visible[i],
+                                      onTap: () => _openRestaurant(visible[i]),
+                                      onRemove: () => _removeRestaurant(visible[i]),
+                                    ),
+                                  ),
+                                  childCount: visible.length,
+                                ),
+                              ),
+                            )
+                          else
+                            SliverPadding(
+                              padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                              sliver: SliverGrid(
+                                gridDelegate:
+                                    const SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: 2,
+                                      mainAxisSpacing: 14,
+                                      crossAxisSpacing: 14,
+                                      childAspectRatio: 0.72,
+                                    ),
+                                delegate: SliverChildBuilderDelegate(
+                                  (context, i) => _RestaurantGridCard(
+                                    restaurant: visible[i],
+                                    onTap: () => _openRestaurant(visible[i]),
+                                    onRemove: () => _removeRestaurant(visible[i]),
+                                  ),
+                                  childCount: visible.length,
+                                ),
+                              ),
+                            ),
                         ],
                       ),
                     ),
-                  ),
-                  if (visible.isEmpty)
-                    SliverFillRemaining(
-                      hasScrollBody: false,
-                      child: _EmptyState(hasQuery: _query.isNotEmpty),
-                    )
-                  else if (_viewMode == ViewMode.list)
-                    SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-                      sliver: SliverList(
-                        delegate: SliverChildBuilderDelegate(
-                          (context, i) => Padding(
-                            padding: const EdgeInsets.only(bottom: 16),
-                            child: _RestaurantListCard(
-                              restaurant: visible[i],
-                              onRemove: () => _removeRestaurant(visible[i]),
-                            ),
-                          ),
-                          childCount: visible.length,
-                        ),
-                      ),
-                    )
-                  else
-                    SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-                      sliver: SliverGrid(
-                        gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 2,
-                              mainAxisSpacing: 14,
-                              crossAxisSpacing: 14,
-                              childAspectRatio: 0.72,
-                            ),
-                        delegate: SliverChildBuilderDelegate(
-                          (context, i) => _RestaurantGridCard(
-                            restaurant: visible[i],
-                            onRemove: () => _removeRestaurant(visible[i]),
-                          ),
-                          childCount: visible.length,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
             ),
           ],
         ),
@@ -570,10 +525,13 @@ class _CollectionsShelf extends StatelessWidget {
   final List<SavedRestaurant> restaurants;
   final String? selected;
   final ValueChanged<String?> onSelect;
+  final VoidCallback onAddCollection;
+
   const _CollectionsShelf({
     required this.restaurants,
     required this.selected,
     required this.onSelect,
+    required this.onAddCollection,
   });
 
   int _countFor(String? collection) {
@@ -590,32 +548,44 @@ class _CollectionsShelf extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 92,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        children: [
-          _CollectionTile(
-            label: 'All Saved',
-            count: _countFor(null),
-            icon: Icons.bookmark,
-            selected: selected == null,
-            onTap: () => onSelect(null),
+    return ValueListenableBuilder<List<SavedCollection>>(
+      valueListenable: SavedRestaurantService.savedCollectionsNotifier,
+      builder: (context, userCollections, _) {
+        final allCollectionNames = <String>[
+          ..._collections,
+          ...userCollections
+              .map((c) => c.name)
+              .where((name) => !_collections.contains(name)),
+        ];
+
+        return SizedBox(
+          height: 92,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            children: [
+              _CollectionTile(
+                label: 'All Saved',
+                count: _countFor(null),
+                icon: Icons.bookmark,
+                selected: selected == null,
+                onTap: () => onSelect(null),
+              ),
+              const SizedBox(width: 12),
+              for (final collection in allCollectionNames) ...[
+                _CollectionTile(
+                  label: collection,
+                  count: _countFor(collection),
+                  icon: _icons[collection] ?? Icons.folder_special_rounded,
+                  selected: selected == collection,
+                  onTap: () => onSelect(collection),
+                ),
+                const SizedBox(width: 12),
+              ],
+              _AddCollectionTile(onTap: onAddCollection),
+            ],
           ),
-          const SizedBox(width: 12),
-          for (final collection in _collections) ...[
-            _CollectionTile(
-              label: collection,
-              count: _countFor(collection),
-              icon: _icons[collection] ?? Icons.folder,
-              selected: selected == collection,
-              onTap: () => onSelect(collection),
-            ),
-            const SizedBox(width: 12),
-          ],
-          _AddCollectionTile(onTap: () {}),
-        ],
-      ),
+        );
+      },
     );
   }
 }
@@ -749,8 +719,13 @@ class _AddCollectionTile extends StatelessWidget {
 /// ---------------------------------------------------------------------
 class _RestaurantListCard extends StatelessWidget {
   final SavedRestaurant restaurant;
+  final VoidCallback onTap;
   final VoidCallback onRemove;
-  const _RestaurantListCard({required this.restaurant, required this.onRemove});
+  const _RestaurantListCard({
+    required this.restaurant,
+    required this.onTap,
+    required this.onRemove,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -767,159 +742,166 @@ class _RestaurantListCard extends StatelessWidget {
         ),
         child: const Icon(Icons.delete_outline, color: AppColors.materialRedAccent),
       ),
-      child: Container(
-        decoration: BoxDecoration(
-          color: AppColors.cardLight,
+      child: Material(
+        color: AppColors.cardLight,
+        borderRadius: BorderRadius.circular(20),
+        child: InkWell(
+          onTap: onTap,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppColors.borderLight),
-          boxShadow: const [
-            BoxShadow(
-              color: AppColors.black12,
-              blurRadius: 10,
-              offset: Offset(0, 4),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: AppColors.borderLight),
+              boxShadow: const [
+                BoxShadow(
+                  color: AppColors.black12,
+                  blurRadius: 10,
+                  offset: Offset(0, 4),
+                ),
+              ],
             ),
-          ],
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(
-              height: 150,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  Image.network(restaurant.imageUrl, fit: BoxFit.cover),
-                  // Dark gradient stays even on the light theme — it's the
-                  // only way white overlay text stays legible on a photo.
-                  DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.bottomCenter,
-                        end: Alignment.topCenter,
-                        colors: [
-                          AppColors.black.withOpacity(0.7),
-                          AppColors.transparent,
-                        ],
-                        stops: const [0.0, 0.7],
+            clipBehavior: Clip.antiAlias,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  height: 150,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Image.network(restaurant.imageUrl, fit: BoxFit.cover),
+                      // Dark gradient stays even on the light theme — it's the
+                      // only way white overlay text stays legible on a photo.
+                      DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.bottomCenter,
+                            end: Alignment.topCenter,
+                            colors: [
+                              AppColors.black.withOpacity(0.7),
+                              AppColors.transparent,
+                            ],
+                            stops: const [0.0, 0.7],
+                          ),
+                        ),
                       ),
-                    ),
+                      Positioned(
+                        top: 10,
+                        left: 10,
+                        child: _StatusChip(isOpen: restaurant.isOpen),
+                      ),
+                      Positioned(
+                        top: 10,
+                        right: 10,
+                        child: _BookmarkButton(onTap: onRemove),
+                      ),
+                      Positioned(
+                        left: 12,
+                        right: 12,
+                        bottom: 10,
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                restaurant.name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.white,
+                                ),
+                              ),
+                            ),
+                            _RatingPill(
+                              rating: restaurant.rating,
+                              reviewCount: restaurant.reviewCount,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                  Positioned(
-                    top: 10,
-                    left: 10,
-                    child: _StatusChip(isOpen: restaurant.isOpen),
-                  ),
-                  Positioned(
-                    top: 10,
-                    right: 10,
-                    child: _BookmarkButton(onTap: onRemove),
-                  ),
-                  Positioned(
-                    left: 12,
-                    right: 12,
-                    bottom: 10,
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            restaurant.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.white,
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              '${restaurant.cuisine} · ${restaurant.priceTag}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 12.5,
+                                color: AppColors.textSecondary,
+                              ),
                             ),
                           ),
-                        ),
-                        _RatingPill(
-                          rating: restaurant.rating,
-                          reviewCount: restaurant.reviewCount,
+                          const Icon(
+                            Icons.location_on,
+                            size: 14,
+                            color: AppColors.textMuted,
+                          ),
+                          const SizedBox(width: 2),
+                          Text(
+                            '${restaurant.distanceKm.toStringAsFixed(1)} km',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (restaurant.collections.isNotEmpty) ...[
+                        const SizedBox(height: 10),
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
+                          children: restaurant.collections
+                              .map((c) => _CollectionTag(label: c))
+                              .toList(),
                         ),
                       ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          '${restaurant.cuisine} · ${restaurant.priceTag}',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 12.5,
-                            color: AppColors.textSecondary,
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _ActionButton(
+                              icon: Icons.call_outlined,
+                              label: 'Call',
+                              onTap: () {},
+                            ),
                           ),
-                        ),
-                      ),
-                      const Icon(
-                        Icons.location_on,
-                        size: 14,
-                        color: AppColors.textMuted,
-                      ),
-                      const SizedBox(width: 2),
-                      Text(
-                        '${restaurant.distanceKm.toStringAsFixed(1)} km',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (restaurant.collections.isNotEmpty) ...[
-                    const SizedBox(height: 10),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 6,
-                      children: restaurant.collections
-                          .map((c) => _CollectionTag(label: c))
-                          .toList(),
-                    ),
-                  ],
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _ActionButton(
-                          icon: Icons.call_outlined,
-                          label: 'Call',
-                          onTap: () {},
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _ActionButton(
-                          icon: Icons.directions_outlined,
-                          label: 'Directions',
-                          onTap: () {},
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _ActionButton(
-                          icon: Icons.restaurant_menu,
-                          label: 'Menu',
-                          filled: true,
-                          onTap: () {},
-                        ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _ActionButton(
+                              icon: Icons.directions_outlined,
+                              label: 'Directions',
+                              onTap: () {},
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _ActionButton(
+                              icon: Icons.restaurant_menu,
+                              label: 'Menu',
+                              filled: true,
+                              onTap: onTap,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -931,99 +913,115 @@ class _RestaurantListCard extends StatelessWidget {
 /// ---------------------------------------------------------------------
 class _RestaurantGridCard extends StatelessWidget {
   final SavedRestaurant restaurant;
+  final VoidCallback onTap;
   final VoidCallback onRemove;
-  const _RestaurantGridCard({required this.restaurant, required this.onRemove});
+  const _RestaurantGridCard({
+    required this.restaurant,
+    required this.onTap,
+    required this.onRemove,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.cardLight,
+    return Material(
+      color: AppColors.cardLight,
+      borderRadius: BorderRadius.circular(18),
+      child: InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.borderLight),
-        boxShadow: const [
-          BoxShadow(color: AppColors.black12, blurRadius: 8, offset: Offset(0, 3)),
-        ],
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                Image.network(restaurant.imageUrl, fit: BoxFit.cover),
-                DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.bottomCenter,
-                      end: Alignment.topCenter,
-                      colors: [
-                        AppColors.black.withOpacity(0.65),
-                        AppColors.transparent,
-                      ],
-                      stops: const [0.0, 0.6],
-                    ),
-                  ),
-                ),
-                Positioned(
-                  top: 8,
-                  right: 8,
-                  child: _BookmarkButton(onTap: onRemove, compact: true),
-                ),
-                Positioned(
-                  top: 8,
-                  left: 8,
-                  child: _StatusChip(isOpen: restaurant.isOpen, compact: true),
-                ),
-                Positioned(
-                  left: 10,
-                  right: 10,
-                  bottom: 8,
-                  child: Text(
-                    restaurant.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 13.5,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.white,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: AppColors.borderLight),
+            boxShadow: const [
+              BoxShadow(
+                color: AppColors.black12,
+                blurRadius: 8,
+                offset: Offset(0, 3),
+              ),
+            ],
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
-            child: Row(
-              children: [
-                const Icon(Icons.star, size: 13, color: AppColors.yellow),
-                const SizedBox(width: 3),
-                Text(
-                  restaurant.rating.toStringAsFixed(1),
-                  style: const TextStyle(
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    '${restaurant.distanceKm.toStringAsFixed(1)} km',
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      color: AppColors.textMuted,
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Image.network(restaurant.imageUrl, fit: BoxFit.cover),
+                    DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.bottomCenter,
+                          end: Alignment.topCenter,
+                          colors: [
+                            AppColors.black.withOpacity(0.65),
+                            AppColors.transparent,
+                          ],
+                          stops: const [0.0, 0.6],
+                        ),
+                      ),
                     ),
-                  ),
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: _BookmarkButton(onTap: onRemove, compact: true),
+                    ),
+                    Positioned(
+                      top: 8,
+                      left: 8,
+                      child: _StatusChip(isOpen: restaurant.isOpen, compact: true),
+                    ),
+                    Positioned(
+                      left: 10,
+                      right: 10,
+                      bottom: 8,
+                      child: Text(
+                        restaurant.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.white,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+                child: Row(
+                  children: [
+                    const Icon(Icons.star, size: 13, color: AppColors.yellow),
+                    const SizedBox(width: 3),
+                    Text(
+                      restaurant.rating.toStringAsFixed(1),
+                      style: const TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        '${restaurant.distanceKm.toStringAsFixed(1)} km',
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: AppColors.textMuted,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

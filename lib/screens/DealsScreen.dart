@@ -7,7 +7,7 @@ import '../services/offer_service.dart';
 import '../services/restaurant_service.dart';
 import '../widgets/app_top_bar.dart';
 import '../widgets/discovery_search_bar.dart';
-import 'RestuarantMenuScreen.dart';
+import 'OfferExplanationScreen.dart';
 
 /// ---------------------------------------------------------------------
 /// Enriched Deal Model
@@ -23,6 +23,7 @@ class Deal {
   final double rating;
   final int reviewCount;
   final String distance;
+  final double distanceKm;
   final String discount;
   final double discountPercent;
   final String scopeType;
@@ -45,6 +46,7 @@ class Deal {
     this.rating = 4.8,
     this.reviewCount = 120,
     required this.distance,
+    this.distanceKm = 1.2,
     required this.discount,
     this.discountPercent = 0.0,
     this.scopeType = 'all_menu',
@@ -108,7 +110,8 @@ class Deal {
 
     final rating = double.tryParse(vendor?['rating']?.toString() ?? vendor?['average_rating']?.toString() ?? '') ?? 4.8;
     final reviews = int.tryParse(vendor?['review_count']?.toString() ?? vendor?['rating_count']?.toString() ?? '') ?? 140;
-    final dist = vendor?['distance_km'] != null ? '${vendor!['distance_km']} km' : '1.2 km';
+    final distanceKm = double.tryParse(offer['distance_km']?.toString() ?? vendor?['distance_km']?.toString() ?? '') ?? 1.2;
+    final dist = offer['distance_km'] != null ? '${offer['distance_km']} km' : (vendor?['distance_km'] != null ? '${vendor!['distance_km']} km' : 'Nearby');
 
     DateTime? endsAt;
     String timeLeft = 'Limited Time';
@@ -151,6 +154,7 @@ class Deal {
       rating: rating,
       reviewCount: reviews,
       distance: dist,
+      distanceKm: distanceKm,
       discount: discountLabel,
       discountPercent: discountPct,
       scopeType: scopeType,
@@ -216,11 +220,12 @@ Future<List<Deal>> dealsFromOffers(List<Map<String, dynamic>> offers) async {
   final list = <Deal>[];
   for (int i = 0; i < offers.length; i++) {
     final offer = offers[i];
-    final vId = offer['vendor']?.toString() ?? '';
-    final vendor = vMap[vId];
+    final vendorRef = offer['vendor'];
+    final vId = (vendorRef is Map ? vendorRef['id'] : vendorRef)?.toString() ?? '';
+    final vendor = vMap[vId] ?? (vendorRef is Map ? Map<String, dynamic>.from(vendorRef) : null);
     list.add(
       Deal.fromBackend(
-        offer: offer,
+        offer: {...offer, 'vendor': vId},
         vendor: vendor,
         fallbackImage: i < deals.length ? deals[i].imageUrl : null,
       ),
@@ -239,8 +244,13 @@ List<Deal> dashboardDeals(List<Deal> liveDeals) {
 /// ---------------------------------------------------------------------
 class DealsScreen extends StatefulWidget {
   final VoidCallback? onOpenCart;
+  final double bottomOverlayPadding;
 
-  const DealsScreen({super.key, this.onOpenCart});
+  const DealsScreen({
+    super.key,
+    this.onOpenCart,
+    this.bottomOverlayPadding = 0,
+  });
 
   @override
   State<DealsScreen> createState() => _DealsScreenState();
@@ -257,6 +267,9 @@ class _DealsScreenState extends State<DealsScreen> {
 
   final List<String> _filters = [
     'All Deals',
+    '📍 Under 5 km',
+    '📍 Under 15 km',
+    '📍 Under 25 km',
     '⚡ Mega Deals (25%+)',
     '🍕 Whole Menu',
     '🍱 Category Specials',
@@ -279,7 +292,7 @@ class _DealsScreenState extends State<DealsScreen> {
   Future<void> _loadDeals() async {
     setState(() => _isLoading = true);
     try {
-      final rawOffers = await OfferService.fetchOffers();
+      final rawOffers = await OfferService.fetchOffers(forceRefresh: true);
       if (rawOffers.isNotEmpty) {
         final parsed = await dealsFromOffers(rawOffers);
         if (mounted) {
@@ -304,7 +317,13 @@ class _DealsScreenState extends State<DealsScreen> {
     var list = List<Deal>.from(_allDeals);
 
     // Apply Filter Tab
-    if (_selectedFilter == '⚡ Mega Deals (25%+)') {
+    if (_selectedFilter == '📍 Under 5 km') {
+      list = list.where((d) => d.distanceKm <= 5.0).toList();
+    } else if (_selectedFilter == '📍 Under 15 km') {
+      list = list.where((d) => d.distanceKm <= 15.0).toList();
+    } else if (_selectedFilter == '📍 Under 25 km') {
+      list = list.where((d) => d.distanceKm <= 25.0).toList();
+    } else if (_selectedFilter == '⚡ Mega Deals (25%+)') {
       list = list.where((d) => d.discountPercent >= 25 || d.isMega).toList();
     } else if (_selectedFilter == '🍕 Whole Menu') {
       list = list.where((d) => d.scopeType == 'all_menu').toList();
@@ -330,26 +349,136 @@ class _DealsScreenState extends State<DealsScreen> {
     return list;
   }
 
-  void _navigateToMenu(Deal deal) {
-    if (deal.vendorId != null && deal.vendorId!.isNotEmpty) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => RestaurantMenuScreen(
-            vendorId: deal.vendorId,
-            restaurantName: deal.restaurant,
-            heroImageUrl: deal.imageUrl,
-            cuisine: deal.cuisine,
-          ),
+  void _openDeal(Deal deal) {
+    final subtitle = deal.description.isNotEmpty
+        ? deal.description
+        : [
+            deal.restaurant,
+            deal.distance,
+          ].where((value) => value.isNotEmpty).join(' · ');
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => OfferExplanationScreen(
+          title: deal.title,
+          subtitle: subtitle.isEmpty ? 'On selected items' : subtitle,
+          badge: deal.discount,
+          expiry: deal.timeLeft.isEmpty ? 'Limited time' : deal.timeLeft,
+          restaurantName: deal.restaurant,
+          vendorId: deal.vendorId,
+          dealId: deal.id ?? deal.title,
+          discountPercent: deal.discountPercent,
+          scopeType: deal.scopeType,
+          itemIds: deal.itemIds,
+          categoryIds: deal.categoryIds,
         ),
-      );
-    }
+      ),
+    );
+  }
+
+  void _openFilterSheet() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.transparent,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.cardDark : AppColors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.black.withValues(alpha: 0.15),
+              blurRadius: 16,
+              offset: const Offset(0, -4),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.white24 : AppColors.borderLight,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Filter Deals',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: isDark ? AppColors.white : AppColors.textPrimary,
+                  ),
+                ),
+                if (_selectedFilter != 'All Deals')
+                  TextButton(
+                    onPressed: () {
+                      setState(() => _selectedFilter = 'All Deals');
+                      Navigator.pop(context);
+                    },
+                    child: const Text('Reset', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 10,
+              children: _filters.map((filter) {
+                final isSelected = filter == _selectedFilter;
+                return GestureDetector(
+                  onTap: () {
+                    setState(() => _selectedFilter = filter);
+                    Navigator.pop(context);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? AppColors.primary
+                          : (isDark ? AppColors.cardDark : AppColors.surfaceRaised),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: isSelected
+                            ? AppColors.primary
+                            : (isDark ? AppColors.borderDark : AppColors.borderLight),
+                      ),
+                    ),
+                    child: Text(
+                      filter,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                        color: isSelected
+                            ? AppColors.white
+                            : (isDark ? AppColors.white70 : AppColors.toneFF4B5563),
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColor = isDark ? AppColors.bgDark : AppColors.bgLight;
+    final bgColor = isDark ? AppColors.bgDark : AppColors.white;
 
     final spotlightDeals = _allDeals.where((d) => d.discountPercent >= 20 || d.isMega).take(4).toList();
     final flashDeals = _allDeals.where((d) => d.isFlash || d.timeLeft.contains('m left') || d.timeLeft.contains('h left')).toList();
@@ -365,10 +494,14 @@ class _DealsScreenState extends State<DealsScreen> {
           bottom: false,
           child: RefreshIndicator(
             color: AppColors.primary,
+            backgroundColor: isDark ? AppColors.cardDark : AppColors.white,
             onRefresh: _loadDeals,
             child: CustomScrollView(
+              physics: const AlwaysScrollableScrollPhysics(
+                parent: BouncingScrollPhysics(),
+              ),
               slivers: [
-                // Top Bar (Location, Notifications, Cart)
+                // Top Bar with Location, Notifications & Cart
                 SliverToBoxAdapter(
                   child: AppTopBar(
                     onOpenCart: widget.onOpenCart,
@@ -382,164 +515,197 @@ class _DealsScreenState extends State<DealsScreen> {
                   ),
                 ),
 
-              // Search Bar
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-                  child: DiscoverySearchBar.editable(
-                    isDark: isDark,
-                    hintText: 'Search deals, dishes or restaurants...',
-                    selectedFilterLabel: _selectedFilter,
-                    shellKey: const ValueKey('deals-search-field'),
-                    searchKey: const ValueKey('deals-search'),
-                    filterKey: const ValueKey('deals-selected-filter'),
-                    controller: _searchCtrl,
-                    onChanged: (val) => setState(() => _searchQuery = val),
-                    onClear: () {
-                      _searchCtrl.clear();
-                      setState(() => _searchQuery = '');
-                    },
+                // Search Bar with Filter Button
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: DiscoverySearchBar.editable(
+                            isDark: isDark,
+                            backgroundColor: isDark ? null : AppColors.surfaceRaised,
+                            hintText: 'Search deals, dishes or restaurants...',
+                            selectedFilterLabel: _selectedFilter == 'All Deals' ? 'Filter' : _selectedFilter.replaceAll(RegExp(r'[^\w\s%+()]+'), '').trim(),
+                            filterIcon: Icons.tune_rounded,
+                            showFilterPill: false,
+                            shellKey: const ValueKey('deals-search-field'),
+                            searchKey: const ValueKey('deals-search'),
+                            filterKey: const ValueKey('deals-selected-filter'),
+                            controller: _searchCtrl,
+                            onChanged: (val) => setState(() => _searchQuery = val),
+                            onClear: () {
+                              _searchCtrl.clear();
+                              setState(() => _searchQuery = '');
+                            },
+                            onFilterTap: _openFilterSheet,
+                          ),
+                        ),
+                        const SizedBox(width: 9),
+                        Material(
+                          color: isDark ? AppColors.cardDark : AppColors.surfaceRaised,
+                          shape: const CircleBorder(),
+                          child: InkWell(
+                            key: const ValueKey('deals-filter-button'),
+                            onTap: _openFilterSheet,
+                            customBorder: const CircleBorder(),
+                            child: SizedBox(
+                              width: 52,
+                              height: 52,
+                              child: Icon(
+                                Icons.tune_rounded,
+                                color: isDark ? AppColors.white : AppColors.textPrimary,
+                                size: 21,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
 
-              // Filter Tabs
-              SliverToBoxAdapter(
-                child: SizedBox(
-                  height: 42,
-                  child: ListView.separated(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    scrollDirection: Axis.horizontal,
-                    itemCount: _filters.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 8),
-                    itemBuilder: (context, i) {
-                      final filter = _filters[i];
-                      final isSelected = filter == _selectedFilter;
-                      return _FilterPill(
-                        label: filter,
-                        isSelected: isSelected,
-                        isDark: isDark,
-                        onTap: () => setState(() => _selectedFilter = filter),
-                      );
-                    },
-                  ),
-                ),
-              ),
-
-              if (_isLoading)
-                const SliverFillRemaining(
-                  child: Center(
-                    child: CircularProgressIndicator(color: AppColors.primary),
-                  ),
-                )
-              else ...[
-                // Spotlight Hero Section (only when no search query active)
-                if (_searchQuery.isEmpty && _selectedFilter == 'All Deals' && spotlightDeals.isNotEmpty) ...[
-                  const SliverToBoxAdapter(child: SizedBox(height: 18)),
-                  SliverToBoxAdapter(
-                    child: Padding(
+                // Filter Tabs
+                SliverToBoxAdapter(
+                  child: SizedBox(
+                    height: 38,
+                    child: ListView.separated(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: _SectionTitle(
-                        title: '🔥 Spotlight Deals',
-                        subtitle: 'Top handpicked discounts right now',
+                      scrollDirection: Axis.horizontal,
+                      itemCount: _filters.length,
+                      separatorBuilder: (_, _) => const SizedBox(width: 8),
+                      itemBuilder: (context, i) {
+                        final filter = _filters[i];
+                        final isSelected = filter == _selectedFilter;
+                        return _FilterPill(
+                          label: filter,
+                          isSelected: isSelected,
+                          isDark: isDark,
+                          onTap: () => setState(() => _selectedFilter = filter),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+
+                if (_isLoading)
+                  const SliverFillRemaining(
+                    child: Center(
+                      child: CircularProgressIndicator(color: AppColors.primary),
+                    ),
+                  )
+                else ...[
+                  // Spotlight Hero Section (only when no search query active)
+                  if (_searchQuery.isEmpty && _selectedFilter == 'All Deals' && spotlightDeals.isNotEmpty) ...[
+                    const SliverToBoxAdapter(child: SizedBox(height: 18)),
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: _SectionTitle(
+                          title: '🔥 Spotlight Deals',
+                          subtitle: 'Top handpicked discounts right now',
+                          isDark: isDark,
+                        ),
+                      ),
+                    ),
+                    const SliverToBoxAdapter(child: SizedBox(height: 12)),
+                    SliverToBoxAdapter(
+                      child: _SpotlightCarousel(
+                        deals: spotlightDeals.isNotEmpty ? spotlightDeals : deals,
+                        onDealTap: _openDeal,
                         isDark: isDark,
                       ),
                     ),
-                  ),
-                  const SliverToBoxAdapter(child: SizedBox(height: 12)),
-                  SliverToBoxAdapter(
-                    child: _SpotlightCarousel(
-                      deals: spotlightDeals.isNotEmpty ? spotlightDeals : deals,
-                      onDealTap: _navigateToMenu,
-                      isDark: isDark,
-                    ),
-                  ),
-                ],
+                  ],
 
-                // Flash Sales Section
-                if (_searchQuery.isEmpty && _selectedFilter == 'All Deals' && flashDeals.isNotEmpty) ...[
+                  // Flash Sales Section
+                  if (_searchQuery.isEmpty && _selectedFilter == 'All Deals' && flashDeals.isNotEmpty) ...[
+                    const SliverToBoxAdapter(child: SizedBox(height: 24)),
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: _SectionTitle(
+                          title: '⚡ Flash Sales & Happy Hours',
+                          subtitle: 'Expiring soon • Auto-applied at checkout',
+                          isDark: isDark,
+                        ),
+                      ),
+                    ),
+                    const SliverToBoxAdapter(child: SizedBox(height: 12)),
+                    SliverToBoxAdapter(
+                      child: SizedBox(
+                        height: 190,
+                        child: ListView.separated(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          scrollDirection: Axis.horizontal,
+                          itemCount: flashDeals.length,
+                          separatorBuilder: (_, _) => const SizedBox(width: 14),
+                          itemBuilder: (context, i) {
+                            return _FlashDealCard(
+                              deal: flashDeals[i],
+                              isDark: isDark,
+                              onTap: () => _openDeal(flashDeals[i]),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
+
+                  // All Deals List / Filtered Results
                   const SliverToBoxAdapter(child: SizedBox(height: 24)),
                   SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: _SectionTitle(
-                        title: '⚡ Flash Sales & Happy Hours',
-                        subtitle: 'Expiring soon • Auto-applied at checkout',
+                        title: _selectedFilter == 'All Deals' ? '🏷️ All Offers Near You' : '🏷️ $_selectedFilter',
+                        subtitle: '${_filteredDeals.length} deals available around you',
                         isDark: isDark,
                       ),
                     ),
                   ),
                   const SliverToBoxAdapter(child: SizedBox(height: 12)),
-                  SliverToBoxAdapter(
-                    child: SizedBox(
-                      height: 190,
-                      child: ListView.separated(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        scrollDirection: Axis.horizontal,
-                        itemCount: flashDeals.length,
-                        separatorBuilder: (_, __) => const SizedBox(width: 14),
-                        itemBuilder: (context, i) {
-                          return _FlashDealCard(
-                            deal: flashDeals[i],
-                            isDark: isDark,
-                            onTap: () => _navigateToMenu(flashDeals[i]),
-                          );
+
+                  if (_filteredDeals.isEmpty)
+                    SliverToBoxAdapter(
+                      child: _EmptyDealsView(
+                        isDark: isDark,
+                        onReset: () {
+                          _searchCtrl.clear();
+                          setState(() {
+                            _searchQuery = '';
+                            _selectedFilter = 'All Deals';
+                          });
                         },
                       ),
+                    )
+                  else
+                    SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
+                      sliver: SliverList(
+                        delegate: SliverChildBuilderDelegate(
+                          (context, i) {
+                            final deal = _filteredDeals[i];
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 14),
+                              child: _ModernDealCard(
+                                deal: deal,
+                                isDark: isDark,
+                                onTap: () => _openDeal(deal),
+                              ),
+                            );
+                          },
+                          childCount: _filteredDeals.length,
+                        ),
+                      ),
                     ),
-                  ),
                 ],
-
-                // All Deals List / Filtered Results
-                const SliverToBoxAdapter(child: SizedBox(height: 24)),
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: _SectionTitle(
-                      title: _selectedFilter == 'All Deals' ? '🏷️ All Offers Near You' : '🏷️ $_selectedFilter',
-                      subtitle: '${_filteredDeals.length} deals available around you',
-                      isDark: isDark,
-                    ),
-                  ),
-                ),
-                const SliverToBoxAdapter(child: SizedBox(height: 12)),
-
-                if (_filteredDeals.isEmpty)
+                if (widget.bottomOverlayPadding > 0)
                   SliverToBoxAdapter(
-                    child: _EmptyDealsView(
-                      isDark: isDark,
-                      onReset: () {
-                        _searchCtrl.clear();
-                        setState(() {
-                          _searchQuery = '';
-                          _selectedFilter = 'All Deals';
-                        });
-                      },
-                    ),
-                  )
-                else
-                  SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
-                    sliver: SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                        (context, i) {
-                          final deal = _filteredDeals[i];
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 14),
-                            child: _ModernDealCard(
-                              deal: deal,
-                              isDark: isDark,
-                              onTap: () => _navigateToMenu(deal),
-                            ),
-                          );
-                        },
-                        childCount: _filteredDeals.length,
-                      ),
-                    ),
+                    child: SizedBox(height: widget.bottomOverlayPadding),
                   ),
               ],
-            ],
-          ),
+            ),
           ),
         ),
       ),
@@ -560,29 +726,29 @@ class _DealsHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textPrimary = isDark ? AppColors.white : AppColors.textPrimary;
-    final textMuted = isDark ? AppColors.textMutedDark : AppColors.toneFF8E8E93;
+    final textSecondary = isDark ? AppColors.textMutedDark : AppColors.textSecondary;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      padding: const EdgeInsets.fromLTRB(16, 6, 16, 14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             'Explore Top Deals',
             style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.w900,
-              letterSpacing: -0.5,
+              fontSize: 21,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.65,
               color: textPrimary,
             ),
           ),
-          const SizedBox(height: 3),
+          const SizedBox(height: 2),
           Text(
             'Automatic discounts • No promo codes required',
             style: TextStyle(
-              fontSize: 12.5,
-              color: textMuted,
+              fontSize: 12,
               fontWeight: FontWeight.w500,
+              color: textSecondary,
             ),
           ),
         ],
@@ -609,40 +775,33 @@ class _FilterPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
+    return Material(
+      color: isSelected
+          ? AppColors.primary
+          : (isDark ? AppColors.cardDark : AppColors.white),
+      shape: StadiumBorder(
+        side: BorderSide(
           color: isSelected
               ? AppColors.primary
-              : (isDark ? AppColors.cardDark : AppColors.white),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isSelected
-                ? AppColors.primary
-                : (isDark ? AppColors.borderDark : AppColors.borderLight),
-          ),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: AppColors.primary.withValues(alpha: 0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ]
-              : null,
+              : (isDark ? AppColors.borderDark : const Color(0xFFE5E7EB)),
+          width: 1,
         ),
-        child: Center(
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-              color: isSelected
-                  ? AppColors.white
-                  : (isDark ? AppColors.white70 : AppColors.toneFF4B5563),
+      ),
+      child: InkWell(
+        onTap: onTap,
+        customBorder: const StadiumBorder(),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Center(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 11.5,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                color: isSelected
+                    ? AppColors.white
+                    : (isDark ? AppColors.white70 : AppColors.textSecondary),
+              ),
             ),
           ),
         ),
@@ -802,7 +961,7 @@ class _SpotlightCard extends StatelessWidget {
               Image.network(
                 deal.imageUrl,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
+                errorBuilder: (_, _, _) => Container(
                   color: AppColors.cardDark,
                   child: const Center(
                     child: Icon(Icons.restaurant_rounded, color: AppColors.primary, size: 48),
@@ -1018,7 +1177,7 @@ class _FlashDealCard extends StatelessWidget {
                     width: 240,
                     height: 100,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
+                    errorBuilder: (_, _, _) => Container(
                       width: 240,
                       height: 100,
                       color: AppColors.redeemSurfaceDark,
@@ -1180,7 +1339,7 @@ class _ModernDealCard extends StatelessWidget {
                         width: 96,
                         height: 96,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => const Icon(
+                        errorBuilder: (_, _, _) => const Icon(
                           Icons.restaurant_rounded,
                           color: AppColors.primary,
                           size: 32,
@@ -1436,19 +1595,30 @@ class _HotDealsRowState extends State<HotDealsRow> {
           isDark: Theme.of(context).brightness == Brightness.dark,
           onTap: () {
             final deal = featuredDeals[index];
-            if (deal.vendorId != null) {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => RestaurantMenuScreen(
-                    vendorId: deal.vendorId,
-                    restaurantName: deal.restaurant,
-                    heroImageUrl: deal.imageUrl,
-                    cuisine: deal.cuisine,
-                  ),
+            final subtitle = deal.description.isNotEmpty
+                ? deal.description
+                : [
+                    deal.restaurant,
+                    deal.distance,
+                  ].where((value) => value.isNotEmpty).join(' · ');
+
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => OfferExplanationScreen(
+                  title: deal.title,
+                  subtitle: subtitle.isEmpty ? 'On selected items' : subtitle,
+                  badge: deal.discount,
+                  expiry: deal.timeLeft.isEmpty ? 'Limited time' : deal.timeLeft,
+                  restaurantName: deal.restaurant,
+                  vendorId: deal.vendorId,
+                  dealId: deal.id ?? deal.title,
+                  discountPercent: deal.discountPercent,
+                  scopeType: deal.scopeType,
+                  itemIds: deal.itemIds,
+                  categoryIds: deal.categoryIds,
                 ),
-              );
-            }
+              ),
+            );
           },
         ),
       ),

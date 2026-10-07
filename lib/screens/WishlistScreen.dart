@@ -152,6 +152,11 @@ class _WishlistscreenState extends State<Wishlistscreen> {
     super.dispose();
   }
 
+  Future<void> _refreshWishlist() async {
+    await Future.delayed(const Duration(milliseconds: 600));
+    if (mounted) setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
     final filtered = _filtered;
@@ -161,9 +166,15 @@ class _WishlistscreenState extends State<Wishlistscreen> {
       body: Stack(
         children: [
           // ── Scrollable content ─────────────────────────────────────────────
-          CustomScrollView(
-            physics: const BouncingScrollPhysics(),
-            slivers: [
+          RefreshIndicator(
+            color: AppColors.primary,
+            backgroundColor: AppColors.white,
+            onRefresh: _refreshWishlist,
+            child: CustomScrollView(
+              physics: const AlwaysScrollableScrollPhysics(
+                parent: BouncingScrollPhysics(),
+              ),
+              slivers: [
               // Status bar spacer
               SliverToBoxAdapter(
                 child: SizedBox(
@@ -235,6 +246,7 @@ class _WishlistscreenState extends State<Wishlistscreen> {
               const SliverToBoxAdapter(child: SizedBox(height: 140)),
             ],
           ),
+        ),
 
           // ── Frosted header ─────────────────────────────────────────────────
           Positioned(

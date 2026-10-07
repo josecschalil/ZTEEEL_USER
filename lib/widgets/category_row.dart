@@ -28,36 +28,34 @@ class CategoryRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const tagTextGap = 4.0;
+    const tagTextGap = 3.0;
     const fontSize = 12.0;
     final labelHeight = MediaQuery.textScalerOf(context).scale(fontSize) * 1.25;
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Five touch targets fit across the content area for a compact, thick look
-        final tileSize = itemSize ??
-            ((constraints.maxWidth - 36 - 32) / 5).clamp(52.0, 64.0);
-
-        final cardRadius = BorderRadius.circular(14);
+        final iconSize = (itemSize ?? 72.0).clamp(64.0, 78.0);
+        final itemWidth = iconSize;
+        final cardRadius = BorderRadius.circular(18);
 
         return Hero(
           tag: 'discovery_food_tags_hero',
           child: Material(
             color: Colors.transparent,
             child: SizedBox(
-              height: tileSize + tagTextGap + labelHeight + 2,
+              height: iconSize + tagTextGap + labelHeight + 2,
               child: ListView.separated(
                 key: scrollKey ?? const PageStorageKey('home-categories'),
                 scrollDirection: Axis.horizontal,
                 padding: padding,
-                itemCount: isLoading ? 5 : foodTags.length,
+                itemCount: isLoading ? 6 : foodTags.length,
                 separatorBuilder: (_, _) => const SizedBox(width: 8),
                 itemBuilder: (context, index) {
                   if (isLoading) {
                     return SizedBox(
-                      width: tileSize,
+                      width: itemWidth,
                       child: _CategorySkeleton(
-                        size: tileSize,
+                        size: iconSize,
                         gap: tagTextGap,
                         radius: cardRadius,
                       ),
@@ -81,13 +79,13 @@ class CategoryRow extends StatelessWidget {
                       child: Icon(
                         Icons.restaurant_menu_rounded,
                         color: AppColors.orange,
-                        size: 24,
+                        size: 30,
                       ),
                     ),
                   );
 
                   return SizedBox(
-                    width: tileSize,
+                    width: itemWidth,
                     child: InkWell(
                       key: ValueKey('home-food-tag-${tag.id}'),
                       splashColor: Colors.transparent,
@@ -98,8 +96,8 @@ class CategoryRow extends StatelessWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           SizedBox(
-                            width: tileSize,
-                            height: tileSize,
+                            width: iconSize,
+                            height: iconSize,
                             child: Stack(
                               alignment: Alignment.center,
                               children: [
@@ -107,15 +105,15 @@ class CategoryRow extends StatelessWidget {
                                 if (isSelected) ...[
                                   Positioned(
                                     bottom: 2,
-                                    left: tileSize * 0.10,
-                                    right: tileSize * 0.10,
-                                    height: tileSize * 0.32,
+                                    left: iconSize * 0.10,
+                                    right: iconSize * 0.10,
+                                    height: iconSize * 0.32,
                                     child: Container(
                                       decoration: BoxDecoration(
                                         borderRadius: BorderRadius.all(
                                           Radius.elliptical(
-                                            tileSize * 0.40,
-                                            tileSize * 0.16,
+                                            iconSize * 0.40,
+                                            iconSize * 0.16,
                                           ),
                                         ),
                                         boxShadow: [
@@ -171,24 +169,28 @@ class CategoryRow extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(height: tagTextGap),
-                          Text(
-                            tag.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            textAlign: TextAlign.center,
-                            style: Theme.of(context)
-                                .textTheme
-                                .labelSmall
-                                ?.copyWith(
-                                  fontSize: fontSize,
-                                  height: 1.2,
-                                  fontWeight: isSelected
-                                      ? FontWeight.w800
-                                      : FontWeight.w700,
-                                  color: isSelected
-                                      ? AppColors.orange
-                                      : AppColors.toneFF2F2F2F,
-                                ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 1),
+                            child: Text(
+                              tag.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .labelSmall
+                                  ?.copyWith(
+                                    fontSize: fontSize,
+                                    letterSpacing: -0.25,
+                                    height: 1.15,
+                                    fontWeight: isSelected
+                                        ? FontWeight.w800
+                                        : FontWeight.w700,
+                                    color: isSelected
+                                        ? AppColors.orange
+                                        : AppColors.toneFF2F2F2F,
+                                  ),
+                            ),
                           ),
                         ],
                       ),
@@ -231,7 +233,7 @@ class _CategorySkeleton extends StatelessWidget {
           ),
           SizedBox(height: gap),
           Container(
-            width: (size * 0.75).clamp(32.0, 48.0),
+            width: (size * 0.85).clamp(32.0, 52.0),
             height: 8,
             decoration: BoxDecoration(
               color: AppColors.surfaceRaised,

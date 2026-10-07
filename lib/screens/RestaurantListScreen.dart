@@ -3,10 +3,17 @@ import 'package:flutter/services.dart';
 import '../app_colors.dart';
 import '../config/api_config.dart';
 import '../services/restaurant_service.dart';
+import '../widgets/app_top_bar.dart';
 import '../widgets/discovery_search_bar.dart';
+import '../widgets/exploring_location.dart';
 import '../widgets/restaurant_card.dart';
 import '../widgets/shimmer_loading.dart';
 import 'RestuarantMenuScreen.dart';
+import '../services/cart_service.dart';
+import '../services/location_service.dart';
+import 'LocationPageScreen.dart';
+import 'MainCartScreen.dart';
+import 'NotificationScreen.dart';
 
 export '../widgets/restaurant_card.dart';
 
@@ -131,7 +138,7 @@ class RestaurantListing {
   });
 }
 
-enum _QuickFilter { openNow, nearby, topRated, freeDelivery }
+enum _QuickFilter { openNow, nearby5km, nearby15km, nearby25km, topRated, freeDelivery }
 
 /// An optional starting filter for callers that open restaurant discovery from
 /// a focused action on the Home feed. The screen remains fully usable without
@@ -143,8 +150,12 @@ extension on _QuickFilter {
     switch (this) {
       case _QuickFilter.openNow:
         return 'Open now';
-      case _QuickFilter.nearby:
-        return 'Under 2 km';
+      case _QuickFilter.nearby5km:
+        return 'Within 5 km';
+      case _QuickFilter.nearby15km:
+        return 'Within 15 km';
+      case _QuickFilter.nearby25km:
+        return 'Within 25 km';
       case _QuickFilter.topRated:
         return 'Top rated';
       case _QuickFilter.freeDelivery:
@@ -156,8 +167,12 @@ extension on _QuickFilter {
     switch (this) {
       case _QuickFilter.openNow:
         return Icons.schedule_rounded;
-      case _QuickFilter.nearby:
+      case _QuickFilter.nearby5km:
         return Icons.near_me_rounded;
+      case _QuickFilter.nearby15km:
+        return Icons.location_on_rounded;
+      case _QuickFilter.nearby25km:
+        return Icons.map_rounded;
       case _QuickFilter.topRated:
         return Icons.star_rounded;
       case _QuickFilter.freeDelivery:
@@ -187,12 +202,20 @@ class NearbyRestaurantsScreen extends StatefulWidget {
   final List<RestaurantListing>? restaurants;
   final ValueChanged<RestaurantListing>? onRestaurantSelected;
   final RestaurantBrowsePreset? preset;
+  final bool showBackButton;
+  final VoidCallback? onOpenCart;
+  final double bottomOverlayPadding;
+  final Future<void> Function()? onRefresh;
 
   const NearbyRestaurantsScreen({
     super.key,
     this.restaurants,
     this.onRestaurantSelected,
     this.preset,
+    this.showBackButton = true,
+    this.onOpenCart,
+    this.bottomOverlayPadding = 0,
+    this.onRefresh,
   });
 
   @override
@@ -204,6 +227,7 @@ class _NearbyRestaurantsScreenState extends State<NearbyRestaurantsScreen> {
   List<RestaurantListing> _all = [];
   bool _isLoading = false;
   final TextEditingController _searchController = TextEditingController();
+  String _address = 'Choose your location';
 
   final Set<_QuickFilter> _activeFilters = {};
   _SortOption _sort = _SortOption.relevance;
@@ -212,6 +236,8 @@ class _NearbyRestaurantsScreenState extends State<NearbyRestaurantsScreen> {
   @override
   void initState() {
     super.initState();
+    LocationService.addressNotifier.addListener(_onAddressChanged);
+    _restoreLocation();
     if (widget.preset == RestaurantBrowsePreset.openNow) {
       _activeFilters.add(_QuickFilter.openNow);
     }
@@ -228,6 +254,45 @@ class _NearbyRestaurantsScreenState extends State<NearbyRestaurantsScreen> {
   }
 
   @override
+
+  @override
+  void dispose() {
+    LocationService.addressNotifier.removeListener(_onAddressChanged);
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onAddressChanged() {
+    if (!mounted) return;
+    final live = LocationService.addressNotifier.value;
+    if (_address != live) {
+      setState(() => _address = live);
+    }
+  }
+
+  Future<void> _restoreLocation() async {
+    final saved = await LocationService.load();
+    if (!mounted || saved == null) return;
+    final newAddress = saved.address.isEmpty ? 'Selected location' : saved.address;
+    LocationService.addressNotifier.value = newAddress;
+    setState(() {
+      _address = newAddress;
+    });
+  }
+
+  Future<void> _openLocationPicker() async {
+    final result = await Navigator.of(context).push<PickedLocation>(
+      MaterialPageRoute(builder: (_) => const LocationPickerScreen()),
+    );
+    if (!mounted || result == null) return;
+    final newAddress = result.address.isEmpty ? 'Selected location' : result.address;
+    LocationService.addressNotifier.value = newAddress;
+    setState(() {
+      _address = newAddress;
+    });
+  }
+
+  @override
   void didUpdateWidget(covariant NearbyRestaurantsScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.restaurants != null && widget.restaurants!.isNotEmpty) {
@@ -238,11 +303,30 @@ class _NearbyRestaurantsScreenState extends State<NearbyRestaurantsScreen> {
     }
   }
 
-  Future<void> _loadLiveRestaurants({bool isSilent = false}) async {
+  Future<void> _handleRefresh() async {
+    if (widget.onRefresh != null) {
+      await widget.onRefresh!();
+      if (mounted && widget.restaurants != null) {
+        setState(() {
+          _all = List.from(widget.restaurants!);
+          _isLoading = false;
+        });
+      }
+      return;
+    }
+    await _loadLiveRestaurants(isSilent: true, forceRefresh: true);
+  }
+
+  Future<void> _loadLiveRestaurants({
+    bool isSilent = false,
+    bool forceRefresh = false,
+  }) async {
     if (!isSilent && _all.isEmpty) {
       setState(() => _isLoading = true);
     }
-    final vendors = await RestaurantService.fetchRestaurants();
+    final vendors = await RestaurantService.fetchRestaurants(
+      forceRefresh: forceRefresh,
+    );
     if (!mounted) return;
     setState(() {
       if (vendors.isNotEmpty) {
@@ -252,11 +336,11 @@ class _NearbyRestaurantsScreenState extends State<NearbyRestaurantsScreen> {
     });
   }
 
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
+
+
+
+
+
 
   List<RestaurantListing> get _filtered {
     var result = _all.where((r) {
@@ -272,7 +356,13 @@ class _NearbyRestaurantsScreenState extends State<NearbyRestaurantsScreen> {
         return false;
       }
 
-      if (_activeFilters.contains(_QuickFilter.nearby) && r.distanceKm > 2.0) {
+      if (_activeFilters.contains(_QuickFilter.nearby5km) && r.distanceKm > 5.0) {
+        return false;
+      }
+      if (_activeFilters.contains(_QuickFilter.nearby15km) && r.distanceKm > 15.0) {
+        return false;
+      }
+      if (_activeFilters.contains(_QuickFilter.nearby25km) && r.distanceKm > 25.0) {
         return false;
       }
 
@@ -364,7 +454,7 @@ class _NearbyRestaurantsScreenState extends State<NearbyRestaurantsScreen> {
       ..sort((a, b) => a.distanceKm.compareTo(b.distanceKm));
 
     return Scaffold(
-      backgroundColor: AppColors.bg,
+      backgroundColor: AppColors.white,
       body: AnnotatedRegion<SystemUiOverlayStyle>(
         value: SystemUiOverlayStyle.dark.copyWith(
           statusBarColor: AppColors.transparent,
@@ -374,90 +464,91 @@ class _NearbyRestaurantsScreenState extends State<NearbyRestaurantsScreen> {
           bottom: false,
           child: Column(
             children: [
-            _Header(
-              resultCount: results.length,
-              onBack: () => Navigator.of(context).maybePop(),
-              searchController: _searchController,
-              onSearchChanged: (v) => setState(() => _query = v),
-              selectedFilterLabel: _searchPillLabel,
-              onOpenNowToggle: () {
-                setState(() {
-                  if (_activeFilters.contains(_QuickFilter.openNow)) {
-                    _activeFilters.remove(_QuickFilter.openNow);
-                  } else {
-                    _activeFilters.add(_QuickFilter.openNow);
-                  }
-                });
-              },
-              onSortTap: _openSortSheet,
-            ),
-            _FilterRow(
-              active: _activeFilters,
-              onToggle: (filter) {
-                setState(() {
-                  if (_activeFilters.contains(filter)) {
-                    _activeFilters.remove(filter);
-                  } else {
-                    _activeFilters.add(filter);
-                  }
-                });
-              },
-            ),
-            Expanded(
-              child: _isLoading
-                  ? const _RestaurantListLoadingSkeleton()
-                  : results.isEmpty
-                  ? const _EmptyState()
-                  : ListView(
-                      physics: const BouncingScrollPhysics(),
-                      padding: const EdgeInsets.only(bottom: 32),
-                      children: [
-                        _ClosestRail(
-                          restaurants: closest.take(6).toList(),
-                          onTap: _openRestaurant,
-                        ),
-                        const SizedBox(height: 6),
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                          child: Row(
-                            children: [
-                              const Expanded(
-                                child: Text(
-                                  'All nearby places',
-                                  style: TextStyle(
-                                    fontSize: 17,
-                                    fontWeight: FontWeight.w800,
-                                    color: AppColors.textPrimary,
-                                    letterSpacing: -0.3,
-                                  ),
-                                ),
-                              ),
-                              Text(
-                                '${results.length} results',
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.textMuted,
-                                ),
-                              ),
-                            ],
+              AppTopBar(
+                showBackButton: widget.showBackButton,
+                onOpenCart: widget.onOpenCart,
+              ),
+              _Header(
+                resultCount: results.length,
+                searchController: _searchController,
+                onSearchChanged: (v) => setState(() => _query = v),
+                selectedFilterLabel: _searchPillLabel,
+                onOpenNowToggle: () {
+                  setState(() {
+                    if (_activeFilters.contains(_QuickFilter.openNow)) {
+                      _activeFilters.remove(_QuickFilter.openNow);
+                    } else {
+                      _activeFilters.add(_QuickFilter.openNow);
+                    }
+                  });
+                },
+                onSortTap: _openSortSheet,
+              ),
+              _FilterRow(
+                active: _activeFilters,
+                onToggle: (filter) {
+                  setState(() {
+                    if (_activeFilters.contains(filter)) {
+                      _activeFilters.remove(filter);
+                    } else {
+                      if (filter == _QuickFilter.nearby5km ||
+                          filter == _QuickFilter.nearby15km ||
+                          filter == _QuickFilter.nearby25km) {
+                        _activeFilters.remove(_QuickFilter.nearby5km);
+                        _activeFilters.remove(_QuickFilter.nearby15km);
+                        _activeFilters.remove(_QuickFilter.nearby25km);
+                      }
+                      _activeFilters.add(filter);
+                    }
+                  });
+                },
+              ),
+              Expanded(
+                child: RefreshIndicator(
+                  color: AppColors.primary,
+                  backgroundColor: AppColors.white,
+                  onRefresh: _handleRefresh,
+                  child: _isLoading
+                      ? _RestaurantListLoadingSkeleton(
+                          bottomOverlayPadding: widget.bottomOverlayPadding,
+                        )
+                      : results.isEmpty
+                      ? ListView(
+                          physics: const AlwaysScrollableScrollPhysics(
+                            parent: BouncingScrollPhysics(),
                           ),
-                        ),
-                        const SizedBox(height: 12),
-                        for (final restaurant in results) ...[
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            child: RestaurantCard(
+                          padding: EdgeInsets.fromLTRB(
+                            16,
+                            8,
+                            16,
+                            32 + widget.bottomOverlayPadding,
+                          ),
+                          children: const [_EmptyState()],
+                        )
+                      : ListView.separated(
+                          physics: const AlwaysScrollableScrollPhysics(
+                            parent: BouncingScrollPhysics(),
+                          ),
+                          padding: EdgeInsets.fromLTRB(
+                            16,
+                            8,
+                            16,
+                            32 + widget.bottomOverlayPadding,
+                          ),
+                          itemCount: results.length,
+                          separatorBuilder: (_, _) => const SizedBox(height: 14),
+                          itemBuilder: (context, index) {
+                            final restaurant = results[index];
+                            return RestaurantCard(
+                              key: ValueKey('restaurant-item-${restaurant.id}'),
                               restaurant: restaurant,
                               onTap: () => _openRestaurant(restaurant),
-                            ),
-                          ),
-                          const SizedBox(height: 14),
-                        ],
-                      ],
-                    ),
-            ),
-          ],
+                            );
+                          },
+                        ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -471,7 +562,6 @@ class _NearbyRestaurantsScreenState extends State<NearbyRestaurantsScreen> {
 
 class _Header extends StatelessWidget {
   final int resultCount;
-  final VoidCallback onBack;
   final TextEditingController searchController;
   final ValueChanged<String> onSearchChanged;
   final String selectedFilterLabel;
@@ -480,7 +570,6 @@ class _Header extends StatelessWidget {
 
   const _Header({
     required this.resultCount,
-    required this.onBack,
     required this.searchController,
     required this.onSearchChanged,
     required this.selectedFilterLabel,
@@ -491,15 +580,13 @@ class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: AppColors.white,
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+      color: Colors.transparent,
+      padding: const EdgeInsets.fromLTRB(16, 6, 16, 14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              _RoundIconButton(icon: Icons.arrow_back_rounded, onTap: onBack),
-              const SizedBox(width: 13),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -515,8 +602,7 @@ class _Header extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '$resultCount ${resultCount == 1 ? 'place' : 'places'} '
-                      'deliver to your location',
+                      '$resultCount ${resultCount == 1 ? 'place' : 'places'} deliver to your location',
                       style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
@@ -526,16 +612,17 @@ class _Header extends StatelessWidget {
                   ],
                 ),
               ),
-              _RoundIconButton(icon: Icons.tune_rounded, onTap: onSortTap),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
           Row(
             children: [
               Expanded(
                 child: DiscoverySearchBar.editable(
                   hintText: 'Search restaurants or cuisines',
                   selectedFilterLabel: selectedFilterLabel,
+                  backgroundColor: AppColors.surfaceRaised,
+                  showFilterPill: false,
                   controller: searchController,
                   onChanged: onSearchChanged,
                   onClear: () {
@@ -550,17 +637,18 @@ class _Header extends StatelessWidget {
               ),
               const SizedBox(width: 9),
               Material(
-                color: AppColors.primary,
-                borderRadius: BorderRadius.circular(26),
+                color: AppColors.surfaceRaised,
+                shape: const CircleBorder(),
                 child: InkWell(
+                  key: const ValueKey('nearby-sort-button'),
                   onTap: onSortTap,
-                  borderRadius: BorderRadius.circular(26),
+                  customBorder: const CircleBorder(),
                   child: const SizedBox(
                     width: 52,
                     height: 52,
                     child: Icon(
-                      Icons.swap_vert_rounded,
-                      color: AppColors.white,
+                      Icons.tune_rounded,
+                      color: AppColors.textPrimary,
                       size: 21,
                     ),
                   ),
@@ -611,7 +699,7 @@ class _FilterRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: AppColors.surface,
+      color: Colors.transparent,
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
       child: SizedBox(
         height: 38,
@@ -626,7 +714,14 @@ class _FilterRow extends StatelessWidget {
 
             return Material(
               color: selected ? AppColors.orange : AppColors.white,
-              shape: const StadiumBorder(),
+              shape: StadiumBorder(
+                side: BorderSide(
+                  color: selected
+                      ? AppColors.orange
+                      : const Color(0xFFE5E7EB),
+                  width: 1,
+                ),
+              ),
               child: InkWell(
                 key: ValueKey('nearby-filter-${filter.name}'),
                 onTap: () => onToggle(filter),
@@ -647,7 +742,9 @@ class _FilterRow extends StatelessWidget {
                         filter.label,
                         style: TextStyle(
                           fontSize: 11.5,
-                          fontWeight: FontWeight.w700,
+                          fontWeight: selected
+                              ? FontWeight.w600
+                              : FontWeight.w500,
                           color: selected
                               ? AppColors.white
                               : AppColors.textSecondary,
@@ -988,13 +1085,15 @@ class _EmptyState extends StatelessWidget {
 }
 
 class _RestaurantListLoadingSkeleton extends StatelessWidget {
-  const _RestaurantListLoadingSkeleton();
+  final double bottomOverlayPadding;
+
+  const _RestaurantListLoadingSkeleton({this.bottomOverlayPadding = 0});
 
   @override
   Widget build(BuildContext context) {
     return ListView(
       physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.only(bottom: 32),
+      padding: EdgeInsets.only(bottom: 32 + bottomOverlayPadding),
       children: [
         const _ClosestRailSkeleton(),
         const SizedBox(height: 6),

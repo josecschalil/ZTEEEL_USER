@@ -4,8 +4,10 @@ import 'package:flutter/services.dart';
 import '../app_colors.dart';
 import '../services/food_tag_service.dart';
 import '../services/location_service.dart';
+import '../widgets/app_top_bar.dart';
 import '../widgets/category_row.dart';
 import '../widgets/discovery_search_bar.dart';
+import '../widgets/exploring_location.dart';
 import '../widgets/offer_widgets.dart';
 import 'DealsScreen.dart';
 import 'FoodTypeShopScreen.dart';
@@ -68,26 +70,30 @@ class HomeDiscoveryView extends StatefulWidget {
   final List<HomeRestaurant> restaurants;
   final List<Deal> deals;
   final VoidCallback onSeeAllDeals;
-  final VoidCallback onOpenCart;
+  final VoidCallback? onOpenCart;
   final int cartItemCount;
   final bool isLoadingRestaurants;
   final bool isLoadingDeals;
   final List<FoodTag> foodTags;
   final bool isLoadingFoodTags;
   final String firstName;
+  final double bottomOverlayPadding;
+  final Future<void> Function()? onRefresh;
 
   const HomeDiscoveryView({
     super.key,
     required this.restaurants,
     required this.deals,
     required this.onSeeAllDeals,
-    required this.onOpenCart,
+    this.onOpenCart,
     this.cartItemCount = 0,
     this.isLoadingRestaurants = false,
     this.isLoadingDeals = false,
     this.foodTags = const [],
     this.isLoadingFoodTags = false,
     this.firstName = '',
+    this.bottomOverlayPadding = 0,
+    this.onRefresh,
   });
 
   @override
@@ -237,8 +243,8 @@ class _HomeDiscoveryViewState extends State<HomeDiscoveryView> {
     if (widget.isLoadingDeals || widget.deals.isEmpty) {
       return 'Discover your next favorite meal.';
     }
-    if (widget.deals.length == 1) return 'There is 1 food offer near you.';
-    return 'There are ${widget.deals.length} food offers near you.';
+    if (widget.deals.length == 1) return '1 offer near you';
+    return '${widget.deals.length} offers near you';
   }
 
   @override
@@ -263,65 +269,43 @@ class _HomeDiscoveryViewState extends State<HomeDiscoveryView> {
               stops: [0.0, 0.28, 0.70],
             ),
           ),
-          child: CustomScrollView(
-            key: const PageStorageKey('home-discovery-feed'),
-            physics: const BouncingScrollPhysics(),
-            slivers: [
+          child: RefreshIndicator(
+            color: AppColors.primary,
+            backgroundColor: AppColors.white,
+            onRefresh: widget.onRefresh ?? () async {},
+            child: CustomScrollView(
+              key: const PageStorageKey('home-discovery-feed'),
+              physics: const AlwaysScrollableScrollPhysics(
+                parent: BouncingScrollPhysics(),
+              ),
+              slivers: [
               SliverToBoxAdapter(
                 child: SafeArea(
                   bottom: false,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _HomeHeader(
-                        address: _address,
-                        cartItemCount: widget.cartItemCount,
-                        onLocation: _openLocationPicker,
+                      AppTopBar(
                         onOpenCart: widget.onOpenCart,
+                        locationKey: const ValueKey('home-location'),
+                        notificationsKey: const ValueKey('home-notifications'),
+                        cartKey: const ValueKey('home-cart'),
                       ),
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(18, 8, 18, 12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              widget.firstName.isEmpty
-                                  ? 'Hello!'
-                                  : 'Hello, ${widget.firstName}!',
-                              style: Theme.of(context).textTheme.titleLarge
-                                  ?.copyWith(
-                                    fontSize: 22,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                            ),
-                            const SizedBox(height: 4),
-                            ConstrainedBox(
-                              constraints: const BoxConstraints(maxWidth: 320),
-                              child: Text(
-                                _headline,
-                                key: const ValueKey('home-offer-count'),
-                                style: Theme.of(
-                                  context,
-                                ).textTheme.headlineMedium,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                      const SizedBox(height: 12),
                       _HomeSearchBar(
-                        onMap: _openLocationPicker,
+                        onRestaurantsTap: () => _openRestaurants(),
                         onOpenNow: () => _openRestaurants(
                           preset: RestaurantBrowsePreset.openNow,
                         ),
                         onSearchTap: () => _openSearchDiscovery(null),
                       ),
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 6),
                       _CategoryRow(
                         foodTags: widget.foodTags,
                         isLoading: widget.isLoadingFoodTags,
                         onTagTap: _openSearchDiscovery,
                       ),
-                      const SizedBox(height: 18),
+                      const SizedBox(height: 6),
                       widget.isLoadingDeals && widget.deals.isEmpty
                           ? const OfferRail(offers: [], isLoading: true)
                           : widget.deals.isEmpty
@@ -349,7 +333,7 @@ class _HomeDiscoveryViewState extends State<HomeDiscoveryView> {
                               },
                               onSeeAll: widget.onSeeAllDeals,
                             ),
-                      const SizedBox(height: 18),
+                      const SizedBox(height: 6),
                     ],
                   ),
                 ),
@@ -401,104 +385,26 @@ class _HomeDiscoveryViewState extends State<HomeDiscoveryView> {
                   separatorBuilder: (_, _) => const SizedBox(height: 12),
                 ),
               ),
-          ],
+              if (widget.bottomOverlayPadding > 0)
+                SliverToBoxAdapter(
+                  child: SizedBox(height: widget.bottomOverlayPadding + 16),
+                ),
+            ],
+          ),
         ),
       ),
     ),
-    );
-  }
+  );
 }
-
-class _HomeHeader extends StatelessWidget {
-  final String address;
-  final int cartItemCount;
-  final VoidCallback onLocation;
-  final VoidCallback onOpenCart;
-
-  const _HomeHeader({
-    required this.address,
-    required this.cartItemCount,
-    required this.onLocation,
-    required this.onOpenCart,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 8, 10, 0),
-      child: Row(
-        children: [
-          Expanded(
-            child: InkWell(
-              key: const ValueKey('home-location'),
-              onTap: onLocation,
-              borderRadius: BorderRadius.circular(12),
-              child: SizedBox(
-                height: 44,
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.location_on_rounded,
-                      color: AppColors.orange,
-                      size: 16,
-                    ),
-                    const SizedBox(width: 5),
-                    Flexible(
-                      child: Text(
-                        address,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 3),
-                    const Icon(Icons.keyboard_arrow_down_rounded, size: 16),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          IconButton(
-            key: const ValueKey('home-notifications'),
-            tooltip: 'Notifications',
-            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
-            icon: const Icon(Icons.notifications_none_rounded, size: 22),
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const NotificationsScreen()),
-            ),
-          ),
-          Semantics(
-            label: 'Cart, $cartItemCount items',
-            child: IconButton(
-              key: const ValueKey('home-cart'),
-              tooltip: 'Cart',
-              constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
-              onPressed: onOpenCart,
-              icon: Badge(
-                key: const ValueKey('home-cart-badge'),
-                isLabelVisible: cartItemCount > 0,
-                backgroundColor: AppColors.orange,
-                textColor: AppColors.textOnAccent,
-                label: Text(cartItemCount > 99 ? '99+' : '$cartItemCount'),
-                child: const Icon(Icons.shopping_cart_outlined, size: 22),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 class _HomeSearchBar extends StatelessWidget {
-  final VoidCallback onMap;
+  final VoidCallback onRestaurantsTap;
   final VoidCallback onOpenNow;
   final VoidCallback? onSearchTap;
 
   const _HomeSearchBar({
-    required this.onMap,
+    required this.onRestaurantsTap,
     required this.onOpenNow,
     this.onSearchTap,
   });
@@ -533,11 +439,11 @@ class _HomeSearchBar extends StatelessWidget {
           ),
           const SizedBox(width: 10),
           _RoundIconButton(
-            key: const ValueKey('home-map'),
-            icon: Icons.map_outlined,
-            tooltip: 'Choose location on map',
+            key: const ValueKey('home-restaurants-btn'),
+            icon: Icons.restaurant_rounded,
+            tooltip: 'Browse restaurants',
             size: 52,
-            onTap: onMap,
+            onTap: onRestaurantsTap,
           ),
         ],
       ),
@@ -562,7 +468,7 @@ class _HomeSectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 0, 10, 8),
+      padding: const EdgeInsets.fromLTRB(18, 0, 10, 4),
       child: Row(
         children: [
           Expanded(

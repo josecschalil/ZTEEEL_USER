@@ -57,6 +57,7 @@ class OfferExplanationScreen extends StatefulWidget {
   final String scopeType;
   final List<String> itemIds;
   final List<String> categoryIds;
+  final String? heroTag;
 
   const OfferExplanationScreen({
     super.key,
@@ -80,6 +81,7 @@ class OfferExplanationScreen extends StatefulWidget {
     this.scopeType = 'all_menu',
     this.itemIds = const [],
     this.categoryIds = const [],
+    this.heroTag,
   });
 
   @override
@@ -420,7 +422,7 @@ class _OfferExplanationScreenState extends State<OfferExplanationScreen> {
               Padding(
                 padding: const EdgeInsets.fromLTRB(18, 4, 18, 14),
                 child: OfferCard(
-                  heroTag: 'offer-card-${widget.dealId ?? cardData.id}',
+                  heroTag: widget.heroTag ?? 'offer-card-${widget.dealId ?? cardData.id}',
                   offer: cardData,
                   onTap: null,
                 ),

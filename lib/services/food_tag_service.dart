@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config/api_config.dart';
+import 'location_service.dart';
 
 class FoodTag {
   final String id;
@@ -22,9 +23,12 @@ class FoodTag {
 
   factory FoodTag.fromJson(Map<String, dynamic> json) {
     final rawImage = json['image']?.toString().trim() ?? '';
+    final rawName = json['name']?.toString().trim() ?? '';
+    final normalizedName =
+        rawName.toLowerCase() == 'deserts' ? 'Desserts' : rawName;
     return FoodTag(
       id: json['id']?.toString() ?? '',
-      name: json['name']?.toString().trim() ?? '',
+      name: normalizedName,
       slug: json['slug']?.toString().trim() ?? '',
       imageUrl: rawImage.isEmpty ? null : resolveImage(rawImage),
       matchingVendorCount:
@@ -135,11 +139,25 @@ class FoodTagService {
   static Future<List<Map<String, dynamic>>> fetchTagVendors(
     String tagId,
   ) async {
-    return _fetchRows(ApiConfig.foodTagVendorsUrl(tagId));
+    final location = await LocationService.load();
+    return _fetchRows(
+      ApiConfig.foodTagVendorsUrl(
+        tagId,
+        latitude: location?.latitude,
+        longitude: location?.longitude,
+      ),
+    );
   }
 
   static Future<List<Map<String, dynamic>>> fetchTagOffers(String tagId) async {
-    return _fetchRows(ApiConfig.foodTagOffersUrl(tagId));
+    final location = await LocationService.load();
+    return _fetchRows(
+      ApiConfig.foodTagOffersUrl(
+        tagId,
+        latitude: location?.latitude,
+        longitude: location?.longitude,
+      ),
+    );
   }
 
   static Future<List<Map<String, dynamic>>> fetchVendorTagItems(
