@@ -528,6 +528,13 @@ class CartService {
   }) async {
     final vId = vendorId ?? currentCart?.vendor?.id ?? '';
     final vName = vendorName ?? currentCart?.vendor?.businessName ?? 'Restaurant';
+    final previousBaskets = Map<String, CartData>.from(basketsNotifier.value);
+    final previousCart = cartNotifier.value;
+
+    void restoreLocalCart() {
+      basketsNotifier.value = previousBaskets;
+      cartNotifier.value = previousCart;
+    }
 
     // 1. Instantly update or create local basket for this vendor
     if (vId.isNotEmpty) {
@@ -592,6 +599,7 @@ class CartService {
       );
 
       if (response.statusCode == 409) {
+        restoreLocalCart();
         return {'success': false, 'conflict': true};
       }
 
@@ -609,12 +617,23 @@ class CartService {
           return {'success': true, 'data': data};
         }
       }
+      restoreLocalCart();
+      String error = 'This item is no longer available.';
+      try {
+        final decoded = jsonDecode(response.body);
+        if (decoded is Map) {
+          error = (decoded['message'] ?? decoded['detail'] ?? error).toString();
+        }
+      } catch (_) {}
+      return {'success': false, 'error': error};
     } catch (e) {
       debugPrint('CartService addItem network sync: $e');
+      restoreLocalCart();
+      return {
+        'success': false,
+        'error': 'Unable to check item availability. Please try again.',
+      };
     }
-
-    final basket = getBasket(vId);
-    return {'success': true, 'data': basket};
   }
 
   /// Sets exact quantity of an item in a specific vendor basket

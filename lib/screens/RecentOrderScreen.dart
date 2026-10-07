@@ -3,7 +3,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:zteel_user/screens/QrScreen.dart';
+import 'CheckOutScreen.dart';
 import '../services/redemption_service.dart';
+import '../services/cart_service.dart';
+import '../services/restaurant_service.dart';
 import '../widgets/app_top_bar.dart';
 
 
@@ -30,6 +33,7 @@ class _OrdersScreenState extends State<OrdersScreen>
   late final PageController _pageController;
   late int _selectedTab;
   bool _isLoading = false;
+  bool _isReordering = false;
   Timer? _poller;
   List<RedemptionSessionData> _allOrders = [];
 
@@ -112,13 +116,139 @@ class _OrdersScreenState extends State<OrdersScreen>
     }
   }
 
+  Future<void> _reorderExpiredOrder(RedemptionSessionData session) async {
+    if (_isReordering) return;
+    final vendor = session.vendor;
+    if (vendor == null || vendor.id.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('This order no longer has a restaurant to reorder from.')),
+      );
+      return;
+    }
+
+    setState(() => _isReordering = true);
+    try {
+      final currentCart = await CartService.fetchCart();
+      if (!mounted) return;
+      if (currentCart != null &&
+          currentCart.isNotEmpty &&
+          currentCart.vendor?.id.isNotEmpty == true &&
+          currentCart.vendor!.id != vendor.id) {
+        final replaceCart = await showDialog<bool>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: const Text('Replace current cart?'),
+            content: Text(
+              'Your cart contains items from ${currentCart.vendor!.businessName}. '
+              'Clear it before reordering from ${vendor.businessName}?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(dialogContext, true),
+                child: const Text('Clear and reorder'),
+              ),
+            ],
+          ),
+        );
+        if (replaceCart != true) return;
+        await CartService.clearCart();
+      }
+
+      // The public menu is fetched freshly so old snapshots never decide what
+      // can be reordered. The server validates again when each line is added.
+      final categories = await RestaurantService.fetchLiveVendorMenu(vendor.id);
+      if (categories == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Could not check current item availability. Please try again.'),
+            ),
+          );
+        }
+        return;
+      }
+      final liveItems = <String, Map<String, dynamic>>{};
+      for (final category in categories) {
+        final menuItems = category['menu_items'];
+        if (menuItems is! List) continue;
+        for (final rawItem in menuItems.whereType<Map>()) {
+          final item = Map<String, dynamic>.from(rawItem);
+          final id = item['id']?.toString() ?? '';
+          if (id.isNotEmpty && item['is_available'] != false) {
+            liveItems[id] = item;
+          }
+        }
+      }
+
+      final unavailable = <UnavailableReorderItem>[];
+      for (final orderedItem in session.items) {
+        final liveItem = liveItems[orderedItem.menuItemId];
+        if (liveItem == null) {
+          unavailable.add(UnavailableReorderItem(
+            name: orderedItem.name,
+            quantity: orderedItem.quantity,
+            imageUrl: orderedItem.imageUrl,
+          ));
+          continue;
+        }
+
+        final result = await CartService.addItem(
+          menuItemId: orderedItem.menuItemId,
+          quantity: orderedItem.quantity,
+          vendorId: vendor.id,
+          vendorName: vendor.businessName,
+          vendorCoverImage: vendor.coverImage,
+          itemName: liveItem['name']?.toString(),
+          unitPrice: double.tryParse(liveItem['price']?.toString() ?? ''),
+          discountedPrice:
+              double.tryParse(liveItem['discounted_price']?.toString() ?? ''),
+          itemImage: liveItem['image']?.toString(),
+          itemDescription: liveItem['description']?.toString(),
+        );
+        if (result['success'] != true) {
+          if (result['conflict'] == true) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Your cart changed. Please try reordering again.')),
+              );
+            }
+            return;
+          }
+          unavailable.add(UnavailableReorderItem(
+            name: orderedItem.name,
+            quantity: orderedItem.quantity,
+            imageUrl: orderedItem.imageUrl,
+            reason: result['error']?.toString() ?? 'No longer available',
+          ));
+        }
+      }
+
+      if (!mounted) return;
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => CheckoutScreen(
+            vendorId: vendor.id,
+            unavailableReorderItems: unavailable,
+          ),
+        ),
+      );
+      await _loadOrders(silent: true);
+    } finally {
+      if (mounted) setState(() => _isReordering = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final pending = _allOrders.where((o) => o.isPending).toList();
     final completed = _allOrders.where((o) => o.isConfirmed).toList();
-    final expired = _allOrders.where((o) => o.isExpired).toList();
+    final expired = _allOrders.where((o) => o.isExpired || o.isRejected).toList();
 
     return Scaffold(
       backgroundColor: isDark ? AppColors.bgDark : AppColors.white,
@@ -337,6 +467,8 @@ class _OrdersScreenState extends State<OrdersScreen>
 
     final isConfirmed = session.isConfirmed;
     final isPending = session.isPending;
+    final isExpired = session.status.toLowerCase() == 'expired';
+    final isRejected = session.isRejected;
 
     return GestureDetector(
       onTap: () => _openOrderDetails(session),
@@ -391,13 +523,21 @@ class _OrdersScreenState extends State<OrdersScreen>
                     decoration: BoxDecoration(
                       color: isPending
                           ? AppColors.primary.withValues(alpha: 0.1)
-                          : (isConfirmed ? AppColors.materialGreen.withValues(alpha: 0.1) : AppColors.materialGrey.withValues(alpha: 0.1)),
+                          : (isConfirmed
+                              ? AppColors.materialGreen.withValues(alpha: 0.1)
+                              : (isRejected
+                                  ? AppColors.materialRed.withValues(alpha: 0.1)
+                                  : AppColors.materialGrey.withValues(alpha: 0.1))),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
                       isPending ? 'Show QR' : 'Show Details',
                       style: TextStyle(
-                        color: isPending ? AppColors.primary : (isConfirmed ? AppColors.materialGreen : AppColors.materialGrey),
+                        color: isPending
+                            ? AppColors.primary
+                            : (isConfirmed
+                                ? AppColors.materialGreen
+                                : (isRejected ? AppColors.materialRed : AppColors.materialGrey)),
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
                       ),
@@ -427,6 +567,28 @@ class _OrdersScreenState extends State<OrdersScreen>
               ),
             ],
 
+            if (isExpired) ...[
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: _isReordering ? null : () => _reorderExpiredOrder(session),
+                  icon: _isReordering
+                      ? const SizedBox(
+                          height: 16,
+                          width: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.replay_rounded),
+                  label: Text(_isReordering ? 'Checking availability…' : 'Reorder'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    side: const BorderSide(color: AppColors.primary),
+                  ),
+                ),
+              ),
+            ],
+
             const SizedBox(height: 16),
             const Divider(color: AppColors.border, thickness: 1),
             const SizedBox(height: 12),
@@ -450,10 +612,14 @@ class _OrdersScreenState extends State<OrdersScreen>
                       Icon(
                         isConfirmed
                             ? Icons.verified_rounded
-                            : (isPending ? Icons.timer_outlined : Icons.cancel_outlined),
+                            : (isPending
+                                ? Icons.timer_outlined
+                                : (isRejected ? Icons.cancel_rounded : Icons.cancel_outlined)),
                         color: isConfirmed
                             ? AppColors.supportGreen
-                            : (isPending ? AppColors.primary : AppColors.materialGrey),
+                            : (isPending
+                                ? AppColors.primary
+                                : (isRejected ? AppColors.materialRed : AppColors.materialGrey)),
                         size: 18,
                       ),
                       const SizedBox(width: 8),
@@ -463,7 +629,11 @@ class _OrdersScreenState extends State<OrdersScreen>
                           Text(
                             isConfirmed
                                 ? 'Redeemed Successfully'
-                                : (isPending ? 'Active QR Code' : 'Order ${session.status.toUpperCase()}'),
+                                : (isPending
+                                    ? 'Active QR Code'
+                                    : (isRejected
+                                        ? 'Order Rejected by Restaurant'
+                                        : 'Order ${session.status.toUpperCase()}')),
                             style: TextStyle(
                               fontSize: 11.5,
                               fontWeight: FontWeight.bold,
@@ -474,7 +644,11 @@ class _OrdersScreenState extends State<OrdersScreen>
                           Text(
                             isConfirmed
                                 ? 'Redemption verified'
-                                : (isPending ? 'Show at restaurant' : 'Session closed'),
+                                : (isPending
+                                    ? 'Show at restaurant'
+                                    : (isRejected
+                                        ? 'Please place a new order when ready'
+                                        : 'Session closed')),
                             style: TextStyle(
                               fontSize: 9.5,
                               color: isDark ? AppColors.textMutedDark : AppColors.textMuted,
