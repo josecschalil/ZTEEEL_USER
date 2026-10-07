@@ -6,6 +6,7 @@ import '../services/food_tag_service.dart';
 import '../services/offer_service.dart';
 import '../services/restaurant_service.dart';
 import '../services/auth_service.dart';
+import '../services/location_service.dart';
 import '../widgets/bottom_nav_bar.dart';
 import 'DealsScreen.dart';
 import 'MainCartScreen.dart';
@@ -28,8 +29,6 @@ HomeRestaurant _homeRestaurantFromVendor(Map<String, dynamic> vendor) {
   String cuisine = 'Multi-Cuisine';
   if (vendor['cuisines'] is List && (vendor['cuisines'] as List).isNotEmpty) {
     cuisine = (vendor['cuisines'] as List).join(' · ');
-  } else if (vendor['shop_description']?.toString().trim().isNotEmpty == true) {
-    cuisine = vendor['shop_description']!.toString().trim();
   } else if (vendor['category']?.toString().trim().isNotEmpty == true) {
     cuisine = vendor['category']!.toString().trim();
   }
@@ -47,16 +46,18 @@ HomeRestaurant _homeRestaurantFromVendor(Map<String, dynamic> vendor) {
     }
   }
 
+  final rawDistance = vendor['distance_km'];
   final distanceStr =
-      vendor['distance_km'] != null &&
-          vendor['distance_km'].toString().isNotEmpty
-      ? '${vendor['distance_km']} km'
-      : '1.2 km';
+      rawDistance != null && rawDistance.toString().trim().isNotEmpty
+          ? '${rawDistance} km'
+          : '';
 
+  final distanceNum = double.tryParse(rawDistance?.toString() ?? '') ?? 1.5;
+  final calculatedEta = (12 + distanceNum * 2.5).round().clamp(15, 90);
   final etaStr =
       vendor['delivery_time']?.toString() ??
       vendor['eta']?.toString() ??
-      '20–30 min';
+      '$calculatedEta min';
 
   return HomeRestaurant(
     id: id,
@@ -112,6 +113,8 @@ class _HomeDiscoveryScreenState extends State<HomeDiscoveryScreen> {
   @override
   void initState() {
     super.initState();
+    LocationService.locationNotifier.addListener(_onLocationChanged);
+
     // 1. Check in-memory caches for instant render
     if (RestaurantService.cachedRestaurants.isNotEmpty) {
       _liveRestaurants = RestaurantService.cachedRestaurants
@@ -135,6 +138,17 @@ class _HomeDiscoveryScreenState extends State<HomeDiscoveryScreen> {
     _loadCustomerProfile();
   }
 
+  @override
+  void dispose() {
+    LocationService.locationNotifier.removeListener(_onLocationChanged);
+    super.dispose();
+  }
+
+  void _onLocationChanged() {
+    if (!mounted) return;
+    _loadDiscoveryData(forceRefresh: true);
+  }
+
   Future<void> _loadCustomerProfile() async {
     final profile = await AuthService.getCustomerProfile();
     if (!mounted || profile == null) return;
@@ -147,7 +161,15 @@ class _HomeDiscoveryScreenState extends State<HomeDiscoveryScreen> {
     });
   }
 
-  Future<void> _loadDiscoveryData() async {
+  Future<void> _loadDiscoveryData({bool forceRefresh = false}) async {
+    if (forceRefresh && mounted) {
+      setState(() {
+        _isLoadingRestaurants = true;
+        _isLoadingDeals = true;
+        _isLoadingFoodTags = true;
+      });
+    }
+
     // 1. Instant local disk cache load
     final cachedDiskVendorsFuture = RestaurantService.loadCachedRestaurants();
     final cachedDiskOffersFuture = OfferService.loadCachedOffers();
@@ -265,6 +287,7 @@ class _HomeDiscoveryScreenState extends State<HomeDiscoveryScreen> {
         isLoadingFoodTags: _isLoadingFoodTags,
         firstName: _firstName,
         onSeeAllDeals: () => setState(() => _navIndex = 1),
+        onSeeAllRestaurants: () => setState(() => _navIndex = 2),
         onOpenCart: _openCart,
         bottomOverlayPadding: bottomOverlayPadding,
         onRefresh: _loadDiscoveryData,

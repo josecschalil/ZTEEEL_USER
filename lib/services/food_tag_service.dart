@@ -139,23 +139,23 @@ class FoodTagService {
   static Future<List<Map<String, dynamic>>> fetchTagVendors(
     String tagId,
   ) async {
-    final location = await LocationService.load();
+    final location = await LocationService.ensureLocation();
     return _fetchRows(
       ApiConfig.foodTagVendorsUrl(
         tagId,
-        latitude: location?.latitude,
-        longitude: location?.longitude,
+        latitude: location.latitude,
+        longitude: location.longitude,
       ),
     );
   }
 
   static Future<List<Map<String, dynamic>>> fetchTagOffers(String tagId) async {
-    final location = await LocationService.load();
+    final location = await LocationService.ensureLocation();
     return _fetchRows(
       ApiConfig.foodTagOffersUrl(
         tagId,
-        latitude: location?.latitude,
-        longitude: location?.longitude,
+        latitude: location.latitude,
+        longitude: location.longitude,
       ),
     );
   }

@@ -1,6 +1,7 @@
 import '../app_colors.dart';
 import 'package:flutter/material.dart';
 import '../services/cart_service.dart';
+import '../services/wishlist_service.dart';
 
 
 class FoodItemPage extends StatefulWidget {
@@ -58,6 +59,43 @@ class _FoodItemPageState extends State<FoodItemPage> {
     super.initState();
     _photoPageController = PageController();
     _quantity = widget.initialQuantity > 0 ? widget.initialQuantity : 1;
+    WishlistService.loadWishlist();
+  }
+
+  Future<void> _handleToggleWishlist() async {
+    final wishlistItem = WishlistItem(
+      id: widget.id,
+      vendorId: widget.vendorId ?? '',
+      restaurant: widget.vendorName ?? 'Restaurant',
+      name: widget.name,
+      price: widget.price,
+      originalPrice: widget.originalPrice,
+      imageUrl: widget.photos.isNotEmpty ? widget.photos.first : '',
+      category: widget.category,
+      tag: widget.isBestseller
+          ? 'Bestseller'
+          : (widget.isVeg ? 'Veg' : 'Non-Veg'),
+      rating: double.tryParse(widget.rating) ?? 4.8,
+      description: widget.description,
+    );
+
+    final isCurrentlySaved = WishlistService.isInWishlist(widget.id);
+    await WishlistService.toggleWishlist(wishlistItem);
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          !isCurrentlySaved
+              ? 'Added "${widget.name}" to wishlist!'
+              : 'Removed "${widget.name}" from wishlist.',
+        ),
+        backgroundColor: !isCurrentlySaved ? AppColors.primary : const Color(0xFF334155),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 2),
+      ),
+    );
   }
 
   @override
@@ -244,16 +282,18 @@ class _FoodItemPageState extends State<FoodItemPage> {
                             icon: Icons.chevron_left_rounded,
                             onTap: () => Navigator.of(context).pop(),
                           ),
-                          _CircularButton(
-                            icon: Icons.favorite_border_rounded,
-                            onTap: () {
-                              ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('Added "${widget.name}" to wishlist!'),
-                                  behavior: SnackBarBehavior.floating,
-                                  duration: const Duration(seconds: 2),
-                                ),
+                          ValueListenableBuilder<Set<String>>(
+                            valueListenable: WishlistService.wishlistedItemIdsNotifier,
+                            builder: (context, wishlistedIds, _) {
+                              final isSaved = wishlistedIds.contains(widget.id);
+                              return _CircularButton(
+                                icon: isSaved
+                                    ? Icons.favorite_rounded
+                                    : Icons.favorite_border_rounded,
+                                iconColor: isSaved
+                                    ? AppColors.toneFFF43F5E
+                                    : AppColors.white,
+                                onTap: _handleToggleWishlist,
                               );
                             },
                           ),
@@ -574,8 +614,13 @@ class _FoodItemPageState extends State<FoodItemPage> {
 
 class _CircularButton extends StatelessWidget {
   final IconData icon;
+  final Color? iconColor;
   final VoidCallback onTap;
-  const _CircularButton({required this.icon, required this.onTap});
+  const _CircularButton({
+    required this.icon,
+    this.iconColor,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -585,7 +630,7 @@ class _CircularButton extends StatelessWidget {
         shape: BoxShape.circle,
       ),
       child: IconButton(
-        icon: Icon(icon, color: AppColors.white, size: 24),
+        icon: Icon(icon, color: iconColor ?? AppColors.white, size: 24),
         onPressed: onTap,
       ),
     );

@@ -67,8 +67,6 @@ class SavedRestaurant {
     String cuisine = 'Multi-Cuisine';
     if (vendor['cuisines'] is List && (vendor['cuisines'] as List).isNotEmpty) {
       cuisine = (vendor['cuisines'] as List).join(' · ');
-    } else if (vendor['shop_description']?.toString().trim().isNotEmpty == true) {
-      cuisine = vendor['shop_description']!.toString().trim();
     } else if (vendor['category']?.toString().trim().isNotEmpty == true) {
       cuisine = vendor['category']!.toString().trim();
     }
@@ -79,7 +77,7 @@ class SavedRestaurant {
     final reviewCount = int.tryParse(
       vendor['review_count']?.toString() ?? vendor['rating_count']?.toString() ?? '',
     ) ?? 120;
-    final distanceKm = double.tryParse(vendor['distance_km']?.toString() ?? '') ?? 1.2;
+    final distanceKm = double.tryParse(vendor['distance_km']?.toString() ?? '') ?? 0.0;
 
     final image = vendor['cover_image'] ?? vendor['icon_image'];
     final imageUrl = image is String && image.isNotEmpty

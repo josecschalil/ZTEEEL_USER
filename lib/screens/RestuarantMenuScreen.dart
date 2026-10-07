@@ -988,6 +988,7 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
                     onRemove: _removeItem,
                     onSetQuantity: _setItemQuantity,
                     restaurantName: vendor.name,
+                    vendorId: vendor.id,
                   ),
                   _OffersView(
                     offers: _vendorOffers,
@@ -1806,6 +1807,8 @@ class _CategorySection extends StatelessWidget {
   final ValueChanged<String> onAdd;
   final ValueChanged<String> onRemove;
   final void Function(String id, int quantity)? onSetQuantity;
+  final String? vendorId;
+  final String? restaurantName;
 
   const _CategorySection({
     required this.category,
@@ -1814,6 +1817,8 @@ class _CategorySection extends StatelessWidget {
     required this.onAdd,
     required this.onRemove,
     this.onSetQuantity,
+    this.vendorId,
+    this.restaurantName,
   });
 
   @override
@@ -1863,6 +1868,8 @@ class _CategorySection extends StatelessWidget {
                       categoryName: category.title,
                       quantity: cart[item.id] ?? 0,
                       isDark: isDark,
+                      vendorId: vendorId,
+                      restaurantName: restaurantName,
                       onAdd: () => onAdd(item.id),
                       onRemove: () => onRemove(item.id),
                       onSetQuantity: onSetQuantity != null
@@ -1884,6 +1891,8 @@ class _MenuItemCard extends StatelessWidget {
   final String categoryName;
   final int quantity;
   final bool isDark;
+  final String? vendorId;
+  final String? restaurantName;
   final VoidCallback onAdd;
   final VoidCallback onRemove;
   final ValueChanged<int>? onSetQuantity;
@@ -1893,6 +1902,8 @@ class _MenuItemCard extends StatelessWidget {
     required this.categoryName,
     required this.quantity,
     required this.isDark,
+    this.vendorId,
+    this.restaurantName,
     required this.onAdd,
     required this.onRemove,
     this.onSetQuantity,
@@ -1910,6 +1921,8 @@ class _MenuItemCard extends StatelessWidget {
           MaterialPageRoute(
             builder: (_) => FoodItemPage(
               id: item.id,
+              vendorId: vendorId,
+              vendorName: restaurantName,
               name: item.name,
               category: categoryName,
               price: item.discountedPrice,
@@ -1924,7 +1937,17 @@ class _MenuItemCard extends StatelessWidget {
                 if (onSetQuantity != null) {
                   onSetQuantity!(targetQty);
                 } else {
-                  await CartService.addItem(menuItemId: item.id, quantity: targetQty);
+                  await CartService.addItem(
+                    menuItemId: item.id,
+                    quantity: targetQty,
+                    vendorId: vendorId,
+                    vendorName: restaurantName,
+                    itemName: item.name,
+                    unitPrice: item.price,
+                    discountedPrice: item.discountedPrice,
+                    itemImage: item.imageUrl,
+                    itemDescription: item.description,
+                  );
                 }
               },
             ),
@@ -2334,6 +2357,7 @@ class _MenuView extends StatelessWidget {
   final ValueChanged<String> onRemove;
   final void Function(String id, int quantity)? onSetQuantity;
   final String restaurantName;
+  final String? vendorId;
 
   const _MenuView({
     required this.selectedPill,
@@ -2347,6 +2371,7 @@ class _MenuView extends StatelessWidget {
     required this.onRemove,
     this.onSetQuantity,
     this.restaurantName = 'Restaurant',
+    this.vendorId,
   });
 
   @override
@@ -2428,6 +2453,8 @@ class _MenuView extends StatelessWidget {
                   onAdd: onAdd,
                   onRemove: onRemove,
                   onSetQuantity: onSetQuantity,
+                  vendorId: vendorId,
+                  restaurantName: restaurantName,
                 ),
             ],
           ),

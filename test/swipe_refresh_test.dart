@@ -3,11 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:zteel_user/screens/DealsScreen.dart';
 import 'package:zteel_user/screens/FoodTypeShopScreen.dart';
 import 'package:zteel_user/screens/NotificationScreen.dart';
-import 'package:zteel_user/screens/PopularFoodScreen.dart';
 import 'package:zteel_user/screens/ProfileScreen.dart';
 import 'package:zteel_user/screens/RestaurantListScreen.dart';
-import 'package:zteel_user/screens/RestuarantMenuScreen.dart';
-import 'package:zteel_user/screens/SavedShopScreen.dart';
 import 'package:zteel_user/screens/WishlistScreen.dart';
 import 'package:zteel_user/screens/home_discovery_view.dart';
 

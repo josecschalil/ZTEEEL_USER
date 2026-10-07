@@ -1,3 +1,5 @@
+import '../services/discovery_preferences_service.dart';
+
 /// Central backend configuration for the ZTEEL user app.
 class ApiConfig {
   ApiConfig._();
@@ -5,7 +7,8 @@ class ApiConfig {
   static const String baseUrl = 'http://68.233.116.23:8000';
 
   /// Default search radius in kilometers for restaurants and deal feeds.
-  static const double defaultSearchRadiusKm = 15.0;
+  static double get defaultSearchRadiusKm =>
+      DiscoveryPreferencesService.maxRadiusKm;
 
   static String get sendOtpUrl => '$baseUrl/api/v1/auth/send-otp/';
   static String get customerVerifyOtpUrl =>
@@ -62,7 +65,21 @@ class ApiConfig {
     return '$baseUrl/api/v1/vendors/$query';
   }
   static String get vendorAltListUrl => '$baseUrl/api/v1/vendor/list/';
-  static String get searchVendorsUrl => '$baseUrl/api/v1/search/?q=a&filter=vendors';
+  static String searchVendorsUrl({
+    String query = 'a',
+    String filter = 'vendors',
+    double? latitude,
+    double? longitude,
+    double? radiusKm,
+  }) {
+    final params = <String>['q=$query', 'filter=$filter'];
+    if (latitude != null && longitude != null) {
+      params.add('latitude=$latitude&longitude=$longitude');
+      final radius = radiusKm ?? defaultSearchRadiusKm;
+      params.add('radius_km=$radius');
+    }
+    return '$baseUrl/api/v1/search/?${params.join('&')}';
+  }
   static String vendorDetailUrl(String vendorId) =>
       '$baseUrl/api/v1/vendor/$vendorId/';
   static String vendorMenuUrl(String vendorId) =>

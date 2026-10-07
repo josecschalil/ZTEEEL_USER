@@ -43,33 +43,38 @@ class HomeRestaurant {
     this.offerLabel,
   });
 
-  RestaurantListing toRestaurantListing() => RestaurantListing(
-    id: id,
-    name: name,
-    imageUrl: imageUrl,
-    fallbackIcon: Icons.restaurant_menu_rounded,
-    cuisines: cuisine
-        .split('·')
-        .map((v) => v.trim())
-        .where((v) => v.isNotEmpty)
-        .toList(),
-    rating: rating,
-    reviewCount: reviewCount,
-    distanceKm: double.tryParse(distance.split(' ').first) ?? 1.2,
-    etaMins: int.tryParse(eta.split(RegExp(r'[^0-9]')).first) ?? 25,
-    isOpenNow: isOpen,
-    isPromoted: offerLabel != null,
-    offerLabel: offerLabel,
-    hasFreeDelivery:
-        offerLabel?.toLowerCase().contains('free delivery') == true,
-    priceLevel: '₹₹',
-  );
+  RestaurantListing toRestaurantListing() {
+    final distVal = double.tryParse(distance.split(' ').first) ?? 0.0;
+    return RestaurantListing(
+      id: id,
+      name: name,
+      imageUrl: imageUrl,
+      fallbackIcon: Icons.restaurant_menu_rounded,
+      cuisines: cuisine
+          .split('·')
+          .map((v) => v.trim())
+          .where((v) => v.isNotEmpty)
+          .toList(),
+      rating: rating,
+      reviewCount: reviewCount,
+      distanceKm: distVal,
+      etaMins: int.tryParse(eta.split(RegExp(r'[^0-9]')).first) ??
+          (12 + distVal * 2.5).round().clamp(15, 90),
+      isOpenNow: isOpen,
+      isPromoted: offerLabel != null,
+      offerLabel: offerLabel,
+      hasFreeDelivery:
+          offerLabel?.toLowerCase().contains('free delivery') == true,
+      priceLevel: '₹₹',
+    );
+  }
 }
 
 class HomeDiscoveryView extends StatefulWidget {
   final List<HomeRestaurant> restaurants;
   final List<Deal> deals;
   final VoidCallback onSeeAllDeals;
+  final VoidCallback? onSeeAllRestaurants;
   final VoidCallback? onOpenCart;
   final int cartItemCount;
   final bool isLoadingRestaurants;
@@ -85,6 +90,7 @@ class HomeDiscoveryView extends StatefulWidget {
     required this.restaurants,
     required this.deals,
     required this.onSeeAllDeals,
+    this.onSeeAllRestaurants,
     this.onOpenCart,
     this.cartItemCount = 0,
     this.isLoadingRestaurants = false,
@@ -293,7 +299,9 @@ class _HomeDiscoveryViewState extends State<HomeDiscoveryView> {
                       ),
                       const SizedBox(height: 12),
                       _HomeSearchBar(
-                        onRestaurantsTap: () => _openRestaurants(),
+                        onRestaurantsTap: () => widget.onSeeAllRestaurants != null
+                            ? widget.onSeeAllRestaurants!()
+                            : _openRestaurants(),
                         onOpenNow: () => _openRestaurants(
                           preset: RestaurantBrowsePreset.openNow,
                         ),
@@ -342,7 +350,9 @@ class _HomeDiscoveryViewState extends State<HomeDiscoveryView> {
               child: _HomeSectionHeader(
                 title: 'Restaurants near you',
                 actionKey: 'home-see-all-restaurants',
-                onAction: _openRestaurants,
+                onAction: () => widget.onSeeAllRestaurants != null
+                    ? widget.onSeeAllRestaurants!()
+                    : _openRestaurants(),
               ),
             ),
             if (widget.isLoadingRestaurants && widget.restaurants.isEmpty)

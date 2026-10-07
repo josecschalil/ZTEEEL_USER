@@ -29,6 +29,16 @@ class RestaurantService {
   static Map<String, dynamic>? getCachedVendor(String vendorId) =>
       _vendorCache[vendorId];
 
+  static void clearCache() {
+    _cachedRestaurants = [];
+    _vendorCache.clear();
+    _menuCache.clear();
+    _offersCache.clear();
+    SharedPreferences.getInstance().then((prefs) {
+      prefs.remove(_kRestaurantsCacheKey);
+    }).catchError((_) {});
+  }
+
   /// Loads cached restaurants from local storage for instant cold-boot startup.
   static Future<List<Map<String, dynamic>>> loadCachedRestaurants() async {
     if (_cachedRestaurants.isNotEmpty) {
@@ -71,7 +81,7 @@ class RestaurantService {
     }
 
     final headers = await AuthService.getAuthHeaders();
-    final location = await LocationService.load();
+    final location = await LocationService.ensureLocation();
 
     // 1. Try public vendor list endpoint (/api/v1/vendors/)
     try {
@@ -80,8 +90,8 @@ class RestaurantService {
             Uri.parse(
               ApiConfig.vendorsListUrl(
                 openNow: openNow,
-                latitude: location?.latitude,
-                longitude: location?.longitude,
+                latitude: location.latitude,
+                longitude: location.longitude,
               ),
             ),
             headers: headers,
@@ -133,7 +143,12 @@ class RestaurantService {
     try {
       final response = await http
           .get(
-            Uri.parse(ApiConfig.offerFeedUrl()),
+            Uri.parse(
+              ApiConfig.offerFeedUrl(
+                latitude: location.latitude,
+                longitude: location.longitude,
+              ),
+            ),
             headers: headers,
           )
           .timeout(_kTimeout);
@@ -190,7 +205,12 @@ class RestaurantService {
     try {
       final response = await http
           .get(
-            Uri.parse(ApiConfig.searchVendorsUrl),
+            Uri.parse(
+              ApiConfig.searchVendorsUrl(
+                latitude: location.latitude,
+                longitude: location.longitude,
+              ),
+            ),
             headers: headers,
           )
           .timeout(_kTimeout);

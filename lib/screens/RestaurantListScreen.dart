@@ -11,6 +11,7 @@ import '../widgets/shimmer_loading.dart';
 import 'RestuarantMenuScreen.dart';
 import '../services/cart_service.dart';
 import '../services/location_service.dart';
+import '../services/discovery_preferences_service.dart';
 import 'LocationPageScreen.dart';
 import 'MainCartScreen.dart';
 import 'NotificationScreen.dart';
@@ -36,14 +37,9 @@ RestaurantListing restaurantListingFromVendor(Map<String, dynamic> vendor) {
       final str = c?.toString().trim() ?? '';
       if (str.isNotEmpty) cuisines.add(str);
     }
-  } else if (vendor['shop_description']?.toString().trim().isNotEmpty == true) {
-    cuisines.addAll(
-      vendor['shop_description']
-          .toString()
-          .split('·')
-          .map((s) => s.trim())
-          .where((s) => s.isNotEmpty),
-    );
+  } else if (vendor['category']?.toString().trim().isNotEmpty == true) {
+    final cat = vendor['category'].toString().trim();
+    if (cat.isNotEmpty) cuisines.add(cat);
   }
   if (cuisines.isEmpty) cuisines.add('Multi-Cuisine');
 
@@ -61,14 +57,15 @@ RestaurantListing restaurantListingFromVendor(Map<String, dynamic> vendor) {
   }
 
   final distanceKm =
-      double.tryParse(vendor['distance_km']?.toString() ?? '') ?? 1.2;
+      double.tryParse(vendor['distance_km']?.toString() ?? '') ?? 0.0;
+  final calculatedEta = (12 + distanceKm * 2.5).round().clamp(15, 90);
   final etaMins =
       int.tryParse(
         vendor['eta_minutes']?.toString() ??
             vendor['eta']?.toString().replaceAll(RegExp(r'[^0-9]'), '') ??
             '',
       ) ??
-      25;
+      calculatedEta;
   final rating =
       double.tryParse(
         vendor['rating']?.toString() ??
@@ -138,7 +135,7 @@ class RestaurantListing {
   });
 }
 
-enum _QuickFilter { openNow, nearby5km, nearby15km, nearby25km, topRated, freeDelivery }
+enum _QuickFilter { openNow, topRated, freeDelivery }
 
 /// An optional starting filter for callers that open restaurant discovery from
 /// a focused action on the Home feed. The screen remains fully usable without
@@ -150,12 +147,6 @@ extension on _QuickFilter {
     switch (this) {
       case _QuickFilter.openNow:
         return 'Open now';
-      case _QuickFilter.nearby5km:
-        return 'Within 5 km';
-      case _QuickFilter.nearby15km:
-        return 'Within 15 km';
-      case _QuickFilter.nearby25km:
-        return 'Within 25 km';
       case _QuickFilter.topRated:
         return 'Top rated';
       case _QuickFilter.freeDelivery:
@@ -167,12 +158,6 @@ extension on _QuickFilter {
     switch (this) {
       case _QuickFilter.openNow:
         return Icons.schedule_rounded;
-      case _QuickFilter.nearby5km:
-        return Icons.near_me_rounded;
-      case _QuickFilter.nearby15km:
-        return Icons.location_on_rounded;
-      case _QuickFilter.nearby25km:
-        return Icons.map_rounded;
       case _QuickFilter.topRated:
         return Icons.star_rounded;
       case _QuickFilter.freeDelivery:
@@ -231,12 +216,17 @@ class _NearbyRestaurantsScreenState extends State<NearbyRestaurantsScreen> {
 
   final Set<_QuickFilter> _activeFilters = {};
   _SortOption _sort = _SortOption.relevance;
+  late double _maxDistanceKm;
   String _query = '';
+
+  double get _maxAllowedRadius => DiscoveryPreferencesService.maxRadiusKm;
 
   @override
   void initState() {
     super.initState();
+    _maxDistanceKm = _maxAllowedRadius;
     LocationService.addressNotifier.addListener(_onAddressChanged);
+    DiscoveryPreferencesService.maxRadiusNotifier.addListener(_onRadiusPreferenceChanged);
     _restoreLocation();
     if (widget.preset == RestaurantBrowsePreset.openNow) {
       _activeFilters.add(_QuickFilter.openNow);
@@ -254,12 +244,18 @@ class _NearbyRestaurantsScreenState extends State<NearbyRestaurantsScreen> {
   }
 
   @override
-
-  @override
   void dispose() {
     LocationService.addressNotifier.removeListener(_onAddressChanged);
+    DiscoveryPreferencesService.maxRadiusNotifier.removeListener(_onRadiusPreferenceChanged);
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _onRadiusPreferenceChanged() {
+    if (!mounted) return;
+    if (_maxDistanceKm > _maxAllowedRadius) {
+      setState(() => _maxDistanceKm = _maxAllowedRadius);
+    }
   }
 
   void _onAddressChanged() {
@@ -267,6 +263,7 @@ class _NearbyRestaurantsScreenState extends State<NearbyRestaurantsScreen> {
     final live = LocationService.addressNotifier.value;
     if (_address != live) {
       setState(() => _address = live);
+      _loadLiveRestaurants();
     }
   }
 
@@ -290,6 +287,7 @@ class _NearbyRestaurantsScreenState extends State<NearbyRestaurantsScreen> {
     setState(() {
       _address = newAddress;
     });
+    _loadLiveRestaurants();
   }
 
   @override
@@ -356,13 +354,7 @@ class _NearbyRestaurantsScreenState extends State<NearbyRestaurantsScreen> {
         return false;
       }
 
-      if (_activeFilters.contains(_QuickFilter.nearby5km) && r.distanceKm > 5.0) {
-        return false;
-      }
-      if (_activeFilters.contains(_QuickFilter.nearby15km) && r.distanceKm > 15.0) {
-        return false;
-      }
-      if (_activeFilters.contains(_QuickFilter.nearby25km) && r.distanceKm > 25.0) {
+      if (_maxDistanceKm < _maxAllowedRadius && r.distanceKm > _maxDistanceKm) {
         return false;
       }
 
@@ -411,9 +403,11 @@ class _NearbyRestaurantsScreenState extends State<NearbyRestaurantsScreen> {
     return result;
   }
 
-  String get _searchPillLabel => _activeFilters.contains(_QuickFilter.openNow)
-      ? 'Open now'
-      : 'All shops';
+  String get _searchPillLabel => _maxDistanceKm < _maxAllowedRadius
+      ? '${_maxDistanceKm.round()} km'
+      : (_activeFilters.contains(_QuickFilter.openNow)
+          ? 'Open now'
+          : 'All shops');
 
   void _openRestaurant(RestaurantListing restaurant) {
     widget.onRestaurantSelected?.call(restaurant);
@@ -436,10 +430,19 @@ class _NearbyRestaurantsScreenState extends State<NearbyRestaurantsScreen> {
       context: context,
       backgroundColor: AppColors.transparent,
       isScrollControlled: true,
-      builder: (context) => _SortSheet(
-        current: _sort,
-        onSelected: (option) {
-          setState(() => _sort = option);
+      builder: (context) => _FilterAndSortSheet(
+        currentSort: _sort,
+        currentDistance: _maxDistanceKm.clamp(1.0, _maxAllowedRadius),
+        maxAllowedRadius: _maxAllowedRadius,
+        activeFilters: _activeFilters,
+        onApply: (distance, sort, filters) {
+          setState(() {
+            _maxDistanceKm = distance;
+            _sort = sort;
+            _activeFilters
+              ..clear()
+              ..addAll(filters);
+          });
           Navigator.pop(context);
         },
       ),
@@ -486,18 +489,14 @@ class _NearbyRestaurantsScreenState extends State<NearbyRestaurantsScreen> {
               ),
               _FilterRow(
                 active: _activeFilters,
+                maxDistanceKm: _maxDistanceKm,
+                maxAllowedRadius: _maxAllowedRadius,
+                onDistanceTap: _openSortSheet,
                 onToggle: (filter) {
                   setState(() {
                     if (_activeFilters.contains(filter)) {
                       _activeFilters.remove(filter);
                     } else {
-                      if (filter == _QuickFilter.nearby5km ||
-                          filter == _QuickFilter.nearby15km ||
-                          filter == _QuickFilter.nearby25km) {
-                        _activeFilters.remove(_QuickFilter.nearby5km);
-                        _activeFilters.remove(_QuickFilter.nearby15km);
-                        _activeFilters.remove(_QuickFilter.nearby25km);
-                      }
                       _activeFilters.add(filter);
                     }
                   });
@@ -692,9 +691,18 @@ class _RoundIconButton extends StatelessWidget {
 
 class _FilterRow extends StatelessWidget {
   final Set<_QuickFilter> active;
+  final double maxDistanceKm;
+  final double maxAllowedRadius;
   final ValueChanged<_QuickFilter> onToggle;
+  final VoidCallback onDistanceTap;
 
-  const _FilterRow({required this.active, required this.onToggle});
+  const _FilterRow({
+    required this.active,
+    required this.maxDistanceKm,
+    required this.maxAllowedRadius,
+    required this.onToggle,
+    required this.onDistanceTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -703,59 +711,82 @@ class _FilterRow extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
       child: SizedBox(
         height: 38,
-        child: ListView.separated(
+        child: ListView(
           scrollDirection: Axis.horizontal,
           physics: const BouncingScrollPhysics(),
-          itemCount: _QuickFilter.values.length,
-          separatorBuilder: (_, __) => const SizedBox(width: 8),
-          itemBuilder: (context, index) {
-            final filter = _QuickFilter.values[index];
-            final selected = active.contains(filter);
-
-            return Material(
-              color: selected ? AppColors.orange : AppColors.white,
-              shape: StadiumBorder(
-                side: BorderSide(
-                  color: selected
-                      ? AppColors.orange
-                      : const Color(0xFFE5E7EB),
-                  width: 1,
+          children: [
+            if (maxDistanceKm < maxAllowedRadius) ...[
+              Material(
+                color: AppColors.orange,
+                shape: const StadiumBorder(
+                  side: BorderSide(color: AppColors.orange, width: 1),
                 ),
-              ),
-              child: InkWell(
-                key: ValueKey('nearby-filter-${filter.name}'),
-                onTap: () => onToggle(filter),
-                customBorder: const StadiumBorder(),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: Row(
-                    children: [
-                      Icon(
-                        filter.icon,
-                        size: 15,
-                        color: selected
-                            ? AppColors.white
-                            : AppColors.textSecondary,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        filter.label,
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          fontWeight: selected
-                              ? FontWeight.w600
-                              : FontWeight.w500,
-                          color: selected
-                              ? AppColors.white
-                              : AppColors.textSecondary,
+                child: InkWell(
+                  onTap: onDistanceTap,
+                  customBorder: const StadiumBorder(),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.near_me_rounded, size: 15, color: AppColors.white),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Within ${maxDistanceKm.round()} km',
+                          style: const TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.white,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
-            );
-          },
+              const SizedBox(width: 8),
+            ],
+            ..._QuickFilter.values.map((filter) {
+              final selected = active.contains(filter);
+              return Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: Material(
+                  color: selected ? AppColors.orange : AppColors.white,
+                  shape: StadiumBorder(
+                    side: BorderSide(
+                      color: selected ? AppColors.orange : const Color(0xFFE5E7EB),
+                      width: 1,
+                    ),
+                  ),
+                  child: InkWell(
+                    key: ValueKey('nearby-filter-${filter.name}'),
+                    onTap: () => onToggle(filter),
+                    customBorder: const StadiumBorder(),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: Row(
+                        children: [
+                          Icon(
+                            filter.icon,
+                            size: 15,
+                            color: selected ? AppColors.white : AppColors.textSecondary,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            filter.label,
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                              color: selected ? AppColors.white : AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ],
         ),
       ),
     );
@@ -912,117 +943,312 @@ class _ClosestRail extends StatelessWidget {
 
 
 /// ---------------------------------------------------------------------------
-/// Sort sheet
+/// Filter & Sort sheet
 /// ---------------------------------------------------------------------------
 
-class _SortSheet extends StatelessWidget {
-  final _SortOption current;
-  final ValueChanged<_SortOption> onSelected;
+class _FilterAndSortSheet extends StatelessWidget {
+  final _SortOption currentSort;
+  final double currentDistance;
+  final double maxAllowedRadius;
+  final Set<_QuickFilter> activeFilters;
+  final void Function(double distance, _SortOption sort, Set<_QuickFilter> filters) onApply;
 
-  const _SortSheet({required this.current, required this.onSelected});
+  const _FilterAndSortSheet({
+    required this.currentSort,
+    required this.currentDistance,
+    required this.maxAllowedRadius,
+    required this.activeFilters,
+    required this.onApply,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.fromLTRB(
-        20,
-        10,
-        20,
-        18 + MediaQuery.of(context).padding.bottom,
-      ),
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Center(
-            child: Container(
-              width: 42,
-              height: 4,
-              margin: const EdgeInsets.only(bottom: 20),
-              decoration: BoxDecoration(
-                color: AppColors.border,
-                borderRadius: BorderRadius.circular(99),
-              ),
-            ),
+    double tempDistance = currentDistance;
+    _SortOption tempSort = currentSort;
+    final Set<_QuickFilter> tempFilters = Set.from(activeFilters);
+
+    return StatefulBuilder(
+      builder: (context, setSheetState) {
+        return Container(
+          padding: EdgeInsets.fromLTRB(
+            20,
+            16,
+            20,
+            24 + MediaQuery.of(context).padding.bottom,
           ),
-          const Text(
-            'Sort restaurants',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w800,
-              letterSpacing: -0.4,
-              color: AppColors.textPrimary,
-            ),
+          decoration: const BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
           ),
-          const SizedBox(height: 4),
-          const Text(
-            'Choose how nearby places should be ordered.',
-            style: TextStyle(
-              fontSize: 12.5,
-              fontWeight: FontWeight.w500,
-              color: AppColors.textSecondary,
-            ),
-          ),
-          const SizedBox(height: 12),
-          for (final option in _SortOption.values)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 5),
-              child: Material(
-                color: option == current
-                    ? AppColors.orangeTint
-                    : AppColors.transparent,
-                borderRadius: BorderRadius.circular(14),
-                child: InkWell(
-                  onTap: () => onSelected(option),
-                  borderRadius: BorderRadius.circular(14),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 13,
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          option == current
-                              ? Icons.radio_button_checked_rounded
-                              : Icons.radio_button_off_rounded,
-                          size: 20,
-                          color: option == current
-                              ? AppColors.orange
-                              : AppColors.textMuted,
-                        ),
-                        const SizedBox(width: 12),
-                        Text(
-                          option.label,
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: option == current
-                                ? FontWeight.w800
-                                : FontWeight.w600,
-                            color: option == current
-                                ? AppColors.textPrimary
-                                : AppColors.textSecondary,
-                          ),
-                        ),
-                        const Spacer(),
-                        if (option == current)
-                          const Icon(
-                            Icons.check_rounded,
-                            size: 19,
-                            color: AppColors.orange,
-                          ),
-                      ],
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 42,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: AppColors.border,
+                      borderRadius: BorderRadius.circular(99),
                     ),
                   ),
                 ),
-              ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Filter & Sort',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.4,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    if (tempDistance < maxAllowedRadius || tempSort != _SortOption.relevance || tempFilters.isNotEmpty)
+                      TextButton(
+                        onPressed: () {
+                          setSheetState(() {
+                            tempDistance = maxAllowedRadius;
+                            tempSort = _SortOption.relevance;
+                            tempFilters.clear();
+                          });
+                        },
+                        child: const Text(
+                          'Reset all',
+                          style: TextStyle(color: AppColors.orange, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+
+                // DISTANCE METER SLIDER
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(Icons.near_me_rounded, size: 17, color: AppColors.orange),
+                        SizedBox(width: 6),
+                        Text(
+                          'Maximum Distance',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.orangeTint,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        tempDistance >= maxAllowedRadius ? '${maxAllowedRadius.round()} km (Max)' : 'Within ${tempDistance.round()} km',
+                        style: const TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.orange,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                SliderTheme(
+                  data: SliderTheme.of(context).copyWith(
+                    activeTrackColor: AppColors.orange,
+                    inactiveTrackColor: const Color(0xFFE5E7EB),
+                    thumbColor: AppColors.orange,
+                    overlayColor: AppColors.orange.withValues(alpha: 0.15),
+                    trackHeight: 4.0,
+                  ),
+                  child: Slider(
+                    value: tempDistance,
+                    min: 1.0,
+                    max: maxAllowedRadius,
+                    divisions: maxAllowedRadius.round() - 1 > 0 ? maxAllowedRadius.round() - 1 : 1,
+                    label: tempDistance >= maxAllowedRadius ? '${maxAllowedRadius.round()} km (Max)' : '${tempDistance.round()} km',
+                    onChanged: (val) {
+                      setSheetState(() => tempDistance = val);
+                    },
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [5.0, 10.0, 25.0, 50.0, maxAllowedRadius].where((p) => p <= maxAllowedRadius).toSet().toList().map((preset) {
+                      final isSelected = (tempDistance - preset).abs() < 1.0;
+                      return GestureDetector(
+                        onTap: () => setSheetState(() => tempDistance = preset),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? AppColors.orange
+                                : const Color(0xFFF3F4F6),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            preset == maxAllowedRadius ? '${preset.toInt()} km (Max)' : '${preset.toInt()} km',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                              color: isSelected
+                                  ? AppColors.white
+                                  : AppColors.textSecondary,
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+                const SizedBox(height: 18),
+
+                // SORT OPTIONS
+                const Text(
+                  'Sort By',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: _SortOption.values.map((option) {
+                    final isSelected = option == tempSort;
+                    return GestureDetector(
+                      onTap: () => setSheetState(() => tempSort = option),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: isSelected ? AppColors.orangeTint : AppColors.surface,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: isSelected ? AppColors.orange : const Color(0xFFE5E7EB),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              isSelected ? Icons.radio_button_checked_rounded : Icons.radio_button_off_rounded,
+                              size: 15,
+                              color: isSelected ? AppColors.orange : AppColors.textMuted,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              option.label,
+                              style: TextStyle(
+                                fontSize: 12.5,
+                                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                                color: isSelected ? AppColors.textPrimary : AppColors.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 18),
+
+                // QUICK FILTERS
+                const Text(
+                  'Quick Filters',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: _QuickFilter.values.map((filter) {
+                    final isSelected = tempFilters.contains(filter);
+                    return GestureDetector(
+                      onTap: () {
+                        setSheetState(() {
+                          if (isSelected) {
+                            tempFilters.remove(filter);
+                          } else {
+                            tempFilters.add(filter);
+                          }
+                        });
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: isSelected ? AppColors.orange : AppColors.surface,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: isSelected ? AppColors.orange : const Color(0xFFE5E7EB),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              filter.icon,
+                              size: 15,
+                              color: isSelected ? AppColors.white : AppColors.textSecondary,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              filter.label,
+                              style: TextStyle(
+                                fontSize: 12.5,
+                                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                                color: isSelected ? AppColors.white : AppColors.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 24),
+
+                // APPLY BUTTON
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      onApply(tempDistance, tempSort, tempFilters);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.orange,
+                      foregroundColor: AppColors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      elevation: 0,
+                    ),
+                    child: const Text(
+                      'Apply Filters',
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+                    ),
+                  ),
+                ),
+              ],
             ),
-        ],
-      ),
+          ),
+        );
+      },
     );
   }
 }

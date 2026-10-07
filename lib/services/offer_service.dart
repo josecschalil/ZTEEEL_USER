@@ -16,6 +16,13 @@ class OfferService {
   static List<Map<String, dynamic>> get cachedOffers =>
       List.unmodifiable(_cachedOffers);
 
+  static void clearCache() {
+    _cachedOffers = [];
+    SharedPreferences.getInstance().then((prefs) {
+      prefs.remove(_kOffersCacheKey);
+    }).catchError((_) {});
+  }
+
   /// Loads cached offers from local storage for instant cold-boot startup.
   static Future<List<Map<String, dynamic>>> loadCachedOffers() async {
     if (_cachedOffers.isNotEmpty) {
@@ -48,13 +55,13 @@ class OfferService {
     }
 
     try {
-      final location = await LocationService.load();
+      final location = await LocationService.ensureLocation();
       final response = await http
           .get(
             Uri.parse(
               ApiConfig.offerFeedUrl(
-                latitude: location?.latitude,
-                longitude: location?.longitude,
+                latitude: location.latitude,
+                longitude: location.longitude,
               ),
             ),
           )

@@ -16,8 +16,6 @@ enum ViewMode { list, grid }
 
 enum SortMode { recent, ratingHighLow, distanceNearFar, nameAz }
 
-const _collections = ['Date Night', 'Quick Lunch', 'Family', 'Coffee & Brunch'];
-
 /// ---------------------------------------------------------------------
 /// Main screen
 /// ---------------------------------------------------------------------
@@ -142,7 +140,7 @@ class _SavedRestaurantsScreenState extends State<SavedRestaurantsScreen> {
           controller: controller,
           autofocus: true,
           decoration: const InputDecoration(
-            hintText: 'List name (e.g. Date Night)',
+            hintText: 'List name (e.g. Favorites, Weekend Brunches)',
           ),
           onSubmitted: (v) => Navigator.pop(ctx, v.trim()),
         ),
@@ -539,24 +537,12 @@ class _CollectionsShelf extends StatelessWidget {
     return restaurants.where((r) => r.collections.contains(collection)).length;
   }
 
-  static const _icons = {
-    'Date Night': Icons.local_fire_department,
-    'Quick Lunch': Icons.bolt,
-    'Family': Icons.family_restroom,
-    'Coffee & Brunch': Icons.coffee,
-  };
-
   @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder<List<SavedCollection>>(
       valueListenable: SavedRestaurantService.savedCollectionsNotifier,
       builder: (context, userCollections, _) {
-        final allCollectionNames = <String>[
-          ..._collections,
-          ...userCollections
-              .map((c) => c.name)
-              .where((name) => !_collections.contains(name)),
-        ];
+        final allCollectionNames = userCollections.map((c) => c.name).toList();
 
         return SizedBox(
           height: 92,
@@ -575,7 +561,7 @@ class _CollectionsShelf extends StatelessWidget {
                 _CollectionTile(
                   label: collection,
                   count: _countFor(collection),
-                  icon: _icons[collection] ?? Icons.folder_special_rounded,
+                  icon: Icons.folder_special_rounded,
                   selected: selected == collection,
                   onTap: () => onSelect(collection),
                 ),

@@ -612,7 +612,8 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(find.text('Green Bowl'), findsOneWidget);
-      expect(find.text('Closed'), findsOneWidget);
+      expect(find.byType(ColorFiltered), findsWidgets);
+      expect(find.text('Closed'), findsNothing);
       expect(tester.takeException(), isNull);
     },
   );
@@ -645,7 +646,8 @@ void main() {
       find.byWidgetPredicate((w) => w is Image && w.image is AssetImage),
       findsWidgets,
     );
-    expect(find.text('Closed'), findsOneWidget);
+    expect(find.byType(ColorFiltered), findsWidgets);
+    expect(find.text('Closed'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 

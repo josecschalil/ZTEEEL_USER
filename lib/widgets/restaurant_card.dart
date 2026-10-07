@@ -58,49 +58,7 @@ class RestaurantCard extends StatelessWidget {
                   children: [
                     RestaurantImage(restaurant: restaurant),
 
-                    // BOOKMARK / SAVE BUTTON
-                    Positioned(
-                      top: 10,
-                      right: 10,
-                      child: ValueListenableBuilder<Set<String>>(
-                        valueListenable:
-                            SavedRestaurantService.savedVendorIdsNotifier,
-                        builder: (context, savedIds, _) {
-                          final isSaved = savedIds.contains(restaurant.id);
-                          return Material(
-                            color: AppColors.black.withValues(alpha: 0.35),
-                            shape: const CircleBorder(),
-                            child: InkWell(
-                              customBorder: const CircleBorder(),
-                              onTap: () {
-                                SaveToCollectionSheet.show(
-                                  context,
-                                  vendorId: restaurant.id,
-                                  restaurantName: restaurant.name,
-                                  imageUrl: restaurant.imageUrl,
-                                );
-                              },
-                              child: Container(
-                                width: 34,
-                                height: 34,
-                                alignment: Alignment.center,
-                                child: Icon(
-                                  isSaved
-                                      ? Icons.bookmark_rounded
-                                      : Icons.bookmark_border_rounded,
-                                  color: isSaved
-                                      ? AppColors.primary
-                                      : AppColors.white,
-                                  size: 19,
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-
-                    // PROMOTED / FREE DELIVERY / OFFER BADGES
+                    // PROMOTED / FREE DELIVERY / OFFER BADGES (White bg, accent text)
                     Positioned(
                       left: 12,
                       top: 12,
@@ -111,13 +69,13 @@ class RestaurantCard extends StatelessWidget {
                             _ImageBadge(
                               icon: Icons.bolt_rounded,
                               label: restaurant.offerLabel!,
-                              dark: true,
+                              dark: false,
                             )
                           else if (restaurant.isPromoted)
                             const _ImageBadge(
                               icon: Icons.bolt_rounded,
                               label: 'PROMOTED',
-                              dark: true,
+                              dark: false,
                             ),
 
                           if (restaurant.isPromoted &&
@@ -131,52 +89,6 @@ class RestaurantCard extends StatelessWidget {
                               dark: false,
                             ),
                         ],
-                      ),
-                    ),
-
-                    // OPEN / CLOSED BADGE
-                    Positioned(
-                      right: 12,
-                      bottom: 12,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.white,
-                          borderRadius: BorderRadius.circular(999),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.black.withValues(alpha: 0.08),
-                              blurRadius: 6,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              width: 7,
-                              height: 7,
-                              decoration: BoxDecoration(
-                                color: AppColors.orange,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              restaurant.isOpenNow ? 'Open now' : 'Closed',
-                              style: TextStyle(
-                                fontSize: 10.5,
-                                height: 1,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.orange,
-                              ),
-                            ),
-                          ],
-                        ),
                       ),
                     ),
                   ],
@@ -230,7 +142,7 @@ class RestaurantCard extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 10),
-                    // DISTANCE + ETA
+                    // DISTANCE + DRIVING ETA
                     Row(
                       children: [
                         Row(
@@ -258,8 +170,8 @@ class RestaurantCard extends StatelessWidget {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             const Icon(
-                              Icons.access_time_rounded,
-                              size: 14,
+                              Icons.directions_car_rounded,
+                              size: 14.5,
                               color: AppColors.textMuted,
                             ),
                             const SizedBox(width: 4),
@@ -296,9 +208,10 @@ class RestaurantImage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final imageUrl = restaurant.imageUrl;
+    Widget image;
 
     if (imageUrl != null && imageUrl.trim().isNotEmpty) {
-      return Image.network(
+      image = Image.network(
         imageUrl,
         fit: BoxFit.cover,
         errorBuilder: (_, _, _) {
@@ -309,9 +222,23 @@ class RestaurantImage extends StatelessWidget {
           return Container(color: AppColors.surfaceRaised);
         },
       );
+    } else {
+      image = _PhotoFallback(icon: restaurant.fallbackIcon);
     }
 
-    return _PhotoFallback(icon: restaurant.fallbackIcon);
+    if (!restaurant.isOpenNow) {
+      image = ColorFiltered(
+        colorFilter: const ColorFilter.matrix(<double>[
+          0.2126, 0.7152, 0.0722, 0, 0,
+          0.2126, 0.7152, 0.0722, 0, 0,
+          0.2126, 0.7152, 0.0722, 0, 0,
+          0,      0,      0,      0.65, 0,
+        ]),
+        child: image,
+      );
+    }
+
+    return image;
   }
 }
 
@@ -346,22 +273,22 @@ class _ImageBadge extends StatelessWidget {
   const _ImageBadge({
     required this.icon,
     required this.label,
-    required this.dark,
+    this.dark = false,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5.5),
       decoration: BoxDecoration(
-        color: dark ? AppColors.primary : AppColors.surface,
+        color: dark ? AppColors.primary : AppColors.white,
         borderRadius: BorderRadius.circular(999),
         border: dark ? null : Border.all(color: AppColors.orangeBorder, width: 0.8),
         boxShadow: const [
           BoxShadow(
             color: AppColors.tone18000000,
             blurRadius: 8,
-            offset: Offset(0, 3),
+            offset: Offset(0, 2),
           ),
         ],
       ),
@@ -377,11 +304,11 @@ class _ImageBadge extends StatelessWidget {
           Text(
             label,
             style: TextStyle(
-              fontSize: 8.5,
+              fontSize: 9.5,
               height: 1,
-              fontWeight: FontWeight.w900,
+              fontWeight: FontWeight.w800,
               letterSpacing: 0.3,
-              color: dark ? AppColors.white : AppColors.primaryDeep,
+              color: dark ? AppColors.white : AppColors.primary,
             ),
           ),
         ],

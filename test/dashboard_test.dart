@@ -12,7 +12,6 @@ import 'package:zteel_user/app_typography.dart';
 import 'package:zteel_user/screens/FoodTypeShopScreen.dart';
 import 'package:zteel_user/screens/dashboard.dart';
 import 'package:zteel_user/screens/home_discovery_view.dart';
-import 'package:zteel_user/screens/MainCartScreen.dart';
 import 'package:zteel_user/screens/RecentOrderScreen.dart';
 import 'package:zteel_user/screens/RestaurantListScreen.dart';
 import 'package:zteel_user/services/cart_service.dart';

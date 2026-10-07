@@ -7,6 +7,7 @@ import 'RecentOrderScreen.dart';
 import 'HelpSupportScreen.dart';
 import '../services/auth_service.dart';
 import '../services/cart_service.dart';
+import '../services/discovery_preferences_service.dart';
 
 
 class _MenuItem {
@@ -51,6 +52,13 @@ const _accountItems = [
 ];
 
 const _supportItems = [
+  _MenuItem(
+    icon: Icons.radar_rounded,
+    iconColor: AppColors.orange,
+    title: 'Discovery Preferences',
+    subtitle: 'Set maximum search & discovery radius',
+    menupage: 'DiscoveryPreferences',
+  ),
   _MenuItem(
     icon: Icons.help_outline_rounded,
     iconColor: AppColors.toneFFA855F7, // purple-500
@@ -122,6 +130,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _handleRefresh() async {
     if (widget.onRefresh != null) {
       await widget.onRefresh!();
+      return;
     }
     final profile = await AuthService.getCustomerProfile();
     if (mounted && profile != null) {
@@ -315,7 +324,14 @@ class _ProfileHeader extends StatelessWidget {
                 ],
               ),
               child: ClipOval(
-                child: Image.network(_avatarUrl, fit: BoxFit.cover),
+                child: Image.network(
+                  _avatarUrl,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
+                    color: isDark ? AppColors.cardFill : AppColors.surfaceRaised,
+                    child: const Icon(Icons.person, color: AppColors.primary, size: 50),
+                  ),
+                ),
               ),
             ),
             Positioned(
@@ -432,6 +448,207 @@ class _MenuRow extends StatelessWidget {
   final bool isDark;
   const _MenuRow({required this.item, required this.isDark});
 
+  void _openDiscoveryPreferencesSheet(BuildContext context, bool isDark) {
+    double tempRadius = DiscoveryPreferencesService.maxRadiusKm;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.transparent,
+      isScrollControlled: true,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setSheetState) {
+          return Container(
+            padding: EdgeInsets.fromLTRB(
+              20,
+              16,
+              20,
+              28 + MediaQuery.of(context).padding.bottom,
+            ),
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.cardDark : AppColors.white,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.black.withValues(alpha: 0.15),
+                  blurRadius: 16,
+                  offset: const Offset(0, -4),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 42,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: isDark ? AppColors.white24 : AppColors.borderLight,
+                      borderRadius: BorderRadius.circular(99),
+                    ),
+                  ),
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Discovery Preferences',
+                      style: TextStyle(
+                        fontSize: 19,
+                        fontWeight: FontWeight.w800,
+                        color: isDark ? AppColors.white : AppColors.textPrimary,
+                      ),
+                    ),
+                    if ((tempRadius - DiscoveryPreferencesService.defaultMaxRadiusKm).abs() > 0.1)
+                      TextButton(
+                        onPressed: () {
+                          setSheetState(() => tempRadius = DiscoveryPreferencesService.defaultMaxRadiusKm);
+                        },
+                        child: const Text('Reset', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Set the maximum discoverable radius for nearby restaurants, deals, and category recommendations.',
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    height: 1.35,
+                    fontWeight: FontWeight.w500,
+                    color: isDark ? AppColors.textDescription : AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.radar_rounded, size: 18, color: AppColors.primary),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Max Discoverable Radius',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: isDark ? AppColors.white : AppColors.textPrimary,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        '${tempRadius.round()} km (Max)',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                SliderTheme(
+                  data: SliderTheme.of(context).copyWith(
+                    activeTrackColor: AppColors.primary,
+                    inactiveTrackColor: isDark ? AppColors.white24 : AppColors.borderLight,
+                    thumbColor: AppColors.primary,
+                    overlayColor: AppColors.primary.withValues(alpha: 0.15),
+                    trackHeight: 4.0,
+                  ),
+                  child: Slider(
+                    value: tempRadius,
+                    min: DiscoveryPreferencesService.minAllowedRadiusKm,
+                    max: DiscoveryPreferencesService.hardMaxRadiusKm,
+                    divisions: 19,
+                    label: '${tempRadius.round()} km',
+                    onChanged: (val) {
+                      setSheetState(() => tempRadius = val);
+                    },
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [10.0, 25.0, 50.0, 100.0].map((preset) {
+                      final isSelected = (tempRadius - preset).abs() < 1.0;
+                      return GestureDetector(
+                        onTap: () => setSheetState(() => tempRadius = preset),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? AppColors.primary
+                                : (isDark ? AppColors.cardFill : AppColors.surfaceRaised),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: isSelected
+                                  ? AppColors.primary
+                                  : (isDark ? AppColors.borderDark : AppColors.borderLight),
+                            ),
+                          ),
+                          child: Text(
+                            preset >= 100.0 ? '100 km (Max)' : '${preset.toInt()} km',
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                              color: isSelected
+                                  ? AppColors.white
+                                  : (isDark ? AppColors.white70 : AppColors.textSecondary),
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      await DiscoveryPreferencesService.setMaxRadius(tempRadius);
+                      if (!context.mounted) return;
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Max discovery radius set to ${tempRadius.round()} km'),
+                          backgroundColor: AppColors.primary,
+                          behavior: SnackBarBehavior.floating,
+                          duration: const Duration(seconds: 2),
+                        ),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: AppColors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      elevation: 0,
+                    ),
+                    child: const Text(
+                      'Save Preferences',
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final cardBg = isDark ? AppColors.cardFill : AppColors.white;
@@ -450,6 +667,11 @@ class _MenuRow extends StatelessWidget {
           MaterialPageRoute(builder: (_) => const LoginScreen()),
           (_) => false,
         );
+        return;
+      }
+
+      if (item.menupage == 'DiscoveryPreferences') {
+        _openDiscoveryPreferencesSheet(context, isDark);
         return;
       }
 

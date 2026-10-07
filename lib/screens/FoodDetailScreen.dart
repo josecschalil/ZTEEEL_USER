@@ -1,5 +1,6 @@
 import '../app_colors.dart';
 import 'package:flutter/material.dart';
+import '../services/wishlist_service.dart';
 
 
 /// ---------------------------------------------------------------------
@@ -38,7 +39,58 @@ const _addOns = [
 /// Main screen
 /// ---------------------------------------------------------------------
 class FoodDetailsScreen extends StatelessWidget {
-  const FoodDetailsScreen({super.key});
+  final String id;
+  final String name;
+  final String restaurant;
+  final double price;
+  final double? originalPrice;
+  final String imageUrl;
+  final String category;
+
+  const FoodDetailsScreen({
+    super.key,
+    this.id = 'deal_cheesy_pizza',
+    this.name = 'Cheesy Delight Pizza',
+    this.restaurant = 'Pizza Hut',
+    this.price = 12.50,
+    this.originalPrice = 18.00,
+    this.imageUrl = _heroImageUrl,
+    this.category = 'pizza',
+  });
+
+  void _handleToggleWishlist(BuildContext context) async {
+    final item = WishlistItem(
+      id: id,
+      restaurant: restaurant,
+      name: name,
+      price: price,
+      originalPrice: originalPrice,
+      imageUrl: imageUrl,
+      category: category,
+      tag: 'HOT DEAL',
+      rating: 4.9,
+      distance: 1.2,
+      description: 'Cheesy Delight Pizza deal with dipping sauce and drinks.',
+    );
+
+    final isSaved = WishlistService.isInWishlist(id);
+    await WishlistService.toggleWishlist(item);
+
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          !isSaved
+              ? 'Added "$name" to wishlist!'
+              : 'Removed "$name" from wishlist.',
+        ),
+        backgroundColor: !isSaved ? AppColors.primary : const Color(0xFF334155),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -91,9 +143,21 @@ class FoodDetailsScreen extends StatelessWidget {
                 ),
                 Row(
                   children: [
-                    _RoundIconButton(
-                      icon: Icons.favorite_border_rounded,
-                      isDark: isDark,
+                    ValueListenableBuilder<Set<String>>(
+                      valueListenable: WishlistService.wishlistedItemIdsNotifier,
+                      builder: (context, wishlistedIds, _) {
+                        final isSaved = wishlistedIds.contains(id);
+                        return _RoundIconButton(
+                          icon: isSaved
+                              ? Icons.favorite_rounded
+                              : Icons.favorite_border_rounded,
+                          iconColor: isSaved
+                              ? AppColors.toneFFF43F5E
+                              : null,
+                          isDark: isDark,
+                          onTap: () => _handleToggleWishlist(context),
+                        );
+                      },
                     ),
                     const SizedBox(width: 10),
                     _RoundIconButton(icon: Icons.share_rounded, isDark: isDark),
@@ -114,12 +178,14 @@ class FoodDetailsScreen extends StatelessWidget {
 /// ---------------------------------------------------------------------
 class _RoundIconButton extends StatelessWidget {
   final IconData icon;
+  final Color? iconColor;
   final double size;
   final bool isDark;
   final VoidCallback? onTap;
 
   const _RoundIconButton({
     required this.icon,
+    this.iconColor,
     required this.isDark,
     this.size = 22,
     this.onTap,
@@ -150,7 +216,7 @@ class _RoundIconButton extends StatelessWidget {
         ),
         child: Icon(
           icon,
-          color: isDark ? AppColors.white : AppColors.textPrimary,
+          color: iconColor ?? (isDark ? AppColors.white : AppColors.textPrimary),
           size: size,
         ),
       ),

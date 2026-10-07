@@ -319,7 +319,7 @@ class _SaveToCollectionSheetState extends State<SaveToCollectionSheet> {
                         controller: _newListController,
                         autofocus: true,
                         decoration: InputDecoration(
-                          hintText: 'List name (e.g. Date Night)',
+                          hintText: 'List name (e.g. Favorites, Weekend Brunches)',
                           hintStyle: const TextStyle(fontSize: 13),
                           isDense: true,
                           contentPadding: const EdgeInsets.symmetric(

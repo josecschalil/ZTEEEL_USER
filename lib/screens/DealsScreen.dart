@@ -5,6 +5,8 @@ import 'package:flutter/services.dart';
 import '../config/api_config.dart';
 import '../services/offer_service.dart';
 import '../services/restaurant_service.dart';
+import '../services/location_service.dart';
+import '../services/discovery_preferences_service.dart';
 import '../widgets/app_top_bar.dart';
 import '../widgets/discovery_search_bar.dart';
 import 'OfferExplanationScreen.dart';
@@ -46,7 +48,7 @@ class Deal {
     this.rating = 4.8,
     this.reviewCount = 120,
     required this.distance,
-    this.distanceKm = 1.2,
+    this.distanceKm = 0.0,
     required this.discount,
     this.discountPercent = 0.0,
     this.scopeType = 'all_menu',
@@ -110,7 +112,7 @@ class Deal {
 
     final rating = double.tryParse(vendor?['rating']?.toString() ?? vendor?['average_rating']?.toString() ?? '') ?? 4.8;
     final reviews = int.tryParse(vendor?['review_count']?.toString() ?? vendor?['rating_count']?.toString() ?? '') ?? 140;
-    final distanceKm = double.tryParse(offer['distance_km']?.toString() ?? vendor?['distance_km']?.toString() ?? '') ?? 1.2;
+    final distanceKm = double.tryParse(offer['distance_km']?.toString() ?? vendor?['distance_km']?.toString() ?? '') ?? 0.0;
     final dist = offer['distance_km'] != null ? '${offer['distance_km']} km' : (vendor?['distance_km'] != null ? '${vendor!['distance_km']} km' : 'Nearby');
 
     DateTime? endsAt;
@@ -262,14 +264,14 @@ class _DealsScreenState extends State<DealsScreen> {
   bool _isLoading = true;
   List<Deal> _allDeals = [];
   String _selectedFilter = 'All Deals';
+  late double _maxDistanceKm;
   String _searchQuery = '';
   final TextEditingController _searchCtrl = TextEditingController();
 
+  double get _maxAllowedRadius => DiscoveryPreferencesService.maxRadiusKm;
+
   final List<String> _filters = [
     'All Deals',
-    '📍 Under 5 km',
-    '📍 Under 15 km',
-    '📍 Under 25 km',
     '⚡ Mega Deals (25%+)',
     '🍕 Whole Menu',
     '🍱 Category Specials',
@@ -280,13 +282,30 @@ class _DealsScreenState extends State<DealsScreen> {
   @override
   void initState() {
     super.initState();
+    _maxDistanceKm = _maxAllowedRadius;
+    LocationService.locationNotifier.addListener(_onLocationChanged);
+    DiscoveryPreferencesService.maxRadiusNotifier.addListener(_onRadiusPreferenceChanged);
     _loadDeals();
   }
 
   @override
   void dispose() {
+    LocationService.locationNotifier.removeListener(_onLocationChanged);
+    DiscoveryPreferencesService.maxRadiusNotifier.removeListener(_onRadiusPreferenceChanged);
     _searchCtrl.dispose();
     super.dispose();
+  }
+
+  void _onRadiusPreferenceChanged() {
+    if (!mounted) return;
+    if (_maxDistanceKm > _maxAllowedRadius) {
+      setState(() => _maxDistanceKm = _maxAllowedRadius);
+    }
+  }
+
+  void _onLocationChanged() {
+    if (!mounted) return;
+    _loadDeals();
   }
 
   Future<void> _loadDeals() async {
@@ -316,14 +335,13 @@ class _DealsScreenState extends State<DealsScreen> {
   List<Deal> get _filteredDeals {
     var list = List<Deal>.from(_allDeals);
 
+    // Apply Distance Meter Filter
+    if (_maxDistanceKm < _maxAllowedRadius) {
+      list = list.where((d) => d.distanceKm <= _maxDistanceKm).toList();
+    }
+
     // Apply Filter Tab
-    if (_selectedFilter == '📍 Under 5 km') {
-      list = list.where((d) => d.distanceKm <= 5.0).toList();
-    } else if (_selectedFilter == '📍 Under 15 km') {
-      list = list.where((d) => d.distanceKm <= 15.0).toList();
-    } else if (_selectedFilter == '📍 Under 25 km') {
-      list = list.where((d) => d.distanceKm <= 25.0).toList();
-    } else if (_selectedFilter == '⚡ Mega Deals (25%+)') {
+    if (_selectedFilter == '⚡ Mega Deals (25%+)') {
       list = list.where((d) => d.discountPercent >= 25 || d.isMega).toList();
     } else if (_selectedFilter == '🍕 Whole Menu') {
       list = list.where((d) => d.scopeType == 'all_menu').toList();
@@ -378,99 +396,235 @@ class _DealsScreenState extends State<DealsScreen> {
 
   void _openFilterSheet() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final maxRadius = _maxAllowedRadius;
+    double tempDistance = _maxDistanceKm.clamp(1.0, maxRadius);
+    String tempFilter = _selectedFilter;
+
     showModalBottomSheet(
       context: context,
       backgroundColor: AppColors.transparent,
       isScrollControlled: true,
-      builder: (context) => Container(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
-        decoration: BoxDecoration(
-          color: isDark ? AppColors.cardDark : AppColors.white,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.black.withValues(alpha: 0.15),
-              blurRadius: 16,
-              offset: const Offset(0, -4),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: isDark ? AppColors.white24 : AppColors.borderLight,
-                  borderRadius: BorderRadius.circular(2),
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setSheetState) {
+          return Container(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.cardDark : AppColors.white,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.black.withValues(alpha: 0.15),
+                  blurRadius: 16,
+                  offset: const Offset(0, -4),
                 ),
-              ),
+              ],
             ),
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: isDark ? AppColors.white24 : AppColors.borderLight,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Filter Deals',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: isDark ? AppColors.white : AppColors.textPrimary,
+                      ),
+                    ),
+                    if (tempFilter != 'All Deals' || tempDistance < maxRadius)
+                      TextButton(
+                        onPressed: () {
+                          setSheetState(() {
+                            tempFilter = 'All Deals';
+                            tempDistance = maxRadius;
+                          });
+                        },
+                        child: const Text('Reset', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                // DISTANCE METER SLIDER
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.near_me_rounded, size: 17, color: AppColors.primary),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Maximum Distance',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: isDark ? AppColors.white : AppColors.textPrimary,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        tempDistance >= maxRadius ? '${maxRadius.round()} km (Max)' : 'Within ${tempDistance.round()} km',
+                        style: const TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                SliderTheme(
+                  data: SliderTheme.of(context).copyWith(
+                    activeTrackColor: AppColors.primary,
+                    inactiveTrackColor: isDark ? AppColors.white24 : AppColors.borderLight,
+                    thumbColor: AppColors.primary,
+                    overlayColor: AppColors.primary.withValues(alpha: 0.2),
+                    trackHeight: 4.0,
+                  ),
+                  child: Slider(
+                    value: tempDistance,
+                    min: 1.0,
+                    max: maxRadius,
+                    divisions: maxRadius.round() - 1 > 0 ? maxRadius.round() - 1 : 1,
+                    label: tempDistance >= maxRadius ? '${maxRadius.round()} km (Max)' : '${tempDistance.round()} km',
+                    onChanged: (val) {
+                      setSheetState(() => tempDistance = val);
+                    },
+                  ),
+                ),
+                // Quick distance preset buttons
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [5.0, 10.0, 25.0, 50.0, maxRadius].where((p) => p <= maxRadius).toSet().toList().map((preset) {
+                      final isSelected = (tempDistance - preset).abs() < 1.0;
+                      return GestureDetector(
+                        onTap: () => setSheetState(() => tempDistance = preset),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? AppColors.primary
+                                : (isDark ? AppColors.cardDark : AppColors.surfaceRaised),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: isSelected
+                                  ? AppColors.primary
+                                  : (isDark ? AppColors.borderDark : AppColors.borderLight),
+                            ),
+                          ),
+                          child: Text(
+                            preset == maxRadius ? '${preset.toInt()} km (Max)' : '${preset.toInt()} km',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                              color: isSelected
+                                  ? AppColors.white
+                                  : (isDark ? AppColors.white70 : AppColors.toneFF4B5563),
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+                const SizedBox(height: 20),
                 Text(
-                  'Filter Deals',
+                  'Categories & Offers',
                   style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
                     color: isDark ? AppColors.white : AppColors.textPrimary,
                   ),
                 ),
-                if (_selectedFilter != 'All Deals')
-                  TextButton(
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 10,
+                  children: _filters.map((filter) {
+                    final isSelected = filter == tempFilter;
+                    return GestureDetector(
+                      onTap: () {
+                        setSheetState(() => tempFilter = filter);
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? AppColors.primary
+                              : (isDark ? AppColors.cardDark : AppColors.surfaceRaised),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: isSelected
+                                ? AppColors.primary
+                                : (isDark ? AppColors.borderDark : AppColors.borderLight),
+                          ),
+                        ),
+                        child: Text(
+                          filter,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                            color: isSelected
+                                ? AppColors.white
+                                : (isDark ? AppColors.white70 : AppColors.toneFF4B5563),
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 24),
+                // Apply Button
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton(
                     onPressed: () {
-                      setState(() => _selectedFilter = 'All Deals');
+                      setState(() {
+                        _maxDistanceKm = tempDistance;
+                        _selectedFilter = tempFilter;
+                      });
                       Navigator.pop(context);
                     },
-                    child: const Text('Reset', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: AppColors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      elevation: 0,
+                    ),
+                    child: const Text(
+                      'Apply Filters',
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+                    ),
                   ),
+                ),
               ],
             ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 10,
-              children: _filters.map((filter) {
-                final isSelected = filter == _selectedFilter;
-                return GestureDetector(
-                  onTap: () {
-                    setState(() => _selectedFilter = filter);
-                    Navigator.pop(context);
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? AppColors.primary
-                          : (isDark ? AppColors.cardDark : AppColors.surfaceRaised),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: isSelected
-                            ? AppColors.primary
-                            : (isDark ? AppColors.borderDark : AppColors.borderLight),
-                      ),
-                    ),
-                    child: Text(
-                      filter,
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                        color: isSelected
-                            ? AppColors.white
-                            : (isDark ? AppColors.white70 : AppColors.toneFF4B5563),
-                      ),
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
@@ -526,7 +680,11 @@ class _DealsScreenState extends State<DealsScreen> {
                             isDark: isDark,
                             backgroundColor: isDark ? null : AppColors.surfaceRaised,
                             hintText: 'Search deals, dishes or restaurants...',
-                            selectedFilterLabel: _selectedFilter == 'All Deals' ? 'Filter' : _selectedFilter.replaceAll(RegExp(r'[^\w\s%+()]+'), '').trim(),
+                            selectedFilterLabel: _maxDistanceKm < _maxAllowedRadius
+                                ? '${_maxDistanceKm.round()} km'
+                                : (_selectedFilter == 'All Deals'
+                                    ? 'Filter'
+                                    : _selectedFilter.replaceAll(RegExp(r'[^\w\s%+()]+'), '').trim()),
                             filterIcon: Icons.tune_rounded,
                             showFilterPill: false,
                             shellKey: const ValueKey('deals-search-field'),
@@ -569,21 +727,32 @@ class _DealsScreenState extends State<DealsScreen> {
                 SliverToBoxAdapter(
                   child: SizedBox(
                     height: 38,
-                    child: ListView.separated(
+                    child: ListView(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       scrollDirection: Axis.horizontal,
-                      itemCount: _filters.length,
-                      separatorBuilder: (_, _) => const SizedBox(width: 8),
-                      itemBuilder: (context, i) {
-                        final filter = _filters[i];
-                        final isSelected = filter == _selectedFilter;
-                        return _FilterPill(
-                          label: filter,
-                          isSelected: isSelected,
-                          isDark: isDark,
-                          onTap: () => setState(() => _selectedFilter = filter),
-                        );
-                      },
+                      children: [
+                        if (_maxDistanceKm < _maxAllowedRadius) ...[
+                          _FilterPill(
+                            label: '📍 Within ${_maxDistanceKm.round()} km',
+                            isSelected: true,
+                            isDark: isDark,
+                            onTap: _openFilterSheet,
+                          ),
+                          const SizedBox(width: 8),
+                        ],
+                        ..._filters.map((filter) {
+                          final isSelected = filter == _selectedFilter;
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: _FilterPill(
+                              label: filter,
+                              isSelected: isSelected,
+                              isDark: isDark,
+                              onTap: () => setState(() => _selectedFilter = filter),
+                            ),
+                          );
+                        }),
+                      ],
                     ),
                   ),
                 ),
